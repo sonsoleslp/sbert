@@ -101,8 +101,8 @@ makes no numerical-parity claim: you vouch for the configuration.
 ## Examples
 
 ``` r
-if (FALSE) { # interactive()
+if (FALSE) { # \dontrun{
 model <- load_custom("thenlper/gte-small")
 encode(c("one sentence", "another sentence"), model)
-}
+} # }
 ```

@@ -7,24 +7,24 @@ Newest assessment 2026-08-02.
 
 ## Done (this round)
 
-[`keywords()`](https://pak.dynasite.org/sbert/reference/keywords.md) —
+[`keywords()`](https://sonsoles.me/sbert/reference/keywords.md) —
 embedding-ranked keyword/phrase extraction with MMR diversification
 (KeyBERT design)
 
 `stop_words(add = , remove = )` — corpus-vocabulary exclusion
 
-[`select_topics()`](https://pak.dynasite.org/sbert/reference/select_topics.md)
+[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
 — coherence/diversity/separation sweep over candidate topic counts
 
-[`topic_hierarchy()`](https://pak.dynasite.org/sbert/reference/topic_hierarchy.md) +
-[`reduce_topics()`](https://pak.dynasite.org/sbert/reference/reduce_topics.md)
+[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md) +
+[`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
 — topic dendrogram (cosine, deterministic) and tree-cut merging to fewer
 topics
 
-[`blend()`](https://pak.dynasite.org/sbert/reference/blend.md) —
+[`blend()`](https://sonsoles.me/sbert/reference/blend.md) —
 context-blended segment embeddings (residual alpha-blend)
 
-[`representatives()`](https://pak.dynasite.org/sbert/reference/representatives.md)
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
 — margin-ranked evidence selection
 
 **Static embeddings (Model2Vec)** — `potion-base-8M` pinned; token
@@ -49,7 +49,7 @@ n-grams.
 
 **Embedding-based coherence** — mean pairwise term-embedding similarity
 as a third
-[`coherence()`](https://pak.dynasite.org/sbert/reference/coherence.md)
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
 measure.
 
 **Topic stability** — label-invariant agreement (ARI) across perturbed
@@ -62,12 +62,12 @@ potion-multilingual-128M (101 languages) once demand shows; the loader
 already supports them.
 
 **Matryoshka truncation** — `dimensions =` on
-[`encode()`](https://pak.dynasite.org/sbert/reference/encode.md)
-(truncate + renormalize); `nomic-embed-text-v1.5` is MRL-trained.
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) (truncate +
+renormalize); `nomic-embed-text-v1.5` is MRL-trained.
 
 **Late chunking** — successor to
-[`blend()`](https://pak.dynasite.org/sbert/reference/blend.md): pool
-unit token spans from the contextualized document pass. Requires exact
+[`blend()`](https://sonsoles.me/sbert/reference/blend.md): pool unit
+token spans from the contextualized document pass. Requires exact
 char-to-token offset alignment, special-token exclusion, and
 truncation-safe windowing (NOT a splice of a single truncated pass).
 
@@ -82,10 +82,9 @@ Fold the analysis tutorials into the package vignette (`topic-modeling`
 vignette ships)
 
 Decide whether
-[`topics()`](https://pak.dynasite.org/sbert/reference/topics.md)’s
-built-in representatives should use margin ranking (currently raw
-distance;
-[`representatives()`](https://pak.dynasite.org/sbert/reference/representatives.md)
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md)’s built-in
+representatives should use margin ranking (currently raw distance;
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
 is the margin path)
 
 ## Deliberately out of scope

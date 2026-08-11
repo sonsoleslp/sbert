@@ -1,9 +1,9 @@
 # Extract Keywords from Documents by Embedding Similarity
 
-Ranks each document's own words and phrases by cosine topic_similarity
-between their embeddings and the document embedding, computed with the
-same model, and selects the top \`n\` by maximal marginal relevance so
-the keywords are relevant without being redundant (the KeyBERT design).
+Ranks each document's own words and phrases by cosine similarity between
+their embeddings and the document embedding, computed with the same
+model, and selects the top \`n\` by maximal marginal relevance so the
+keywords are relevant without being redundant (the KeyBERT design).
 
 ## Usage
 
@@ -43,8 +43,8 @@ keywords(
 - topic_diversity:
 
   Maximal-marginal-relevance trade-off in \`\[0, 1)\`: \`0\` ranks
-  purely by topic_similarity, larger values penalize keywords similar to
-  ones already selected. Default \`0.3\`.
+  purely by similarity, larger values penalize keywords similar to ones
+  already selected. Default \`0.3\`.
 
 - stop_words:
 
@@ -62,7 +62,7 @@ keywords(
 
 A base data frame with one row per keyword and columns \`document_id\`,
 \`document_name\`, \`rank\`, \`keyword\`, and \`topic_similarity\`
-(cosine topic_similarity between the keyword and its document).
+(cosine similarity between the keyword and its document).
 
 ## Details
 

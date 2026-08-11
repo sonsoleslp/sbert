@@ -5,18 +5,23 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Semantic Topics in Levebee AI Mathematics Feedback — an sbert Tutorial • sbert</title>
+<title>Semantic Topics in Levebee AI Mathematics Feedback • sbert</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Semantic Topics in Levebee AI Mathematics Feedback — an sbert Tutorial">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Semantic Topics in Levebee AI Mathematics Feedback">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
@@ -33,10 +38,9 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/levebee_vignette.html">Semantic Topics in Levebee AI Mathematics Feedback — an sbert Tutorial</a></li>
-    <li><a class="dropdown-item" href="../articles/mcse_abstract_30_topics.html">MCSE Abstract Topics</a></li>
-    <li><a class="dropdown-item" href="../articles/python-free-sbert.html">Python-Free Sentence-BERT in R</a></li>
-    <li><a class="dropdown-item" href="../articles/topic-modeling.html">Topic Modeling: A Tutorial</a></li>
+<li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
+    <li><a class="dropdown-item" href="../articles/levebee_vignette.html">Semantic Topics in Levebee AI Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -45,7 +49,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/mohsaqr/sbert/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/sonsoleslp/sbert/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -58,14 +62,10 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Semantic Topics in Levebee AI Mathematics Feedback — an sbert Tutorial</h1>
-                        <h4 data-toc-skip class="author">sbert
-0.5.2</h4>
+      <img src="../logo.png" class="logo" alt=""><h1>Semantic Topics in Levebee AI Mathematics Feedback</h1>
             
-            <h4 data-toc-skip class="date">2026-08-08</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/mohsaqr/sbert/blob/main/vignettes/articles/levebee_vignette.Rmd" class="external-link"><code>vignettes/articles/levebee_vignette.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/levebee_vignette.Rmd" class="external-link"><code>vignettes/levebee_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>levebee_vignette.Rmd</code></div>
     </div>
 
@@ -80,13 +80,14 @@ from the Levebee mathematics application, translated into English from
 ten source languages. Nobody can read nearly nine thousand messages, and
 many repeat verbatim — “Try again.” is the most common, appearing 11
 times — so simple frequency lists tell you about templates, not content.
-Topic modeling answers the question the raw data cannot: <em>what kinds
+Topic modeling answers the question the raw data cannot: <em>what kind
 of feedback does the system actually give, and in what
 proportions?</em></p>
 <p>The answer has to survive scrutiny, so every step here is
 deterministic: rerunning this document reproduces every number, bar, and
-sentence exactly. The tutorial builds one six-topic model and then
-inspects it from three deliberately different angles:</p>
+sentence exactly. The tutorial first lets the data choose the number of
+topics, builds the resulting six-topic model, and then inspects it from
+three deliberately different angles:</p>
 <ol style="list-style-type: decimal">
 <li>
 <strong>Model quality</strong> — coherence and diversity, so you
@@ -115,16 +116,28 @@ it claims.</li>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Topic model</td>
-<td><code><a href="../reference/topics.html">topics()</a></code></td>
-<td>What groups exist, and how big are they?</td>
+<td>Topic count</td>
+<td><code><a href="../reference/select_topics.html">select_topics()</a></code></td>
+<td>How many topics does the corpus support?</td>
 </tr>
 <tr class="even">
-<td>Evaluation</td>
+<td>Topic model</td>
 <td>
-<code><a href="../reference/coherence.html">coherence()</a></code>, <code><a href="../reference/topic_diversity.html">topic_diversity()</a></code>
+<code><a href="../reference/topics.html">topics()</a></code>, <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code>
+</td>
+<td>What groups exist?</td>
+</tr>
+<tr class="odd">
+<td>Model quality</td>
+<td>
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="../reference/coherence.html">coherence()</a></code>
 </td>
 <td>Which topics are trustworthy?</td>
+</tr>
+<tr class="even">
+<td>Topic size</td>
+<td><code><a href="../reference/topic_sizes.html">topic_sizes()</a></code></td>
+<td>How big is each topic, by distinct and reused share?</td>
 </tr>
 <tr class="odd">
 <td>Frequent keywords</td>
@@ -143,44 +156,42 @@ it claims.</li>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/sbert">sbert</a></span><span class="op">)</span></span></code></pre></div>
 <p>Fourteen revision-pinned models are available; this tutorial uses the
 default, <code>all-MiniLM-L6-v2</code> (the field’s standard
 quality-per-megabyte English embedder). The menu, with each model’s
 dimension, input limit, language coverage, and download size:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/models.html">models</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##                                    model dimensions max_tokens      languages</span></span>
-<span><span class="co">## 1                       all-MiniLM-L6-v2        384        256        English</span></span>
-<span><span class="co">## 2                      all-MiniLM-L12-v2        384        128        English</span></span>
-<span><span class="co">## 3                paraphrase-MiniLM-L3-v2        384        128        English</span></span>
-<span><span class="co">## 4              multi-qa-MiniLM-L6-cos-v1        384        512        English</span></span>
-<span><span class="co">## 5  paraphrase-multilingual-MiniLM-L12-v2        384        128  50+ languages</span></span>
-<span><span class="co">## 6                      all-mpnet-base-v2        768        384        English</span></span>
-<span><span class="co">## 7  paraphrase-multilingual-mpnet-base-v2        768        128  50+ languages</span></span>
-<span><span class="co">## 8                      bge-small-en-v1.5        384        512        English</span></span>
-<span><span class="co">## 9                       bge-base-en-v1.5        768        512        English</span></span>
-<span><span class="co">## 10                 multilingual-e5-small        384        512 100+ languages</span></span>
-<span><span class="co">## 11                 nomic-embed-text-v1.5        768       8192        English</span></span>
-<span><span class="co">## 12           jina-embeddings-v2-small-en        512       8192        English</span></span>
-<span><span class="co">## 13                  mxbai-embed-large-v1       1024        512        English</span></span>
-<span><span class="co">## 14                        potion-base-8M        256    1000000        English</span></span>
-<span><span class="co">##    size_mb</span></span>
-<span><span class="co">## 1     90.9</span></span>
-<span><span class="co">## 2    133.6</span></span>
-<span><span class="co">## 3     69.5</span></span>
-<span><span class="co">## 4     90.9</span></span>
-<span><span class="co">## 5    479.4</span></span>
-<span><span class="co">## 6    436.3</span></span>
-<span><span class="co">## 7   1119.2</span></span>
-<span><span class="co">## 8    133.8</span></span>
-<span><span class="co">## 9    436.5</span></span>
-<span><span class="co">## 10   487.4</span></span>
-<span><span class="co">## 11   548.0</span></span>
-<span><span class="co">## 12   130.5</span></span>
-<span><span class="co">## 13  1337.6</span></span>
-<span><span class="co">## 14    30.9</span></span></code></pre>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/models.html">models</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                                    model dimensions max_tokens      languages</span></span>
+<span><span class="co">#&gt; 1                       all-MiniLM-L6-v2        384        256        English</span></span>
+<span><span class="co">#&gt; 2                      all-MiniLM-L12-v2        384        128        English</span></span>
+<span><span class="co">#&gt; 3                paraphrase-MiniLM-L3-v2        384        128        English</span></span>
+<span><span class="co">#&gt; 4              multi-qa-MiniLM-L6-cos-v1        384        512        English</span></span>
+<span><span class="co">#&gt; 5  paraphrase-multilingual-MiniLM-L12-v2        384        128  50+ languages</span></span>
+<span><span class="co">#&gt; 6                      all-mpnet-base-v2        768        384        English</span></span>
+<span><span class="co">#&gt; 7  paraphrase-multilingual-mpnet-base-v2        768        128  50+ languages</span></span>
+<span><span class="co">#&gt; 8                      bge-small-en-v1.5        384        512        English</span></span>
+<span><span class="co">#&gt; 9                       bge-base-en-v1.5        768        512        English</span></span>
+<span><span class="co">#&gt; 10                 multilingual-e5-small        384        512 100+ languages</span></span>
+<span><span class="co">#&gt; 11                 nomic-embed-text-v1.5        768       8192        English</span></span>
+<span><span class="co">#&gt; 12           jina-embeddings-v2-small-en        512       8192        English</span></span>
+<span><span class="co">#&gt; 13                  mxbai-embed-large-v1       1024        512        English</span></span>
+<span><span class="co">#&gt; 14                        potion-base-8M        256    1000000        English</span></span>
+<span><span class="co">#&gt;    size_mb</span></span>
+<span><span class="co">#&gt; 1     90.9</span></span>
+<span><span class="co">#&gt; 2    133.6</span></span>
+<span><span class="co">#&gt; 3     69.5</span></span>
+<span><span class="co">#&gt; 4     90.9</span></span>
+<span><span class="co">#&gt; 5    479.4</span></span>
+<span><span class="co">#&gt; 6    436.3</span></span>
+<span><span class="co">#&gt; 7   1119.2</span></span>
+<span><span class="co">#&gt; 8    133.8</span></span>
+<span><span class="co">#&gt; 9    436.5</span></span>
+<span><span class="co">#&gt; 10   487.4</span></span>
+<span><span class="co">#&gt; 11   548.0</span></span>
+<span><span class="co">#&gt; 12   130.5</span></span>
+<span><span class="co">#&gt; 13  1337.6</span></span>
+<span><span class="co">#&gt; 14    30.9</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="the-corpus-deduplicated">The corpus, deduplicated<a class="anchor" aria-label="anchor" href="#the-corpus-deduplicated"></a>
@@ -188,67 +199,92 @@ dimension, input limit, language coverage, and download size:</p>
 <p>Embedding the same string twice wastes computation and — more
 importantly — lets repeated templates skew the clustering geometry:
 every copy of a message like “Try again.” acts as another point pulling
-on the same centroid. <code><a href="../reference/dedupe.html">dedupe()</a></code> therefore collapses the
-corpus to its distinct non-blank messages (each kind votes once) while
-keeping the row frequencies, which return as weights when sizes are
-reported.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">corpus</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dedupe.html">dedupe</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">$</span><span class="va">translation</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] 8005</span></span></code></pre>
-<p>Three explicit steps turn the corpus into numbers, and each exists
-for a reason. Called without arguments, every model function uses the
-package default, <code>all-MiniLM-L6-v2</code> — a 6-layer distilled
-English model that is the field’s standard quality-per-megabyte starter
-(<code><a href="../reference/models.html">models()</a></code> lists the other thirteen pinned options).
-<code><a href="../reference/model_download.html">model_download()</a></code> is the only step that touches the network:
-it fetches the model’s ONNX graph (90.4 MB) and tokenizer into the local
-cache, locked to one immutable Hugging Face revision and refused unless
-every byte matches the SHA-256 hashes pinned inside the package — so the
-model you run today is provably the model you run next year. Once the
-files are installed the call is a no-op. <code><a href="../reference/load_model.html">load_model()</a></code> then
-builds the in-memory model from those verified files: the Rust
-tokenizer, the ONNX inference session, and the model’s own settings (384
-dimensions, 256-token limit, mean pooling).</p>
-<p><code><a href="../reference/encode.html">encode()</a></code> does the actual work: each message is tokenized
-into word pieces, run through the network (one vector per token),
-mean-pooled into one vector per message with padding masked out, and
-L2-normalized. The normalization is what makes everything downstream
-cheap — on unit vectors, cosine similarity is a plain dot product, which
-is exactly what the k-means clustering and the centroid distances in the
-panels below rely on. The result is an 8,005 × 384 matrix, numerically
-identical to Python <code>SentenceTransformers</code> output and
-bit-identical on every rerun — which is why this tutorial recomputes it
-(about ten seconds) instead of shipping a cache file.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/model_download.html">model_download</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">minilm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, model <span class="op">=</span> <span class="va">minilm</span><span class="op">)</span></span></code></pre></div>
+on the same centroid. <code><a href="../reference/dedupe.html">dedupe()</a></code> collapses the corpus to its
+distinct non-blank messages (each kind votes once) while keeping the row
+frequencies, which return as weights when sizes are reported. To keep
+this tutorial fast and free of any download, it works with the first 600
+distinct messages — drop the <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> to model the whole
+corpus:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">corpus</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/dedupe.html">dedupe</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">$</span><span class="va">translation</span><span class="op">)</span>, <span class="fl">600</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/model_download.html">model_download()</a></code> is the one step that touches the
+network. Called without arguments it fetches the package default,
+<code>all-MiniLM-L6-v2</code> — a 6-layer distilled English model — as
+its ONNX graph (90.4 MB) and tokenizer into the local cache, locked to
+one immutable Hugging Face revision and refused unless every byte
+matches the SHA-256 hashes pinned inside the package, so the model you
+run today is provably the model you run next year. To use a different
+embedder, pass its name —
+<code>model_download("bge-small-en-v1.5")</code>, for example — and
+<code><a href="../reference/models.html">models()</a></code> lists the other thirteen pinned options. From
+there <code><a href="../reference/select_topics.html">select_topics()</a></code> and <code><a href="../reference/topics.html">topics()</a></code> do the
+rest: under the hood they encode each distinct message — tokenized, run
+through the network, mean-pooled with padding masked out, and
+L2-normalized — into a 600 × 384 matrix, numerically identical to Python
+<code>SentenceTransformers</code> output and bit-identical on every
+rerun.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/model_download.html">model_download</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="the-six-topic-model">The six-topic model<a class="anchor" aria-label="anchor" href="#the-six-topic-model"></a>
+<h2 id="choosing-the-number-of-topics">Choosing the number of topics<a class="anchor" aria-label="anchor" href="#choosing-the-number-of-topics"></a>
 </h2>
-<p>Six topics is a reviewed choice for this corpus, not an algorithmic
-guess — <strong>sbert</strong> deliberately refuses to pick
-<code>n_topics</code> for you, because the right granularity depends on
-what the analysis is <em>for</em> (here: an editorial review of feedback
-types, where six kinds are actionable and sixty are not).</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span></span>
+<p>There is no universally correct number of topics, and
+<strong>sbert</strong> deliberately refuses to pick one for you — the
+right granularity depends on what the analysis is <em>for</em>. Instead
+of guessing, <code><a href="../reference/select_topics.html">select_topics()</a></code> fits one model per candidate
+count and reports the numbers that justify a choice: coherence (do a
+topic’s top terms actually co-occur?), diversity (do topics own their
+vocabulary or share it?), and the share of embedding variance
+<code>explained</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_topics.html">select_topics</a></span><span class="op">(</span></span>
 <span>  <span class="va">corpus</span><span class="op">$</span><span class="va">text</span>,</span>
-<span>  n_topics <span class="op">=</span> <span class="fl">6</span>,</span>
-<span>  embeddings <span class="op">=</span> <span class="va">embeddings</span>,</span>
-<span>  n_terms <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">5</span>, <span class="fl">6</span>, <span class="fl">7</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span><span class="op">)</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"npmi"</span>,</span>
 <span>  n_representatives <span class="op">=</span> <span class="fl">5</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">topic_model</span></span></code></pre></div>
-<pre><code><span><span class="co">## &lt;sbert_topic_model&gt;</span></span>
-<span><span class="co">##   documents: 8005</span></span>
-<span><span class="co">##   topics: 6</span></span>
-<span><span class="co">##   model: precomputed embeddings</span></span>
-<span><span class="co">##   algorithm: deterministic k-means (Lloyd)</span></span>
-<span><span class="co">##   topic sizes: 4114, 1288, 1161, 1099, 288, 55</span></span>
-<span><span class="co">##   between/total SS: 15.2%</span></span></code></pre>
+<span><span class="va">sweep</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; &lt;sbert_topic_sweep&gt; 7 candidates, coherence measure: npmi</span></span>
+<span><span class="co">#&gt;  n_topics  coherence topic_diversity explained</span></span>
+<span><span class="co">#&gt;         4 -0.2070855       0.9250000 0.1229819</span></span>
+<span><span class="co">#&gt;         5 -0.1860037       0.9400000 0.1839887</span></span>
+<span><span class="co">#&gt;         6 -0.1044246       0.9166667 0.2255144</span></span>
+<span><span class="co">#&gt;         7 -0.1894843       0.9142857 0.2355033</span></span>
+<span><span class="co">#&gt;         8 -0.1181287       0.9000000 0.2433832</span></span>
+<span><span class="co">#&gt;        10 -0.1866628       0.8600000 0.2563262</span></span>
+<span><span class="co">#&gt;        12 -0.2138928       0.8151261 0.2716759</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Fitted models retained: fitted(x, n_topics = 6)</span></span></code></pre>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">)</span></span></code></pre></div>
+<p><img src="levebee_vignette_files/figure-html/sweep-plot-1.png" class="r-plt" alt="" width="100%"></p>
+<p>Coherence is negative throughout — these are short, template-like
+messages, so any two top terms rarely land in the same short string —
+but it peaks unmistakably at <strong>six</strong> and falls away on
+either side, while diversity stays high and <code>explained</code> keeps
+climbing with the count. Six is the granularity this corpus actually
+supports: the point after which more topics stop buying coherence, and
+(not by coincidence) about the number of feedback <em>kinds</em> an
+editorial review can act on. <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code> pulls the
+already-fitted six-topic model straight out of the sweep — no
+re-encoding, no second clustering:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span></code></pre></div>
+<p>Only <code><a href="../reference/model_download.html">model_download()</a></code> and the encoding inside
+<code><a href="../reference/select_topics.html">select_topics()</a></code> are skipped here — the 600 messages’
+embeddings ship precomputed — so the vignette builds with no download.
+Run these lines yourself and you reproduce every number below
+exactly.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">topic_model</span></span>
+<span><span class="co">#&gt; &lt;sbert_topic_model&gt;</span></span>
+<span><span class="co">#&gt;   documents: 600</span></span>
+<span><span class="co">#&gt;   topics: 6</span></span>
+<span><span class="co">#&gt;   model: precomputed embeddings</span></span>
+<span><span class="co">#&gt;   algorithm: deterministic k-means (Lloyd)</span></span>
+<span><span class="co">#&gt;   topic sizes: 223, 133, 131, 49, 37, 27</span></span>
+<span><span class="co">#&gt;   between/total SS: 22.6%</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="should-you-trust-these-topics">Should you trust these topics?<a class="anchor" aria-label="anchor" href="#should-you-trust-these-topics"></a>
 </h3>
@@ -258,66 +294,65 @@ asks whether a topic’s top terms actually co-occur in its messages (+1 =
 always together, −1 = never); diversity asks whether topics share their
 vocabulary or own it.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Semantic topic model summary</span></span>
-<span><span class="co">##   documents:            8005</span></span>
-<span><span class="co">##   topics:               6</span></span>
-<span><span class="co">##   model:                precomputed embeddings</span></span>
-<span><span class="co">##   between/total SS:      15.2%</span></span>
-<span><span class="co">##   mean npmi  coherence:  0.1267</span></span>
-<span><span class="co">##   topic topic_diversity:      0.854 (top 10 terms)</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  topic                    label n_documents proportion coherence</span></span>
-<span><span class="co">##      1 choose / pictures / ones        4114   0.513929 -0.184413</span></span>
-<span><span class="co">##      2    mean / middle / means        1288   0.160899  0.005509</span></span>
-<span><span class="co">##      3         one / box / blue        1161   0.145034  0.221195</span></span>
-<span><span class="co">##      4        mean / fly / ones        1099   0.137289 -0.083529</span></span>
-<span><span class="co">##      5      it's / hat / animal         288   0.035978  0.483772</span></span>
-<span><span class="co">##      6    grass / water / green          55   0.006871  0.317913</span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/coherence.html">coherence</a></span><span class="op">(</span><span class="va">topic_model</span>, measure <span class="op">=</span> <span class="st">"npmi"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   topic                    label measure n_terms    coherence</span></span>
-<span><span class="co">## 1     1 choose / pictures / ones    npmi       8 -0.184412886</span></span>
-<span><span class="co">## 2     2    mean / middle / means    npmi       8  0.005508961</span></span>
-<span><span class="co">## 3     3         one / box / blue    npmi       8  0.221194946</span></span>
-<span><span class="co">## 4     4        mean / fly / ones    npmi       8 -0.083528740</span></span>
-<span><span class="co">## 5     5      it's / hat / animal    npmi       8  0.483772393</span></span>
-<span><span class="co">## 6     6    grass / water / green    npmi       8  0.317913224</span></span></code></pre>
-<p>Carry these numbers into the per-topic panels below: the topics with
-the highest NPMI are the rigid instructional templates (regular phrasing
-is exactly what co-occurrence statistics reward), and any topic with
-visibly lower coherence should be read through its representative
-sentences rather than its keywords.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Semantic topic model summary</span></span>
+<span><span class="co">#&gt;   documents:            600</span></span>
+<span><span class="co">#&gt;   topics:               6</span></span>
+<span><span class="co">#&gt;   model:                precomputed embeddings</span></span>
+<span><span class="co">#&gt;   between/total SS:      22.6%</span></span>
+<span><span class="co">#&gt;   mean npmi  coherence:  -0.1044</span></span>
+<span><span class="co">#&gt;   topic topic_diversity:      0.917 (top 10 terms)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  topic                       label n_documents proportion coherence</span></span>
+<span><span class="co">#&gt;      1 picture / pictures / choose         223    0.37167   -0.2368</span></span>
+<span><span class="co">#&gt;      2     ones / broccoli / candy         133    0.22167   -0.4150</span></span>
+<span><span class="co">#&gt;      3    mean / ones / strawberry         131    0.21833   -0.2564</span></span>
+<span><span class="co">#&gt;      4            box / red / blue          49    0.08167    0.3011</span></span>
+<span><span class="co">#&gt;      5      means / middle / right          37    0.06167   -0.2043</span></span>
+<span><span class="co">#&gt;      6      it's / person / animal          27    0.04500    0.1849</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/coherence.html">coherence</a></span><span class="op">(</span><span class="va">topic_model</span>, measure <span class="op">=</span> <span class="st">"npmi"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                       label measure n_terms  coherence</span></span>
+<span><span class="co">#&gt; 1     1 picture / pictures / choose    npmi      10 -0.2367956</span></span>
+<span><span class="co">#&gt; 2     2     ones / broccoli / candy    npmi      10 -0.4150297</span></span>
+<span><span class="co">#&gt; 3     3    mean / ones / strawberry    npmi      10 -0.2563526</span></span>
+<span><span class="co">#&gt; 4     4            box / red / blue    npmi      10  0.3010516</span></span>
+<span><span class="co">#&gt; 5     5      means / middle / right    npmi      10 -0.2043292</span></span>
+<span><span class="co">#&gt; 6     6      it's / person / animal    npmi      10  0.1849079</span></span></code></pre></div>
+<p>Carry these numbers into the per-topic panels below: NPMI rewards
+regular, repetitive phrasing, so the most template-like topics tend to
+score highest, and any topic with visibly lower coherence should be read
+through its representative sentences rather than its keywords.</p>
 </div>
 <div class="section level3">
 <h3 id="size-on-two-scales">Size on two scales<a class="anchor" aria-label="anchor" href="#size-on-two-scales"></a>
 </h3>
 <p>The model counts <em>distinct</em> messages, but the application sent
-some messages hundreds of times, so editorial priority follows the
+some messages many times over, so editorial priority follows the
 weighted share, not the distinct share. <code><a href="../reference/topic_sizes.html">topic_sizes()</a></code>
 reports both scales in one call; the gap between <code>proportion</code>
 and <code>weighted_share</code> measures how template-driven each topic
 is — a topic whose weighted share far exceeds its distinct share is a
 small repertoire of heavily reused messages.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"sizes"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="levebee_vignette_files/figure-html/sizes-1.png" class="r-plt" alt="" width="100%"></p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span>, weights <span class="op">=</span> <span class="va">corpus</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   topic                    label n_documents  proportion n_weighted</span></span>
-<span><span class="co">## 1     1 choose / pictures / ones        4114 0.513928795       4390</span></span>
-<span><span class="co">## 2     2    mean / middle / means        1288 0.160899438       1347</span></span>
-<span><span class="co">## 3     3         one / box / blue        1161 0.145034354       1494</span></span>
-<span><span class="co">## 4     4        mean / fly / ones        1099 0.137289194       1128</span></span>
-<span><span class="co">## 5     5      it's / hat / animal         288 0.035977514        326</span></span>
-<span><span class="co">## 6     6    grass / water / green          55 0.006870706         72</span></span>
-<span><span class="co">##   weighted_share</span></span>
-<span><span class="co">## 1    0.501313235</span></span>
-<span><span class="co">## 2    0.153819801</span></span>
-<span><span class="co">## 3    0.170606372</span></span>
-<span><span class="co">## 4    0.128811237</span></span>
-<span><span class="co">## 5    0.037227361</span></span>
-<span><span class="co">## 6    0.008221994</span></span></code></pre>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span>, weights <span class="op">=</span> <span class="va">corpus</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                       label n_documents proportion n_weighted</span></span>
+<span><span class="co">#&gt; 1     1 picture / pictures / choose         223 0.37166667        267</span></span>
+<span><span class="co">#&gt; 2     2     ones / broccoli / candy         133 0.22166667        162</span></span>
+<span><span class="co">#&gt; 3     3    mean / ones / strawberry         131 0.21833333        138</span></span>
+<span><span class="co">#&gt; 4     4            box / red / blue          49 0.08166667         76</span></span>
+<span><span class="co">#&gt; 5     5      means / middle / right          37 0.06166667         57</span></span>
+<span><span class="co">#&gt; 6     6      it's / person / animal          27 0.04500000         40</span></span>
+<span><span class="co">#&gt;   weighted_share</span></span>
+<span><span class="co">#&gt; 1     0.36081081</span></span>
+<span><span class="co">#&gt; 2     0.21891892</span></span>
+<span><span class="co">#&gt; 3     0.18648649</span></span>
+<span><span class="co">#&gt; 4     0.10270270</span></span>
+<span><span class="co">#&gt; 5     0.07702703</span></span>
+<span><span class="co">#&gt; 6     0.05405405</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -328,99 +363,113 @@ probability of each word given the topic — the <em>generative</em> view,
 dominated by whatever the topic says most often. The class-based TF-IDF
 scores in <code>topic_model$terms</code> are the <em>discriminative</em>
 view: they promote words this topic uses and others do not, and demote
-the corpus-wide vocabulary (“picture”, “choose”) that every feedback
-message shares. Neither list is “the” keywords; a topic is characterized
-by the pair. When the two lists agree, the topic has a vocabulary of its
-own; when they disagree, the counts list is telling you about the corpus
-and only the TF-IDF list about the topic.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+words that recur across many topics — frequent, but saying little about
+any single one. Neither list is “the” keywords; a topic is characterized
+by the pair. When the two lists agree — as they do for topic 1 below,
+whose most frequent and most distinctive words are the same (“picture”,
+“pictures”, “choose”) — the topic has a vocabulary of its own; when they
+disagree, the counts list is telling you about the corpus and only the
+TF-IDF list about the topic.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="cn">NULL</span>, sort_by <span class="op">=</span> <span class="st">"beta"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">beta</span>, <span class="va">topic</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   topic                    label     term rank      score frequency       beta</span></span>
-<span><span class="co">## 1     1 choose / pictures / ones pictures    1 0.12543830      1685 0.11003004</span></span>
-<span><span class="co">## 2     1 choose / pictures / ones   choose    2 0.13402664      1246 0.08136346</span></span>
-<span><span class="co">## 3     1 choose / pictures / ones     ones    3 0.10629994      1045 0.06823821</span></span>
-<span><span class="co">## 4     1 choose / pictures / ones  picture    4 0.07892443       719 0.04695050</span></span>
-<span><span class="co">## 5     1 choose / pictures / ones     pick    5 0.06819370       412 0.02690349</span></span>
-<span><span class="co">## 6     1 choose / pictures / ones   select    6 0.05547671       292 0.01906752</span></span>
-<span><span class="co">## 7     1 choose / pictures / ones     tree    7 0.04311658       239 0.01560663</span></span>
-<span><span class="co">## 8     1 choose / pictures / ones   spider    8 0.04240590       220 0.01436594</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">$</span><span class="va">terms</span>, <span class="va">topic</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   topic                    label     term rank      score frequency</span></span>
-<span><span class="co">## 1     1 choose / pictures / ones   choose    1 0.13402664      1246</span></span>
-<span><span class="co">## 2     1 choose / pictures / ones pictures    2 0.12543830      1685</span></span>
-<span><span class="co">## 3     1 choose / pictures / ones     ones    3 0.10629994      1045</span></span>
-<span><span class="co">## 4     1 choose / pictures / ones  picture    4 0.07892443       719</span></span>
-<span><span class="co">## 5     1 choose / pictures / ones     pick    5 0.06819370       412</span></span>
-<span><span class="co">## 6     1 choose / pictures / ones   select    6 0.05547671       292</span></span>
-<span><span class="co">## 7     1 choose / pictures / ones     tree    7 0.04311658       239</span></span>
-<span><span class="co">## 8     1 choose / pictures / ones   spider    8 0.04240590       220</span></span></code></pre>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">beta</span>, <span class="va">topic</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                       label     term rank      score frequency</span></span>
+<span><span class="co">#&gt; 1     1 picture / pictures / choose pictures    1 0.15734447       130</span></span>
+<span><span class="co">#&gt; 2     1 picture / pictures / choose  picture    2 0.15812657        99</span></span>
+<span><span class="co">#&gt; 3     1 picture / pictures / choose   choose    3 0.15707789        89</span></span>
+<span><span class="co">#&gt; 4     1 picture / pictures / choose     pick    4 0.09026252        35</span></span>
+<span><span class="co">#&gt; 5     1 picture / pictures / choose   select    5 0.07513736        26</span></span>
+<span><span class="co">#&gt; 6     1 picture / pictures / choose     tree    6 0.03853198        14</span></span>
+<span><span class="co">#&gt; 7     1 picture / pictures / choose   number    7 0.04088748        13</span></span>
+<span><span class="co">#&gt; 8     1 picture / pictures / choose    right    8 0.03497847        13</span></span>
+<span><span class="co">#&gt;         beta</span></span>
+<span><span class="co">#&gt; 1 0.13360740</span></span>
+<span><span class="co">#&gt; 2 0.10174717</span></span>
+<span><span class="co">#&gt; 3 0.09146968</span></span>
+<span><span class="co">#&gt; 4 0.03597122</span></span>
+<span><span class="co">#&gt; 5 0.02672148</span></span>
+<span><span class="co">#&gt; 6 0.01438849</span></span>
+<span><span class="co">#&gt; 7 0.01336074</span></span>
+<span><span class="co">#&gt; 8 0.01336074</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">$</span><span class="va">terms</span>, <span class="va">topic</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>, <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                       label       term rank      score frequency</span></span>
+<span><span class="co">#&gt; 1     1 picture / pictures / choose    picture    1 0.15812657        99</span></span>
+<span><span class="co">#&gt; 2     1 picture / pictures / choose   pictures    2 0.15734447       130</span></span>
+<span><span class="co">#&gt; 3     1 picture / pictures / choose     choose    3 0.15707789        89</span></span>
+<span><span class="co">#&gt; 4     1 picture / pictures / choose       pick    4 0.09026252        35</span></span>
+<span><span class="co">#&gt; 5     1 picture / pictures / choose     select    5 0.07513736        26</span></span>
+<span><span class="co">#&gt; 6     1 picture / pictures / choose     number    6 0.04088748        13</span></span>
+<span><span class="co">#&gt; 7     1 picture / pictures / choose       tree    7 0.03853198        14</span></span>
+<span><span class="co">#&gt; 8     1 picture / pictures / choose watermelon    8 0.03834595        12</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="the-topics-at-a-glance">The topics at a glance<a class="anchor" aria-label="anchor" href="#the-topics-at-a-glance"></a>
 </h2>
-<p>The two-panel drawing this tutorial once carried by hand is now built
-into the package. <code>plot(topic_model, type = "terms")</code> shows
-each topic’s distinctive class-based TF-IDF terms, each bar annotated
-with its score:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<p><code>plot(topic_model, type = "terms")</code> shows each topic’s
+distinctive class-based TF-IDF terms, each bar annotated with its
+score:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"terms"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="levebee_vignette_files/figure-html/plot-terms-1.png" class="r-plt" alt="" width="100%"></p>
-<p><code>type = "fit"</code> is the whole per-topic report in one
-figure: for every topic (one row) it draws all three keyword views — raw
-within-topic count, class-based TF-IDF, and generative probability
-(beta) — followed by the topic’s centroid-nearest messages with their
-cosine similarity to the centroid. Reading across a row shows a label,
-why it is distinctive, and the evidence that supports it.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
-<p><img src="levebee_vignette_files/figure-html/plot-fit-1.png" class="r-plt" alt="" width="100%">
-The document text is clipped to fit; for the full, untruncated evidence
+<p><code>type = "fit"</code> is the whole per-topic report: all three
+keyword views — raw within-topic count, class-based TF-IDF, and
+generative probability (beta) — alongside the topic’s centroid-nearest
+messages, one row per topic:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<p><img src="levebee_vignette_files/figure-html/plot-fit-1.png" class="r-plt" alt="" width="100%"></p>
+<p>With <code>per_topic = TRUE</code> each topic becomes its own figure,
+the documents stacked beneath the terms — easier to read one topic at a
+time:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, per_topic <span class="op">=</span> <span class="cn">TRUE</span>, topics <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<p><img src="levebee_vignette_files/figure-html/plot-fit-single-1.png" class="r-plt" alt="" width="100%"></p>
+<p>The plot text is clipped to fit; for the full, untruncated evidence
 behind each topic, ask for the representatives directly:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">$</span><span class="va">representatives</span>, <span class="va">rank</span> <span class="op">&lt;=</span> <span class="fl">2</span><span class="op">)</span><span class="op">[</span></span>
 <span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"topic"</span>, <span class="st">"rank"</span>, <span class="st">"text"</span>, <span class="st">"distance"</span><span class="op">)</span></span>
-<span><span class="op">]</span></span></code></pre></div>
-<pre><code><span><span class="co">##    topic rank</span></span>
-<span><span class="co">## 1      1    1</span></span>
-<span><span class="co">## 2      1    2</span></span>
-<span><span class="co">## 6      2    1</span></span>
-<span><span class="co">## 7      2    2</span></span>
-<span><span class="co">## 11     3    1</span></span>
-<span><span class="co">## 12     3    2</span></span>
-<span><span class="co">## 16     4    1</span></span>
-<span><span class="co">## 17     4    2</span></span>
-<span><span class="co">## 21     5    1</span></span>
-<span><span class="co">## 22     5    2</span></span>
-<span><span class="co">## 26     6    1</span></span>
-<span><span class="co">## 27     6    2</span></span>
-<span><span class="co">##                                                                                        text</span></span>
-<span><span class="co">## 1       Where is the butterfly and the carrot? Pick all the pictures that are between them.</span></span>
-<span><span class="co">## 2           Where is the swan and the candy? Choose all the pictures that are between them.</span></span>
-<span><span class="co">## 6                           What does “all the ones between the leaf and the unicorn” mean?</span></span>
-<span><span class="co">## 7                                    What does “all between the candy and the flower” mean?</span></span>
-<span><span class="co">## 11              There are eight pictures in the gray box. Where is there one fewer picture?</span></span>
-<span><span class="co">## 12            There are eight pictures in the gray box. Where are there two fewer pictures?</span></span>
-<span><span class="co">## 16                              What does “all the ones between the fly and the deer” mean?</span></span>
-<span><span class="co">## 17                                    What does "all between the cow and the balloon" mean?</span></span>
-<span><span class="co">## 21                                  It's an animal, doesn't have a hat, and is not sitting.</span></span>
-<span><span class="co">## 22                                 It's an animal, doesn't have a hat, and is not standing.</span></span>
-<span><span class="co">## 26               To be on the grass means to stand or lie on the soft green ground outside.</span></span>
-<span><span class="co">## 27 To be on the grass means to lie or stand on a soft green thing that grows on the ground.</span></span>
-<span><span class="co">##     distance</span></span>
-<span><span class="co">## 1  0.2301158</span></span>
-<span><span class="co">## 2  0.2317346</span></span>
-<span><span class="co">## 6  0.2163106</span></span>
-<span><span class="co">## 7  0.2185925</span></span>
-<span><span class="co">## 11 0.1244105</span></span>
-<span><span class="co">## 12 0.1276533</span></span>
-<span><span class="co">## 16 0.2234504</span></span>
-<span><span class="co">## 17 0.2288911</span></span>
-<span><span class="co">## 21 0.1548222</span></span>
-<span><span class="co">## 22 0.1596835</span></span>
-<span><span class="co">## 26 0.1740130</span></span>
-<span><span class="co">## 27 0.1745096</span></span></code></pre>
+<span><span class="op">]</span></span>
+<span><span class="co">#&gt;    topic rank</span></span>
+<span><span class="co">#&gt; 1      1    1</span></span>
+<span><span class="co">#&gt; 2      1    2</span></span>
+<span><span class="co">#&gt; 6      2    1</span></span>
+<span><span class="co">#&gt; 7      2    2</span></span>
+<span><span class="co">#&gt; 11     3    1</span></span>
+<span><span class="co">#&gt; 12     3    2</span></span>
+<span><span class="co">#&gt; 16     4    1</span></span>
+<span><span class="co">#&gt; 17     4    2</span></span>
+<span><span class="co">#&gt; 21     5    1</span></span>
+<span><span class="co">#&gt; 22     5    2</span></span>
+<span><span class="co">#&gt; 26     6    1</span></span>
+<span><span class="co">#&gt; 27     6    2</span></span>
+<span><span class="co">#&gt;                                                                                                              text</span></span>
+<span><span class="co">#&gt; 1                                   Where is the cow and the cake? Choose all the pictures that are between them.</span></span>
+<span><span class="co">#&gt; 2                          Where is the second and the fourth picture? Choose the pictures that are between them.</span></span>
+<span><span class="co">#&gt; 6                                                                All the ones between the cat and the strawberry.</span></span>
+<span><span class="co">#&gt; 7                                                                    All the ones between the piglet and the dog.</span></span>
+<span><span class="co">#&gt; 11                                                What does “all the ones between the leaf and the unicorn” mean?</span></span>
+<span><span class="co">#&gt; 12                                              What does “all the ones between the dog and the strawberry” mean?</span></span>
+<span><span class="co">#&gt; 16                                      Are you sure you have fewer pictures in the red box than in the blue one?</span></span>
+<span><span class="co">#&gt; 17 It’s not enough to just have more—there must be exactly two more pictures in the red box than in the blue box.</span></span>
+<span><span class="co">#&gt; 21                                         In the top middle box, it means something is in the middle at the top.</span></span>
+<span><span class="co">#&gt; 22                                                             Do you know what “at the top in the middle” means?</span></span>
+<span><span class="co">#&gt; 26                                                       It is not a person, does not have a hat, and is sitting.</span></span>
+<span><span class="co">#&gt; 27                                                             It’s not a person, it has a hat, and it’s sitting.</span></span>
+<span><span class="co">#&gt;     distance</span></span>
+<span><span class="co">#&gt; 1  0.2023061</span></span>
+<span><span class="co">#&gt; 2  0.2197193</span></span>
+<span><span class="co">#&gt; 6  0.1748744</span></span>
+<span><span class="co">#&gt; 7  0.1755226</span></span>
+<span><span class="co">#&gt; 11 0.1835523</span></span>
+<span><span class="co">#&gt; 12 0.1931901</span></span>
+<span><span class="co">#&gt; 16 0.1413591</span></span>
+<span><span class="co">#&gt; 17 0.1472757</span></span>
+<span><span class="co">#&gt; 21 0.2878022</span></span>
+<span><span class="co">#&gt; 22 0.3234709</span></span>
+<span><span class="co">#&gt; 26 0.1564578</span></span>
+<span><span class="co">#&gt; 27 0.1602140</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="where-to-go-from-here">Where to go from here<a class="anchor" aria-label="anchor" href="#where-to-go-from-here"></a>
@@ -431,12 +480,15 @@ topics without refitting; <code><a href="../reference/topic_membership.html">top
 hard assignment with graded probabilities when a message sits between
 topics; and <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> combined with
 <code><a href="../reference/segment.html">segment()</a></code> shows when a single multi-sentence message spans
-several feedback types. For multilingual work on the <em>source</em>
-messages (the <code>feedback</code> column spans ten languages), change
+several feedback types. When you explore many models on the same corpus
+— the sweep above, or several term settings —
+<code><a href="../reference/topic_corpus.html">topic_corpus()</a></code> embeds and tokenizes the messages once and
+every fit reuses that work, so the exploration costs one corpus pass
+rather than one per model. For multilingual work on the <em>source</em>
+messages (the <code>feedback</code> column spans ten languages), swap
 one argument —
-<code>encode(corpus$text, model = "paraphrase-multilingual-MiniLM-L12-v2")</code>
+<code>topics(corpus$text, n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")</code>
 — and the rest of this document runs unchanged.</p>
-<pre><code><span><span class="co">## [1] "R version 4.6.1 (2026-06-24)"</span></span></code></pre>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -445,7 +497,7 @@ one argument —
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Mohammed Saqr.</p>
+  <p>Developed by Mohammed Saqr, Sonsoles López-Pernas.</p>
 </div>
 
 <div class="pkgdown-footer-right">

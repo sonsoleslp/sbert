@@ -2,6 +2,64 @@
 
 ## sbert 0.5.2
 
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+  and [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+  gain a `cores` argument for parallel tokenization;
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+  also fits its independent candidates in parallel. Because document
+  tokenization and per-candidate fitting are deterministic and
+  order-preserving, results are byte-identical for any core count —
+  `cores` changes only speed, never output. Parallelism uses
+  [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html) on
+  Unix-alikes and falls back to serial on Windows and for small corpora;
+  the default is `cores = 1`. On an 8-core machine a five-count sweep on
+  15,000 documents drops from about 12 s to 7 s.
+- Added
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md):
+  prepare a corpus once — embedding every document and tokenizing it for
+  term scoring — and reuse it across many models.
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+  accept the prepared corpus in place of raw text and skip both the
+  encoding and the tokenization, which previously repeated on every
+  call. A sweep or hand-written loop over topic counts now costs one
+  tokenization (and one encoding) plus the per-model clustering, rather
+  than repeating the whole corpus pass per model; the speedup grows with
+  the number of models fitted. Results are byte-identical to preparing
+  the corpus inside each call, and
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+  now shares one prepared corpus across all candidates internally.
+- [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+  no longer re-tokenizes the corpus inside
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) on
+  every candidate — the dominant cost of a sweep.
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+  gains an optional `token_lists` argument so the shared corpus
+  tokenization is reused; scores are byte-identical. Combined with the
+  corpus reuse above, a five-count sweep on 15,000 documents dropped
+  from about 164 s to 12 s (~13x) with no change to any result.
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md) (and
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+  which calls it per candidate) no longer exhausts memory or stalls on
+  large corpora. The farthest-point centroid initializer was rewritten
+  from an O(n_topics^2 \* n \* d) recompute-everything pass — which
+  repeatedly allocated full document-by-dimension matrices and could
+  crash the R session — to an incremental O(n_topics \* n \* d) pass
+  that keeps a running nearest-centroid distance (about 24x faster at
+  20k documents, with a fraction of the peak memory). The expensive
+  up-front distinct-row dedup was dropped in favour of an exact in-loop
+  check, and per-document centroid cosines are now vectorized. Topic
+  assignments, terms, and representatives are bit-identical to previous
+  versions.
+- Added the `covid` dataset: 4,170 COVID-19 research abstracts
+  (2020-2024) on education, children, schools, and society, each with a
+  publication year. Editorial notices (retractions, corrections, errata)
+  are removed during preparation; 323 records carry a
+  `"[No abstract available]"` placeholder and 3,671 abstracts are
+  distinct. A companion pkgdown article, “Topic Modeling COVID-19
+  Research Abstracts”, walks the full sweep-fit-read workflow.
 - Added `plot(topic_model, type = "representatives")`, a per-topic
   ranked text list of the centroid-nearest documents (with their cosine
   similarity to the centroid), an `n_representatives` argument, and
@@ -16,7 +74,7 @@
   numbers, and `per_topic = TRUE` draws a separate figure for each topic
   instead of one gridded figure.
 - README updated for the 0.5 API: data-frame input to
-  [`topics()`](https://pak.dynasite.org/sbert/reference/topics.md), the
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md), the
   retained-model sweep with
   [`fitted()`](https://rdrr.io/r/stats/fitted.values.html), and
   [`terms()`](https://rdrr.io/r/stats/terms.html) retuning without a
@@ -26,16 +84,16 @@
   names.
 - Corrected the model count in the README from thirteen to fourteen.
 - Named the `n_topics` argument in the README’s
-  [`reduce_topics()`](https://pak.dynasite.org/sbert/reference/reduce_topics.md)
+  [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
   example, and stopped shadowing
-  [`topic_hierarchy()`](https://pak.dynasite.org/sbert/reference/topic_hierarchy.md)
+  [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
   with a variable of the same name.
 
 ## sbert 0.5.1
 
 - `R CMD check --as-cran` is clean: 0 errors, 0 warnings, 0 notes.
 - Documented the `column` argument of
-  [`topics()`](https://pak.dynasite.org/sbert/reference/topics.md).
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 - Repaired a malformed `\eqn` macro in the
   [`terms()`](https://rdrr.io/r/stats/terms.html) documentation.
 - Qualified [`graphics::par()`](https://rdrr.io/r/graphics/par.html) in
@@ -52,55 +110,55 @@ Every exported function lost its prefix. The package has never been
 released, so the old names were removed outright rather than deprecated:
 
 `sbert_topics()` is now
-[`topics()`](https://pak.dynasite.org/sbert/reference/topics.md),
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md),
 `sbert_encode()`
-[`encode()`](https://pak.dynasite.org/sbert/reference/encode.md),
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md),
 `sbert_segment()`
-[`segment()`](https://pak.dynasite.org/sbert/reference/segment.md),
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md),
 `sbert_blend()`
-[`blend()`](https://pak.dynasite.org/sbert/reference/blend.md),
+[`blend()`](https://sonsoles.me/sbert/reference/blend.md),
 `sbert_keywords()`
-[`keywords()`](https://pak.dynasite.org/sbert/reference/keywords.md),
+[`keywords()`](https://sonsoles.me/sbert/reference/keywords.md),
 `sbert_dedupe()`
-[`dedupe()`](https://pak.dynasite.org/sbert/reference/dedupe.md),
+[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md),
 `sbert_coherence()`
-[`coherence()`](https://pak.dynasite.org/sbert/reference/coherence.md),
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md),
 `sbert_select_topics()`
-[`select_topics()`](https://pak.dynasite.org/sbert/reference/select_topics.md),
+[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
 `sbert_representatives()`
-[`representatives()`](https://pak.dynasite.org/sbert/reference/representatives.md),
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
 `sbert_load_model()`
-[`load_model()`](https://pak.dynasite.org/sbert/reference/load_model.md),
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md),
 `sbert_models()`
-[`models()`](https://pak.dynasite.org/sbert/reference/models.md), and so
-on for the cache and runtime verbs.
+[`models()`](https://sonsoles.me/sbert/reference/models.md), and so on
+for the cache and runtime verbs.
 
 Six names are qualified because the bare form collides with a package
 this audience is likely to have attached — `igraph`, `quanteda`,
 `purrr`:
 
 - `sbert_membership()` -\>
-  [`topic_membership()`](https://pak.dynasite.org/sbert/reference/topic_membership.md)
+  [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
 - `sbert_diversity()` -\>
-  [`topic_diversity()`](https://pak.dynasite.org/sbert/reference/topic_diversity.md)
+  [`topic_diversity()`](https://sonsoles.me/sbert/reference/topic_diversity.md)
 - `sbert_hierarchy()` -\>
-  [`topic_hierarchy()`](https://pak.dynasite.org/sbert/reference/topic_hierarchy.md)
+  [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
 - `sbert_similarity()` -\>
-  [`topic_similarity()`](https://pak.dynasite.org/sbert/reference/topic_similarity.md)
+  [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
 - `sbert_reduce()` -\>
-  [`reduce_topics()`](https://pak.dynasite.org/sbert/reference/reduce_topics.md)
+  [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
 - `sbert_stopwords()` -\>
-  [`stop_words()`](https://pak.dynasite.org/sbert/reference/stop_words.md)
+  [`stop_words()`](https://sonsoles.me/sbert/reference/stop_words.md)
 
 Two are qualified because the bare form would mask base R:
 `sbert_gamma()` -\>
-[`topic_gamma()`](https://pak.dynasite.org/sbert/reference/topic_gamma.md),
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md),
 `sbert_palette()` -\>
-[`topic_palette()`](https://pak.dynasite.org/sbert/reference/topic_palette.md).
+[`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md).
 
 Class names keep the prefix (`sbert_topic_model`, `sbert_model`), so S3
 methods read
-[`terms.sbert_topic_model()`](https://pak.dynasite.org/sbert/reference/terms.sbert_topic_model.md).
+[`terms.sbert_topic_model()`](https://sonsoles.me/sbert/reference/terms.sbert_topic_model.md).
 
 ### New: `terms()` retunes without refitting
 
@@ -121,14 +179,14 @@ returned frame carries `beta`, which absorbs the removed `sbert_beta()`.
 
 ### Verbs take your data frame and keep what they compute
 
-- [`topics()`](https://pak.dynasite.org/sbert/reference/topics.md)
-  accepts a data frame plus `column =` naming the text column. Remaining
-  columns ride along into `$documents`. Rows whose text is missing,
-  blank, or a `[NO ABSTRACT AVAILABLE]` placeholder are dropped once,
-  and any supplied `embeddings` are subset to match.
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md) accepts a
+  data frame plus `column =` naming the text column. Remaining columns
+  ride along into `$documents`. Rows whose text is missing, blank, or a
+  `[NO ABSTRACT AVAILABLE]` placeholder are dropped once, and any
+  supplied `embeddings` are subset to match.
 - `keep_embeddings` now defaults to `TRUE`.
-  [`topic_membership()`](https://pak.dynasite.org/sbert/reference/topic_membership.md),
-  [`reduce_topics()`](https://pak.dynasite.org/sbert/reference/reduce_topics.md)
+  [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md),
+  [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
   and `plot(type = "map")` previously failed on a freshly fitted model
   and told the user to refit — which meant re-encoding.
 - `label` is carried into `$documents`, `$terms` and `$representatives`,

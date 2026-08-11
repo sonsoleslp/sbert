@@ -9,7 +9,14 @@ topic models (Mimno et al. 2011).
 ## Usage
 
 ``` r
-coherence(object, measure = c("npmi", "umass"), n_terms = 10L, smoothing = 1)
+coherence(
+  object,
+  measure = c("npmi", "umass"),
+  n_terms = 10L,
+  smoothing = 1,
+  token_lists = NULL,
+  cores = 1L
+)
 ```
 
 ## Arguments
@@ -32,6 +39,20 @@ coherence(object, measure = c("npmi", "umass"), n_terms = 10L, smoothing = 1)
 - smoothing:
 
   Additive smoothing for the UMass co-occurrence count.
+
+- token_lists:
+
+  Optional precomputed per-document token lists, aligned to
+  \`object\$documents\`, that skip re-tokenizing the corpus (as produced
+  by \[topic_corpus()\]). Leave \`NULL\` to tokenize internally; the
+  score is identical either way.
+
+- cores:
+
+  Number of forked worker processes for tokenization when it is not
+  already cached. Default \`1\` (serial). Values above one use
+  \`parallel::mclapply\` on Unix-alikes and fall back to serial
+  elsewhere; the result is identical regardless of the count.
 
 ## Value
 

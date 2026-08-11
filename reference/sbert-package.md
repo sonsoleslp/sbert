@@ -10,18 +10,21 @@ terms. No Python installation is required.
 
 Useful links:
 
-- <https://mohsaqr.github.io/sbert/>
+- <https://sonsoles.me/sbert>
 
-- <https://github.com/mohsaqr/sbert>
+- <https://github.com/sonsoleslp/sbert>
 
-- Report bugs at <https://github.com/mohsaqr/sbert/issues>
+- Report bugs at <https://github.com/sonsoleslp/sbert/issues>
 
 ## Author
 
-**Maintainer**: Mohammed Saqr <mohammed.saqr@uef.fi>
-([ORCID](https://orcid.org/0000-0001-5881-3109)) \[copyright holder\]
+**Maintainer**: Sonsoles López-Pernas <sonsoles.lopez@uef.fi>
+([ORCID](https://orcid.org/0000-0002-9621-1392)) \[copyright holder\]
 
 Authors:
+
+- Sonsoles López-Pernas <sonsoles.lopez@uef.fi>
+  ([ORCID](https://orcid.org/0000-0002-9621-1392)) \[copyright holder\]
 
 - Mohammed Saqr <mohammed.saqr@uef.fi>
   ([ORCID](https://orcid.org/0000-0001-5881-3109)) \[copyright holder\]

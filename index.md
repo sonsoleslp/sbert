@@ -3,7 +3,7 @@
 `sbert` computes genuine Sentence-BERT embeddings in R without Python.
 Fourteen models are supported, each pinned to an immutable revision and
 verified by SHA-256
-([`models()`](https://pak.dynasite.org/sbert/reference/models.md) lists
+([`models()`](https://sonsoles.me/sbert/reference/models.md) lists
 them): the classic `sentence-transformers` family (`all-MiniLM-L6-v2` —
 the default — `all-MiniLM-L12-v2`, `paraphrase-MiniLM-L3-v2`,
 `multi-qa-MiniLM-L6-cos-v1`, `all-mpnet-base-v2`, and the multilingual
@@ -37,15 +37,14 @@ embeddings <- encode(sentences)
 topic_similarity(embeddings)
 ```
 
-[`encode()`](https://pak.dynasite.org/sbert/reference/encode.md) uses
-the default `all-MiniLM-L6-v2` and asks once before its first download;
-pick any other pinned model by name
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) uses the
+default `all-MiniLM-L6-v2` and asks once before its first download; pick
+any other pinned model by name
 (`encode(sentences, model = "bge-small-en-v1.5")` — see
-[`models()`](https://pak.dynasite.org/sbert/reference/models.md) for the
+[`models()`](https://sonsoles.me/sbert/reference/models.md) for the
 menu). Loaded models are reused for the whole session. Explicit
-[`model_download()`](https://pak.dynasite.org/sbert/reference/model_download.md)
-/
-[`load_model()`](https://pak.dynasite.org/sbert/reference/load_model.md)
+[`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
+/ [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
 remain available for scripted installs and backend/thread control.
 
 Semantic topic modeling uses the same native embeddings, deterministic
@@ -60,9 +59,48 @@ topic_model <- topics(
 )
 
 topic_model$topics
-topic_model$terms
-topic_model$representatives
 ```
+
+You can run the whole thing with no download by passing a precomputed
+embedding matrix. Here two clearly separated groups — cooking and
+astronomy — fall out, each labelled by its most distinctive terms:
+
+``` r
+
+sentences <- c(
+  "Simmer the soup with onions and carrots",
+  "This soup recipe needs a pinch of salt",
+  "Chop the carrots and dice the onions",
+  "Roast the chicken with a simple recipe",
+  "The telescope revealed a distant galaxy",
+  "Astronomers aimed the telescope at the sky",
+  "A bright comet crossed the night sky",
+  "Stars filled the dark night sky"
+)
+# Two-dimensional stand-in embeddings, so this needs no model download.
+embeddings <- rbind(
+  c(0.98, 0.02), c(0.95, 0.05), c(0.93, 0.07), c(0.90, 0.10),
+  c(0.05, 0.98), c(0.08, 0.95), c(0.10, 0.92), c(0.03, 0.97)
+)
+topic_model <- topics(sentences, n_topics = 2, embeddings = embeddings)
+topic_model$topics
+#>   topic                     label n_documents proportion    withinss
+#> 1     1 carrots / onions / recipe           4        0.5 0.004327763
+#> 2     2   sky / night / telescope           4        0.5 0.003540644
+```
+
+`plot(type = "fit")` lays the whole model out at a glance — one row per
+topic, its three keyword views (raw count, class-based TF-IDF, and
+generative probability) beside its representative documents:
+
+``` r
+
+plot(topic_model, type = "fit")
+```
+
+![Topic fit plot: two rows, one per topic, each showing count, TF-IDF,
+and beta term bars next to representative
+documents.](reference/figures/README-topics-fit-1.png)
 
 Pass a data frame instead and name the text column: every other column
 rides along into `$documents`, and rows whose text is missing, blank, or
@@ -75,7 +113,7 @@ topic_model <- topics(articles, column = "abstract", n_topics = 40)
 
 There is no correct topic count, so choose it from a table rather than
 by habit.
-[`select_topics()`](https://pak.dynasite.org/sbert/reference/select_topics.md)
+[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
 keeps every model it fits, and
 [`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes the one
 you want without refitting:
@@ -113,7 +151,7 @@ topic_gamma(topic_model, sentences)   # per-document topic mixture
 ```
 
 Beyond the curated registry,
-[`load_custom()`](https://pak.dynasite.org/sbert/reference/load_custom.md)
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
 loads any public Hugging Face repository with an ONNX encoder export,
 auto-detecting its configuration and pinning it locally on first use
 (“trust on first use”):
@@ -206,24 +244,29 @@ segment(
   "We had two goals: speed and clarity; both were met. See Fig. 3.",
   level = "clause"
 )
+#>   document_id document_name segment               text
+#> 1           1                     1  We had two goals:
+#> 2           1                     2 speed and clarity;
+#> 3           1                     3     both were met.
+#> 4           1                     4        See Fig. 3.
 ```
 
-[`segment()`](https://pak.dynasite.org/sbert/reference/segment.md)
-returns one row per segment with the source document index, guarding
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) returns
+one row per segment with the source document index, guarding
 abbreviations
-([`abbreviations()`](https://pak.dynasite.org/sbert/reference/abbreviations.md)),
+([`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)),
 decimals, and parentheticals so they never end a sentence. The clause
 level (the default) also splits at subordinating hinges while keeping
 comma enumerations whole.
 
 Segments can carry their document’s context into the embedding:
-[`blend()`](https://pak.dynasite.org/sbert/reference/blend.md) keeps
-`alpha` of each segment’s context-orthogonal residual and inherits the
-rest from the parent document vector, so a sentence that is ambiguous in
-isolation embeds near its document’s subject while keeping what it alone
-says. The result drops into
-[`topics()`](https://pak.dynasite.org/sbert/reference/topics.md) and
-[`representatives()`](https://pak.dynasite.org/sbert/reference/representatives.md)
+[`blend()`](https://sonsoles.me/sbert/reference/blend.md) keeps `alpha`
+of each segment’s context-orthogonal residual and inherits the rest from
+the parent document vector, so a sentence that is ambiguous in isolation
+embeds near its document’s subject while keeping what it alone says. The
+result drops into
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
 unchanged:
 
 ``` r
@@ -240,41 +283,62 @@ trying the full workflow offline:
 ``` r
 
 head(feedback_translations)
+#>                                                       feedback
+#> 1                                Víš, co znamená o jeden více?
+#> 2                   V červeném má být o dva více než v modrém.
+#> 3                     Když to není člověk, tak co to může být?
+#> 4                                Co znamená všechny za prvním?
+#> 5 V šedém rámečku je pět obrázků. Kde je o jeden obrázek méně?
+#> 6                              Podle čeho se obrázky střídají?
+#>                                                                 translation
+#> 1                                        Do you know what “one more” means?
+#> 2                     There should be two more in the red than in the blue.
+#> 3                                   If it’s not a person, what could it be?
+#> 4                            What does “everyone after the first one” mean?
+#> 5 There are five pictures in the gray box. Where is there one picture less?
+#> 6                                            How do the pictures alternate?
 ```
 
-Model downloads range from 69 MB (`paraphrase-MiniLM-L3-v2`) to 1.1 GB
-(`paraphrase-multilingual-mpnet-base-v2`) and are stored under the
-platform-specific path returned by
-[`cache_dir()`](https://pak.dynasite.org/sbert/reference/cache_dir.md).
-Every artifact is verified by byte size and SHA-256 before it is used.
+A second dataset, `covid`, holds 4,170 COVID-19 research abstracts
+(2020-2024) with publication years — a longer, more technical corpus for
+topic modeling and temporal analysis, showcased in the “Topic Modeling
+COVID-19 Research Abstracts” article.
+
+Model downloads range from 31 MB (`potion-base-8M`) to 1.3 GB
+(`mxbai-embed-large-v1`) and are stored under the platform-specific path
+returned by
+[`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md). Every
+artifact is verified by byte size and SHA-256 before it is used.
 
 ## Tutorial
 
 A full worked tutorial ships with the package and runs offline on the
-bundled `feedback_translations` data — choosing a topic count, reading
-the topics, checking quality, and merging down the topic tree:
+bundled `feedback_translations` data — building a six-topic model,
+checking its coherence and diversity, reading each topic through two
+keyword views, and confirming the labels with representative messages:
 
 ``` r
 
-vignette("topic-modeling", package = "sbert")
+vignette("levebee_vignette", package = "sbert")
 ```
 
 ## Supported scope
 
 - Models: fourteen pinned models (see
-  [`models()`](https://pak.dynasite.org/sbert/reference/models.md)),
-  classic and modern, English and multilingual, 384 to 1,024 dimensions,
-  128 to 8,192 tokens, 69 MB to 1.3 GB
+  [`models()`](https://sonsoles.me/sbert/reference/models.md)), classic
+  and modern, English and multilingual, 256 to 1,024 dimensions, 128 to
+  8,192 tokens, 31 MB to 1.3 GB
 - Pooling: attention-mask-aware mean pooling or CLS pooling, per model
 - Prefixes: model-pinned input prefixes applied automatically (E5,
   Nomic)
 - Custom models:
-  [`load_custom()`](https://pak.dynasite.org/sbert/reference/load_custom.md)
+  [`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
   for any HF ONNX encoder repository, with trust-on-first-use local
   pinning
 - Tokenization: each model’s official `tokenizer.json`, truncated to the
   model’s published maximum sequence length
-- Pooling: attention-mask-aware mean pooling
+- Static models: `potion-base-8M`, a pure-R Model2Vec token-lookup
+  embedder with no ONNX Runtime dependency
 - Normalization: row-wise L2 normalization by default
 - Segmentation: deterministic sentence, clause, and phrase splitting
   with an abbreviation gazetteer and decimal/parenthetical guards
@@ -287,8 +351,9 @@ vignette("topic-modeling", package = "sbert")
   segment-based document-topic `gamma`
 - Topic evaluation: intrinsic UMass and NPMI coherence, and topic
   diversity
-- Topic visualization: deterministic base-graphics size, term, and MDS
-  map views
+- Topic visualization: deterministic base-graphics views — topic sizes,
+  term bars, representative documents, a per-topic fit report, and an
+  MDS document map
 - Backends: those exposed by `onnxr`, with CPU as the portable default
 
 Arbitrary unpinned Hugging Face models and training/fine-tuning are

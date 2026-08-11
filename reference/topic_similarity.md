@@ -21,7 +21,7 @@ topic_similarity(x, y = NULL)
 
 ## Value
 
-A numeric topic_similarity matrix.
+A numeric similarity matrix.
 
 ## Examples
 

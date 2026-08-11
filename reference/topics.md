@@ -28,7 +28,8 @@ topics(
   keep_embeddings = TRUE,
   seeds = NULL,
   seed_embeddings = NULL,
-  fixed_seeds = FALSE
+  fixed_seeds = FALSE,
+  cores = 1L
 )
 ```
 
@@ -139,6 +140,15 @@ topics(
   topics; \`n_topics\` must equal the number of seeds, and topics may be
   empty). When \`FALSE\` (default), seeds only initialize the clustering
   and the data can move the centroids.
+
+- cores:
+
+  Number of forked worker processes used to tokenize documents for term
+  scoring. Default \`1\` (serial). Values above one use
+  \`parallel::mclapply\` on Unix-alikes and fall back to serial on
+  Windows or for small corpora; the tokenization — and therefore every
+  result — is identical regardless of the count. Ignored when a prepared
+  \[topic_corpus()\] is supplied (its tokens are already computed).
 
 ## Value
 

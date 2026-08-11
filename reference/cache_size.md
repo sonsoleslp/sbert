@@ -23,5 +23,5 @@ cache root.
 
 ``` r
 cache_size(tempdir())
-#> [1] 701232
+#> [1] 3503241
 ```

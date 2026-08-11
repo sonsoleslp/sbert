@@ -45,7 +45,7 @@ An object of class \`sbert_model\`.
 ## Examples
 
 ``` r
-if (FALSE) { # interactive()
+if (FALSE) { # \dontrun{
 model <- load_model()
-}
+} # }
 ```

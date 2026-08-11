@@ -46,8 +46,8 @@ dimension of the loaded model.
 ## Examples
 
 ``` r
-if (FALSE) { # interactive()
+if (FALSE) { # \dontrun{
 model <- load_model()
 embeddings <- encode(c("A short sentence.", "Another sentence."), model)
-}
+} # }
 ```

@@ -2,9 +2,8 @@
 
 Fits \[topics()\] once per candidate topic count — deterministically, on
 one shared set of embeddings — and returns the quality metrics that
-justify a granularity choice: mean topic coherence, topic
-topic_diversity, and the share of embedding variance separated between
-topics.
+justify a granularity choice: mean topic coherence, topic diversity, and
+the share of embedding variance separated between topics.
 
 ## Usage
 
@@ -19,6 +18,7 @@ select_topics(
   n_representatives = 1L,
   keep_models = TRUE,
   batch_size = 32L,
+  cores = 1L,
   ...
 )
 ```
@@ -27,7 +27,10 @@ select_topics(
 
 - text:
 
-  A character vector of documents.
+  A character vector of documents, or a prepared \[topic_corpus()\].
+  Passing a corpus (or letting \`select_topics()\` build one internally)
+  embeds and tokenizes the documents once and reuses that work across
+  every candidate, instead of re-tokenizing per candidate.
 
 - n_topics:
 
@@ -69,6 +72,14 @@ select_topics(
 
   Number of texts encoded per model call when encoding is needed.
   Default \`32\`.
+
+- cores:
+
+  Number of forked worker processes. Default \`1\` (serial). Above one,
+  the shared corpus is tokenized in parallel and the candidates — which
+  are independent and deterministic — are fitted in parallel, on
+  Unix-alikes (serial fallback on Windows). Results are identical for
+  any core count.
 
 - ...:
 

@@ -19,7 +19,8 @@ models(detail = FALSE)
   returns the menu (\`model\`, \`dimensions\`, \`max_tokens\`,
   \`languages\`, \`size_mb\`); \`TRUE\` adds \`pooling\` (\`"mean"\` or
   \`"cls"\`), \`prefix\` (text automatically prepended by \[encode()\]),
-  \`license\`, \`id\`, and \`revision\`.
+  \`engine\` (\`"onnx"\` or \`"static"\`), \`license\`, \`id\`, and
+  \`revision\`.
 
 ## Value
 

@@ -24,7 +24,7 @@ The result returned by \[onnxr::onnx_install()\], invisibly.
 ## Examples
 
 ``` r
-if (FALSE) { # interactive()
+if (FALSE) { # \dontrun{
 install_runtime()
-}
+} # }
 ```

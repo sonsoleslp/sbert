@@ -42,7 +42,7 @@ Invisibly, the model directory.
 ## Examples
 
 ``` r
-if (FALSE) { # interactive()
+if (FALSE) { # \dontrun{
 model_download()
-}
+} # }
 ```
