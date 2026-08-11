@@ -1,0 +1,216 @@
+---
+title: "Parallel and High-Throughput Topic Modeling"
+subtitle: "Running sbert at full speed without changing a single result"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+    theme: flatly
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+library(sbert)
+```
+
+<style>
+body { color: #25364a; font-size: 15px; }
+h1, h2, h3 { color: #153e5c; }
+.callout { background: #edf8f5; border-left: 6px solid #238b78; border-radius: 5px; padding: 15px 18px; margin: 20px 0; }
+.warn { background: #fff7dd; border-left: 6px solid #d99000; border-radius: 5px; padding: 15px 18px; margin: 20px 0; }
+table { font-size: 14px; }
+th { background: #247ba0 !important; color: #fff !important; }
+code { color: #14514a; }
+</style>
+
+A topic model in **sbert** is built in three stages, and each scales
+differently:
+
+1. **Encode** — text becomes Sentence-BERT vectors, through the ONNX model.
+2. **Tokenize** — text becomes terms, for the topic labels and coherence.
+3. **Cluster** — vectors become topics, through deterministic k-means.
+
+The largest speed-ups come from two ideas: **do the corpus-level work once**
+(encoding and tokenization depend on the corpus, not on the number of topics),
+and **spread that work across cores**. Crucially, neither changes the output —
+every result below is byte-identical to a plain single-threaded run.
+
+# Do the expensive work once
+
+Encoding is almost always the most expensive stage, and tokenization is the
+next after it once the corpus is large. Both depend only on the documents, so
+computing them once and reusing them is the single biggest lever when you fit
+more than one model — a topic-count sweep, a comparison of term settings, or any
+loop over `n_topics`.
+
+**Pass precomputed embeddings.** Encode once, then hand the matrix to every fit:
+
+```{r embed-once}
+model <- load_model("all-MiniLM-L6-v2", threads = 8)
+embeddings <- encode(corpus$text, model, batch_size = 64)
+
+# topics()/select_topics() now skip encoding entirely
+m <- topics(corpus$text, n_topics = 8, embeddings = embeddings)
+```
+
+**Prepare a corpus once, fit many.** `topic_corpus()` goes further: it caches
+*both* the embeddings and the tokenization, so a sweep or loop repeats neither.
+
+```{r corpus-once}
+prepared <- topic_corpus(corpus$text, embeddings = embeddings)
+
+sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15))
+model8 <- fitted(sweep, n_topics = 8)   # chosen without refitting
+```
+
+`select_topics()` already shares one prepared corpus across all candidates
+internally, so even `select_topics(corpus$text, ...)` no longer re-tokenizes per
+candidate. Passing a prepared `topic_corpus` on top lets you reuse it across
+*several* sweeps or manual loops.
+
+# The two parallel knobs
+
+## `threads` — parallel encoding
+
+`load_model(threads = N)` sets the number of ONNX inference threads. Every
+`encode()` call that uses the loaded model then runs multithreaded:
+
+```{r threads}
+model <- load_model("all-MiniLM-L6-v2", threads = 8)
+embeddings <- encode(text, model)     # inference spread over 8 threads
+```
+
+## `cores` — parallel tokenization and sweeps
+
+`cores` is available on `topics()`, `select_topics()`, `topic_corpus()`, and
+`coherence()`. Above one it forks worker processes to:
+
+- **tokenize** the corpus in parallel (documents split across workers), and
+- in `select_topics()`, **fit the independent candidates** in parallel.
+
+```{r cores}
+# tokenization runs in parallel; the corpus is prepared once
+prepared <- topic_corpus(corpus$text, embeddings = embeddings, cores = 8)
+
+# candidates are fitted across cores, tokenization already cached
+sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
+```
+
+<div class="warn">
+**Platform notes.** `cores` uses `parallel::mclapply`, which forks — available
+on Linux and macOS, and **falls back to serial on Windows**. Forking has
+overhead, so parallel tokenization only engages for corpora of **2,000
+documents or more**; smaller inputs run serially by design. A good default is
+`cores = parallel::detectCores() - 1`.
+</div>
+
+# The maximum-speed recipe
+
+Putting it together for the common case — one corpus, several models:
+
+```{r recipe}
+library(sbert)
+install_runtime()
+
+# 1. Multithreaded encoding, once
+model <- load_model("all-MiniLM-L6-v2", threads = 8)
+embeddings <- encode(corpus$text, model, batch_size = 64)
+
+# 2. Prepare the corpus once (encode + tokenize cached), tokenizing in parallel
+prepared <- topic_corpus(corpus$text, embeddings = embeddings, cores = 8)
+
+# 3. Sweep across cores, then pick a model with no refit
+sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
+model8 <- fitted(sweep, n_topics = 8)
+```
+
+For a corpus so large that encoding dominates and some quality can be traded for
+throughput, the static `potion-base-8M` model embeds around 10,000 sentences per
+second in pure R, with no ONNX Runtime involved:
+
+```{r static}
+fast <- load_model("potion-base-8M")   # 31 MB, Model2Vec token lookup
+embeddings <- encode(corpus$text, fast)
+```
+
+# What to expect
+
+Measured on a 10-core Apple Silicon machine (macOS, Accelerate BLAS, R 4.5)
+with precomputed embeddings. Wall-clock carries some machine-load variance;
+the speed-ups grow with the number of models fitted and with document length.
+
+| Workload | Baseline | Serial | 8 cores |
+|---|---:|---:|---:|
+| Sweep, 5 counts, 15k short docs | 163.5 s | 12.2 s (13×) | **6.9 s (24×)** |
+| Sweep, 3 counts, 5k long docs (~8k chars) | 321.1 s | 56.0 s (5.7×) | **10.3 s (31×)** |
+| Tokenization, 15k short docs | — | 11.7 s | **3.1 s (3.8×)** |
+| Tokenization, 5k long docs | — | 52.5 s | **8.6 s (6.1×)** |
+
+The "baseline" column is the pre-reuse path that re-encoded and re-tokenized on
+every model. Two patterns stand out: longer documents make parallel tokenization
+pay off *more* (6.1× vs 3.8×), and the corpus-reuse win scales with the number
+of models — roughly 3.5× at five models and 4× at ten.
+
+Memory improves independently of document length, because clustering works on
+the embeddings, not the raw text: at 40 topics, peak memory for a 40,000-document
+run dropped from about 2,195 MB to 1,053 MB.
+
+# Reproducibility
+
+<div class="callout">
+**`cores` and `threads` change speed, never results.** Tokenization is split by
+document and recombined in order, and sweep candidates are independent and
+deterministic, so the output is identical for any core or thread count. There is
+no random seed anywhere in the topic pipeline.
+</div>
+
+The proof runs offline — the same model, fitted single-threaded and across four
+cores, is byte-identical:
+
+```{r repro, eval = TRUE}
+set.seed(1)
+n <- 2500L
+text <- paste(
+  "document", seq_len(n),
+  sample(c("alpha beta gamma", "delta epsilon zeta", "eta theta iota"), n, TRUE)
+)
+# clustered stand-in embeddings, so no model download is needed
+centers <- matrix(rnorm(8L * 64L), 8L, 64L)
+embeddings <- centers[sample(8L, n, replace = TRUE), ] +
+  matrix(rnorm(n * 64L, sd = 0.6), n, 64L)
+
+serial   <- topics(text, n_topics = 6, embeddings = embeddings, cores = 1)
+parallel <- topics(text, n_topics = 6, embeddings = embeddings, cores = 4)
+
+identical(
+  serial[c("documents", "topics", "terms", "representatives", "centers")],
+  parallel[c("documents", "topics", "terms", "representatives", "centers")]
+)
+```
+
+<div class="warn">
+**One knob is not free: `batch_size`.** Larger batches speed up ONNX encoding,
+but batch composition perturbs the embeddings at roughly the 1e-7 level, which
+can flip a rare cluster assignment. Pick a `batch_size` and keep it — results
+are reproducible for a fixed value, just not necessarily across different ones.
+</div>
+
+# Checklist
+
+- **Fitting many models on one corpus?** Use `topic_corpus()` (or precompute
+  `embeddings`) so encoding and tokenization happen once. This is where the
+  order-of-magnitude wins are.
+- **Encoding is the bottleneck?** Raise `load_model(threads = N)` and
+  `batch_size`, or switch to the `potion-base-8M` static model.
+- **On Linux or macOS with a big corpus (≥ 2,000 docs)?** Add
+  `cores = detectCores() - 1` to `topic_corpus()` / `select_topics()`.
+- **On Windows, or a small corpus?** `cores` safely no-ops to serial; rely on
+  reuse and `threads` instead.
+- **Need exact reproducibility?** `cores` and `threads` are safe at any value;
+  fix `batch_size` once and leave it.

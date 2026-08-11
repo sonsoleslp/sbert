@@ -49,7 +49,29 @@ stop_words <- function(language = "en", add = NULL, remove = NULL) {
   sort(setdiff(words, tolower(remove)))
 }
 
-tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = FALSE) {
+# How many worker processes to actually use. Forking is deterministic and only
+# available off Windows; tiny inputs are not worth the fork overhead. A
+# parallelized pass is byte-identical to the serial one regardless of the count,
+# so `cores` never changes results, only speed.
+resolve_cores <- function(cores, n_items) {
+  cores <- suppressWarnings(as.integer(cores))
+  if (length(cores) != 1L || is.na(cores) || cores <= 1L) {
+    return(1L)
+  }
+  if (.Platform$OS.type != "unix") {
+    return(1L)
+  }
+  if (n_items < 2000L) {
+    return(1L)
+  }
+  available <- tryCatch(parallel::detectCores(), error = function(e) 1L)
+  if (is.na(available) || available < 1L) {
+    available <- 1L
+  }
+  max(1L, min(cores, available, n_items))
+}
+
+tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = FALSE, cores = 1L) {
   stopifnot(
     is.character(text),
     !anyNA(text),
@@ -64,6 +86,32 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
     length(stem) == 1L,
     !is.na(stem)
   )
+
+  # Regex tokenization and stop-word/length filtering are per-document and
+  # independent, so they parallelize by splitting the documents across forks.
+  # Stemming stays on the combined corpus (it depends on corpus-wide surface
+  # frequencies), so chunking never changes the result.
+  n_cores <- resolve_cores(cores, length(text))
+  if (n_cores > 1L) {
+    chunks <- parallel::splitIndices(length(text), n_cores)
+    parts <- parallel::mclapply(
+      chunks,
+      function(indices) {
+        tokenize_topic_documents(
+          text[indices], stop_words, min_token_length, stem = FALSE, cores = 1L
+        )
+      },
+      mc.cores = n_cores
+    )
+    if (!any(vapply(parts, inherits, logical(1), "try-error"))) {
+      combined <- unlist(parts, recursive = FALSE, use.names = FALSE)
+      if (stem) {
+        combined <- collapse_inflections(combined)
+      }
+      return(combined)
+    }
+    # A fork failed; fall through to the serial path below.
+  }
 
   # Normalize the curly apostrophe (U+2019) to the straight one so that
   # contractions like "it's" and "it’s" are the same token.
@@ -138,7 +186,9 @@ topic_term_scores <- function(
   min_token_length,
   weighting = c("ctfidf", "bm25"),
   reduce_frequent_words = FALSE,
-  stem = FALSE
+  stem = FALSE,
+  token_lists = NULL,
+  cores = 1L
 ) {
   weighting <- match.arg(weighting)
   stopifnot(
@@ -163,7 +213,14 @@ topic_term_scores <- function(
     !is.na(reduce_frequent_words)
   )
 
-  token_lists <- tokenize_topic_documents(text, stop_words, min_token_length, stem = stem)
+  # Tokenization depends only on the text and the token settings, never on the
+  # clustering, so a prepared corpus can compute it once and inject it here for
+  # reuse across many models. The result is identical to tokenizing in place.
+  if (is.null(token_lists)) {
+    token_lists <- tokenize_topic_documents(
+      text, stop_words, min_token_length, stem = stem, cores = cores
+    )
+  }
   all_tokens <- unlist(token_lists, use.names = FALSE)
   if (length(all_tokens) == 0L) {
     stop("No topic terms remain after tokenization and filtering.", call. = FALSE)
@@ -276,57 +333,67 @@ deterministic_topic_centers <- function(embeddings, n_topics, existing_centers =
       (is.matrix(existing_centers) && ncol(existing_centers) == ncol(embeddings))
   )
 
-  distinct_rows <- !duplicated(as.data.frame(embeddings))
-  if (sum(distinct_rows) < n_topics) {
-    stop(
-      "n_topics cannot exceed the number of distinct document embeddings.",
-      call. = FALSE
-    )
-  }
+  n_documents <- nrow(embeddings)
+  n_dimensions <- ncol(embeddings)
 
-  # Squared distance from every embedding row to its nearest given center.
-  minimum_distance_to <- function(centers_matrix) {
-    distance_matrix <- vapply(
-      seq_len(nrow(centers_matrix)),
-      function(center_row) {
-        center <- matrix(
-          centers_matrix[center_row, ],
-          nrow = nrow(embeddings),
-          ncol = ncol(embeddings),
-          byrow = TRUE
-        )
-        rowSums((embeddings - center)^2)
-      },
-      numeric(nrow(embeddings))
-    )
-    apply(distance_matrix, 1L, min)
-  }
-
-  first_center <- if (is.null(existing_centers) || nrow(existing_centers) == 0L) {
-    global_center <- matrix(
-      colMeans(embeddings),
-      nrow = nrow(embeddings),
-      ncol = ncol(embeddings),
+  # Squared distance from every embedding row to one center, using the same
+  # elementwise arithmetic as a full pairwise pass so the selections are
+  # identical to a recompute-everything implementation. Farthest-point
+  # selection then keeps a running nearest-center distance and touches one new
+  # center per step, so the cost is O(n_topics * n * d) rather than the
+  # O(n_topics^2 * n * d) of rebuilding the whole distance set each iteration.
+  squared_distance_to <- function(center) {
+    center_matrix <- matrix(
+      center,
+      nrow = n_documents,
+      ncol = n_dimensions,
       byrow = TRUE
     )
-    which.max(rowSums((embeddings - global_center)^2))
-  } else {
-    # Seeded: the first free center is the point least covered by the seeds.
-    which.max(minimum_distance_to(existing_centers))
+    rowSums((embeddings - center_matrix)^2)
   }
-  selected <- Reduce(
-    function(selected_rows, unused_iteration) {
-      reference_centers <- rbind(
-        existing_centers,
-        embeddings[selected_rows, , drop = FALSE]
-      )
-      minimum_distances <- minimum_distance_to(reference_centers)
-      minimum_distances[selected_rows] <- -Inf
-      c(selected_rows, which.max(minimum_distances))
-    },
-    seq_len(n_topics - 1L),
-    init = first_center
+
+  if (is.null(existing_centers) || nrow(existing_centers) == 0L) {
+    # First free center is the point farthest from the global mean.
+    nearest_distance <- rep(Inf, n_documents)
+    first_center <- which.max(squared_distance_to(colMeans(embeddings)))
+  } else {
+    # Seeded: distance to the nearest seed, accumulated one seed at a time; the
+    # first free center is the point least covered by the seeds.
+    nearest_distance <- Reduce(
+      function(running, seed_row) {
+        pmin(running, squared_distance_to(existing_centers[seed_row, ]))
+      },
+      seq_len(nrow(existing_centers)),
+      init = rep(Inf, n_documents)
+    )
+    first_center <- which.max(nearest_distance)
+  }
+
+  selected <- first_center
+  nearest_distance <- pmin(
+    nearest_distance,
+    squared_distance_to(embeddings[first_center, ])
   )
+  nearest_distance[selected] <- -Inf
+
+  for (unused_iteration in seq_len(n_topics - 1L)) {
+    next_center <- which.max(nearest_distance)
+    if (nearest_distance[[next_center]] <= 0) {
+      # Every unselected point coincides with one already chosen: the corpus has
+      # fewer distinct embeddings than requested topics. Detected here, exactly
+      # when it matters, instead of by an up-front full-matrix dedup.
+      stop(
+        "n_topics cannot exceed the number of distinct document embeddings.",
+        call. = FALSE
+      )
+    }
+    selected <- c(selected, next_center)
+    nearest_distance <- pmin(
+      nearest_distance,
+      squared_distance_to(embeddings[next_center, ])
+    )
+    nearest_distance[selected] <- -Inf
+  }
 
   embeddings[selected, , drop = FALSE]
 }
@@ -440,15 +507,10 @@ fit_embedding_topics <- function(
   topic <- as.integer(new_topic_id[fit$cluster])
   centers <- unname(fit$centers[topic_order, , drop = FALSE])
   normalized_centers <- normalize_embedding_rows(centers)
-  cosine_similarity <- vapply(
-    seq_len(nrow(normalized_embeddings)),
-    function(document_id) {
-      sum(
-        normalized_embeddings[document_id, ] *
-          normalized_centers[topic[[document_id]], ]
-      )
-    },
-    numeric(1)
+  # Each document's cosine to its own topic centroid, vectorized over the whole
+  # corpus (one gather + rowSums) instead of an R-level per-document loop.
+  cosine_similarity <- rowSums(
+    normalized_embeddings * normalized_centers[topic, , drop = FALSE]
   )
 
   list(
@@ -523,6 +585,164 @@ encode_topic_documents <- function(text, model, batch_size) {
   )
 }
 
+#' Prepare a Corpus Once to Fit Many Topic Models
+#'
+#' Runs the corpus-level work that does not depend on the number of topics —
+#' embedding every document and tokenizing it for term scoring — a single time,
+#' so that fitting many models (a [select_topics()] sweep, a manual loop over
+#' topic counts, or repeated [topics()] calls) reuses it instead of repeating
+#' it. Pass the returned object to [topics()] or [select_topics()] in place of
+#' the raw `text`.
+#'
+#' @details The results are byte-identical to calling [topics()] on the raw
+#'   text: the corpus only *caches* the embedding and tokenization steps, it
+#'   does not change them. The corpus fixes the embedding source (`model` or
+#'   `embeddings`) and the tokenization settings (`stop_words`,
+#'   `min_token_length`, `stem`); [topics()] then refuses conflicting overrides
+#'   for those, while per-model settings (`n_topics`, `n_terms`,
+#'   `min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`, ...)
+#'   are still chosen per call.
+#'
+#' @inheritParams topics
+#' @return An object of class `sbert_topic_corpus`: a list with the prepared
+#'   `text`, carried `metadata`, document `embeddings`, cached `token_lists`,
+#'   `model` information, and the fixed tokenization `settings`.
+#' @seealso [topics()], [select_topics()]
+#' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls",
+#'   "Stocks and bonds trade", "Markets price shares"
+#' )
+#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
+#' corpus <- topic_corpus(text, embeddings = embeddings)
+#' topics(corpus, n_topics = 2)$topics
+#' select_topics(corpus, n_topics = 2:3)
+topic_corpus <- function(
+  text,
+  column = NULL,
+  model = NULL,
+  embeddings = NULL,
+  batch_size = 32L,
+  stop_words = default_stop_words(),
+  min_token_length = 2L,
+  stem = FALSE,
+  cores = 1L
+) {
+  if (inherits(text, "sbert_topic_corpus")) {
+    return(text)
+  }
+  if (!is.null(model) && !is.null(embeddings)) {
+    stop("Supply model or embeddings, not both.", call. = FALSE)
+  }
+  prepared <- prepare_topic_input(text, column)
+  text <- prepared$text
+  metadata <- prepared$metadata
+  if (!is.null(embeddings) && length(prepared$kept) < prepared$n_supplied) {
+    embeddings <- embeddings[prepared$kept, , drop = FALSE]
+  }
+  stopifnot(
+    is.character(text),
+    !anyNA(text),
+    length(text) >= 2L,
+    is.numeric(batch_size),
+    length(batch_size) == 1L,
+    is.finite(batch_size),
+    batch_size >= 1,
+    batch_size == as.integer(batch_size),
+    is.character(stop_words),
+    !anyNA(stop_words),
+    is.numeric(min_token_length),
+    length(min_token_length) == 1L,
+    is.finite(min_token_length),
+    min_token_length >= 1,
+    min_token_length == as.integer(min_token_length),
+    is.logical(stem),
+    length(stem) == 1L,
+    !is.na(stem)
+  )
+  if (stem && !requireNamespace("SnowballC", quietly = TRUE)) {
+    stop(
+      "stem = TRUE requires the 'SnowballC' package. Install it or use stem = FALSE.",
+      call. = FALSE
+    )
+  }
+  if (any(!nzchar(trimws(text)))) {
+    stop("text cannot contain blank documents.", call. = FALSE)
+  }
+
+  if (is.null(embeddings)) {
+    model <- resolve_sbert_model(model)
+    embedding_matrix <- encode_topic_documents(
+      text,
+      model,
+      batch_size = as.integer(batch_size)
+    )
+    model_information <- list(
+      id = model$id,
+      revision = model$revision,
+      dimension = model$dimension
+    )
+  } else {
+    embedding_matrix <- embeddings
+    model_information <- list(
+      id = "precomputed embeddings",
+      revision = NA_character_,
+      dimension = if (is.matrix(embeddings)) ncol(embeddings) else NA_integer_
+    )
+  }
+  if (
+    !is.matrix(embedding_matrix) ||
+      !is.numeric(embedding_matrix) ||
+      nrow(embedding_matrix) != length(text) ||
+      ncol(embedding_matrix) < 1L ||
+      anyNA(embedding_matrix) ||
+      any(!is.finite(embedding_matrix))
+  ) {
+    stop(
+      "embeddings must be a finite numeric matrix with one row per document.",
+      call. = FALSE
+    )
+  }
+
+  token_lists <- tokenize_topic_documents(
+    unname(text),
+    stop_words,
+    as.integer(min_token_length),
+    stem = stem,
+    cores = cores
+  )
+
+  structure(
+    list(
+      text = text,
+      metadata = metadata,
+      embeddings = embedding_matrix,
+      token_lists = token_lists,
+      model = model_information,
+      settings = list(
+        stop_words = stop_words,
+        min_token_length = as.integer(min_token_length),
+        stem = stem
+      )
+    ),
+    class = "sbert_topic_corpus"
+  )
+}
+
+#' @export
+print.sbert_topic_corpus <- function(x, ...) {
+  cat("<sbert_topic_corpus>\n")
+  cat("  documents:", length(x$text), "\n")
+  cat("  embedding dimension:", ncol(x$embeddings), "\n")
+  cat("  model:", x$model$id, "\n")
+  cat(
+    "  tokenization: min_token_length =", x$settings$min_token_length,
+    if (x$settings$stem) ", stemmed" else "", "\n"
+  )
+  invisible(x)
+}
+
 #' Discover Semantic Topics in Documents
 #'
 #' Performs deterministic document-level topic clustering with Sentence-BERT
@@ -588,6 +808,12 @@ encode_topic_documents <- function(text, model, batch_size) {
 #'   the clustering and the data can move the centroids.
 #' @param keep_embeddings Whether to retain normalized document embeddings in
 #'   the returned object.
+#' @param cores Number of forked worker processes used to tokenize documents for
+#'   term scoring. Default `1` (serial). Values above one use
+#'   `parallel::mclapply` on Unix-alikes and fall back to serial on Windows or
+#'   for small corpora; the tokenization — and therefore every result — is
+#'   identical regardless of the count. Ignored when a prepared [topic_corpus()]
+#'   is supplied (its tokens are already computed).
 #' @return An object of class `sbert_topic_model` containing document
 #'   assignments, topic summaries, ranked terms, representatives, centers, and
 #'   clustering diagnostics.
@@ -619,18 +845,44 @@ topics <- function(
   keep_embeddings = TRUE,
   seeds = NULL,
   seed_embeddings = NULL,
-  fixed_seeds = FALSE
+  fixed_seeds = FALSE,
+  cores = 1L
 ) {
   weighting <- match.arg(weighting)
 
-  # A data frame goes in whole: `column` names the text to model, every other
-  # column rides along into `$documents`, and unusable rows are dropped here
-  # rather than by every caller in turn. A character vector keeps the old path.
-  prepared <- prepare_topic_input(text, column)
-  text <- prepared$text
-  metadata <- prepared$metadata
-  if (!is.null(embeddings) && length(prepared$kept) < prepared$n_supplied) {
-    embeddings <- embeddings[prepared$kept, , drop = FALSE]
+  # A prepared topic_corpus carries the corpus-level work already done once:
+  # the embeddings, the tokenization, and the token settings. Reusing it across
+  # many models skips both encoding and tokenization, with byte-identical
+  # results. The corpus fixes those settings, so conflicting overrides are
+  # refused rather than silently ignored.
+  precomputed_tokens <- NULL
+  corpus_model_information <- NULL
+  if (inherits(text, "sbert_topic_corpus")) {
+    corpus <- text
+    if (!is.null(model)) {
+      stop("A model cannot be combined with a prepared topic_corpus.", call. = FALSE)
+    }
+    if (!is.null(embeddings)) {
+      stop("embeddings cannot be combined with a prepared topic_corpus.", call. = FALSE)
+    }
+    text <- corpus$text
+    metadata <- corpus$metadata
+    embeddings <- corpus$embeddings
+    precomputed_tokens <- corpus$token_lists
+    stop_words <- corpus$settings$stop_words
+    min_token_length <- corpus$settings$min_token_length
+    stem <- corpus$settings$stem
+    corpus_model_information <- corpus$model
+  } else {
+    # A data frame goes in whole: `column` names the text to model, every other
+    # column rides along into `$documents`, and unusable rows are dropped here
+    # rather than by every caller in turn. A character vector keeps the old path.
+    prepared <- prepare_topic_input(text, column)
+    text <- prepared$text
+    metadata <- prepared$metadata
+    if (!is.null(embeddings) && length(prepared$kept) < prepared$n_supplied) {
+      embeddings <- embeddings[prepared$kept, , drop = FALSE]
+    }
   }
   stopifnot(
     is.character(text),
@@ -711,11 +963,15 @@ topics <- function(
     )
   } else {
     embedding_matrix <- embeddings
-    model_information <- list(
-      id = "precomputed embeddings",
-      revision = NA_character_,
-      dimension = if (is.matrix(embeddings)) ncol(embeddings) else NA_integer_
-    )
+    model_information <- if (!is.null(corpus_model_information)) {
+      corpus_model_information
+    } else {
+      list(
+        id = "precomputed embeddings",
+        revision = NA_character_,
+        dimension = if (is.matrix(embeddings)) ncol(embeddings) else NA_integer_
+      )
+    }
   }
   if (
     !is.matrix(embedding_matrix) ||
@@ -829,7 +1085,9 @@ topics <- function(
     min_token_length = as.integer(min_token_length),
     weighting = weighting,
     reduce_frequent_words = reduce_frequent_words,
-    stem = stem
+    stem = stem,
+    token_lists = precomputed_tokens,
+    cores = cores
   )
   topic_labels <- vapply(
     seq_len(n_topics),

@@ -68,13 +68,17 @@ Draws one of five deterministic base-graphics views of a fitted topic
 model.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 text <- c(
   "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
+  "Stocks and bonds trade", "Markets price shares",
+  "Neural nets learn patterns", "Models train on data"
 )
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topics <- topics(text, 2, embeddings = embeddings, keep_embeddings = TRUE)
+embeddings <- rbind(
+  c(1, 0, 0), c(0.9, 0.1, 0),
+  c(0, 1, 0), c(0.1, 0.9, 0),
+  c(0, 0, 1), c(0.05, 0, 0.95)
+)
+topics <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
 plot(topics, type = "sizes")
 plot(topics, type = "terms")
 plot(topics, type = "terms", by = "frequency")
@@ -83,5 +87,4 @@ plot(topics, type = "representatives")
 plot(topics, type = "fit")
 plot(topics, type = "fit", per_topic = TRUE)
 plot(topics, type = "map")
-\dontshow{\}) # examplesIf}
 }

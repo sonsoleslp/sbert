@@ -1,0 +1,271 @@
+---
+title: "Semantic Topics in Levebee AI Mathematics Feedback"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Semantic Topics in Levebee AI Mathematics Feedback}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 110,
+  out.width = "100%"
+)
+library(sbert)
+```
+
+# Why this tutorial
+
+The `feedback_translations` dataset bundled with **sbert** contains 8,757
+AI-generated feedback messages from the Levebee mathematics application,
+translated into English from ten source languages. Nobody can read nearly nine
+thousand messages, and many repeat verbatim — "Try again." is the most common,
+appearing 11 times — so simple frequency lists tell you about templates,
+not content. Topic modeling answers the question the raw data cannot: *what
+kind of feedback does the system actually give, and in what proportions?*
+
+The answer has to survive scrutiny, so every step here is deterministic:
+rerunning this document reproduces every number, bar, and sentence exactly.
+The tutorial first lets the data choose the number of topics, builds the
+resulting six-topic model, and then inspects it from three deliberately
+different angles:
+
+1. **Model quality** — coherence and diversity, so you know which topics to
+   trust before interpreting any of them.
+2. **Two keyword views per topic** — raw within-topic counts (what the topic
+   *says most*) against class-based TF-IDF (what the topic *alone* says).
+   These are different lists by construction, and the disagreement between
+   them is itself informative.
+3. **Representative sentences** — the centroid-nearest messages, which are
+   the auditable evidence that a topic label means what it claims.
+
+| Component | Verb | Question it answers |
+|---|---|---|
+| Topic count | `select_topics()` | How many topics does the corpus support? |
+| Topic model | `topics()`, `fitted()` | What groups exist? |
+| Model quality | `summary()`, `coherence()` | Which topics are trustworthy? |
+| Topic size | `topic_sizes()` | How big is each topic, by distinct and reused share? |
+| Frequent keywords | `terms(sort_by = "beta")` | What does each topic talk about most? |
+| Distinctive keywords | `topic_model$terms` | What does each topic talk about that others do not? |
+| Evidence | `topic_model$representatives` | Do real messages support the label? |
+
+Fourteen revision-pinned models are available; this tutorial uses the
+default, `all-MiniLM-L6-v2` (the field's standard quality-per-megabyte
+English embedder). The menu, with each model's dimension, input limit,
+language coverage, and download size:
+
+```{r menu}
+models()
+```
+
+# The corpus, deduplicated
+
+Embedding the same string twice wastes computation and — more importantly —
+lets repeated templates skew the clustering geometry: every copy of a
+message like "Try again." acts as another point pulling on the same
+centroid. `dedupe()` collapses the corpus to its distinct non-blank messages
+(each kind votes once) while keeping the row frequencies, which return as
+weights when sizes are reported. To keep this tutorial fast and free of any
+download, it works with the first 600 distinct messages — drop the `head()` to
+model the whole corpus:
+
+```{r dedupe}
+corpus <- head(dedupe(feedback_translations$translation), 600)
+```
+
+`model_download()` is the one step that touches the network. Called without
+arguments it fetches the package default, `all-MiniLM-L6-v2` — a 6-layer
+distilled English model — as its ONNX graph (90.4 MB) and tokenizer into the
+local cache, locked to one immutable Hugging Face revision and refused unless
+every byte matches the SHA-256 hashes pinned inside the package, so the model
+you run today is provably the model you run next year. To use a different
+embedder, pass its name — `model_download("bge-small-en-v1.5")`, for example —
+and `models()` lists the other thirteen pinned options. From there
+`select_topics()` and `topics()` do the rest: under the hood they encode each
+distinct message — tokenized, run through the network, mean-pooled with padding
+masked out, and L2-normalized — into a 600 × 384 matrix, numerically identical
+to Python `SentenceTransformers` output and bit-identical on every rerun.
+
+```{r download, eval=FALSE}
+model_download()
+```
+
+# Choosing the number of topics
+
+There is no universally correct number of topics, and **sbert** deliberately
+refuses to pick one for you — the right granularity depends on what the analysis
+is *for*. Instead of guessing, `select_topics()` fits one model per candidate
+count and reports the numbers that justify a choice: coherence (do a topic's top
+terms actually co-occur?), diversity (do topics own their vocabulary or share
+it?), and the share of embedding variance `explained`.
+
+```{r sweep-show, eval=FALSE}
+sweep <- select_topics(
+  corpus$text,
+  n_topics = c(4, 5, 6, 7, 8, 10, 12),
+  measure = "npmi",
+  n_representatives = 5
+)
+sweep
+```
+
+```{r sweep, include=FALSE}
+# The same 600 messages' embeddings ship precomputed with the package
+# (data-raw/feedback_embeddings.R), so the sweep needs no download to build this
+# vignette; feeding them in is identical to encoding live.
+.sample <- readRDS(
+  system.file("extdata", "feedback_embeddings.rds", package = "sbert")
+)
+stopifnot(identical(corpus$text, .sample$text))
+sweep <- select_topics(
+  corpus$text,
+  n_topics = c(4, 5, 6, 7, 8, 10, 12),
+  embeddings = .sample$embeddings,
+  measure = "npmi",
+  n_representatives = 5
+)
+```
+
+```{r sweep-print, echo=FALSE}
+sweep
+```
+
+```{r sweep-plot, fig.height=4}
+plot(sweep)
+```
+
+Coherence is negative throughout — these are short, template-like messages, so
+any two top terms rarely land in the same short string — but it peaks
+unmistakably at **six** and falls away on either side, while diversity stays
+high and `explained` keeps climbing with the count. Six is the granularity this
+corpus actually supports: the point after which more topics stop buying
+coherence, and (not by coincidence) about the number of feedback *kinds* an
+editorial review can act on. `fitted()` pulls the already-fitted six-topic model
+straight out of the sweep — no re-encoding, no second clustering:
+
+```{r model}
+topic_model <- fitted(sweep, n_topics = 6)
+```
+
+Only `model_download()` and the encoding inside `select_topics()` are skipped
+here — the 600 messages' embeddings ship precomputed — so the vignette builds
+with no download. Run these lines yourself and you reproduce every number below
+exactly.
+
+```{r model-print}
+topic_model
+```
+
+## Should you trust these topics?
+
+Interpretation comes *after* evaluation, because a beautifully labeled topic
+with poor coherence is a story about noise. NPMI coherence asks whether a
+topic's top terms actually co-occur in its messages (+1 = always together,
+−1 = never); diversity asks whether topics share their vocabulary or own it.
+
+```{r evaluate}
+summary(topic_model)
+```
+
+```{r coherence}
+coherence(topic_model, measure = "npmi")
+```
+
+Carry these numbers into the per-topic panels below: NPMI rewards regular,
+repetitive phrasing, so the most template-like topics tend to score highest,
+and any topic with visibly lower coherence should be read through its
+representative sentences rather than its keywords.
+
+## Size on two scales
+
+The model counts *distinct* messages, but the application sent some messages
+many times over, so editorial priority follows the weighted share, not the
+distinct share. `topic_sizes()` reports both scales in one call; the gap
+between `proportion` and `weighted_share` measures how template-driven each
+topic is — a topic whose weighted share far exceeds its distinct share is a
+small repertoire of heavily reused messages.
+
+```{r sizes, fig.height=5}
+plot(topic_model, type = "sizes")
+```
+
+```{r weighted}
+topic_sizes(topic_model, weights = corpus$n)
+```
+
+# Two keyword views, one topic
+
+`terms(sort_by = "beta")` returns the empirical probability of each word given
+the topic — the *generative* view, dominated by whatever the topic says most
+often. The class-based TF-IDF scores in `topic_model$terms` are the
+*discriminative* view: they promote words this topic uses and others do not,
+and demote words that recur across many topics — frequent, but saying little
+about any single one. Neither list is "the" keywords; a topic is characterized
+by the pair. When the two lists agree — as they do for topic 1 below, whose most
+frequent and most distinctive words are the same ("picture", "pictures",
+"choose") — the topic has a vocabulary of its own; when they disagree, the counts
+list is telling you about the corpus and only the TF-IDF list about the topic.
+
+```{r beta}
+beta <- terms(topic_model, n = NULL, sort_by = "beta")
+head(subset(beta, topic == 1), 8)
+```
+
+```{r terms}
+head(subset(topic_model$terms, topic == 1), 8)
+```
+
+# The topics at a glance
+
+`plot(topic_model, type = "terms")` shows each topic's distinctive class-based
+TF-IDF terms, each bar annotated with its score:
+
+```{r plot-terms, fig.height=6}
+plot(topic_model, type = "terms")
+```
+
+`type = "fit"` is the whole per-topic report: all three keyword views — raw
+within-topic count, class-based TF-IDF, and generative probability (beta) —
+alongside the topic's centroid-nearest messages, one row per topic:
+
+```{r plot-fit, fig.width = 8, fig.height = 11}
+plot(topic_model, type = "fit", n_terms = 8, n_representatives = 3)
+```
+
+With `per_topic = TRUE` each topic becomes its own figure, the documents stacked
+beneath the terms — easier to read one topic at a time:
+
+```{r plot-fit-single, fig.height=4.5}
+plot(topic_model, type = "fit", per_topic = TRUE, topics = 1)
+```
+
+The plot text is clipped to fit; for the full, untruncated evidence behind each
+topic, ask for the representatives directly:
+
+```{r representatives}
+subset(topic_model$representatives, rank <= 2)[
+  , c("topic", "rank", "text", "distance")
+]
+```
+
+# Where to go from here
+
+The model built here is reusable, not just describable. `predict()` assigns
+any new feedback message to these six topics without refitting;
+`topic_membership()` replaces the hard assignment with graded probabilities
+when a message sits between topics; and `topic_gamma()` combined with
+`segment()` shows when a single multi-sentence message spans several feedback
+types. When you explore many models on the same corpus — the sweep above, or
+several term settings — `topic_corpus()` embeds and tokenizes the messages once
+and every fit reuses that work, so the exploration costs one corpus pass rather
+than one per model. For multilingual work on the *source* messages (the `feedback` column
+spans ten languages), swap one argument —
+`topics(corpus$text, n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")` —
+and the rest of this document runs unchanged.

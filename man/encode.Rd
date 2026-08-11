@@ -33,8 +33,8 @@ A numeric matrix with one row per input and one column per
 Encode Text with Sentence-BERT
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+\dontrun{
 model <- load_model()
 embeddings <- encode(c("A short sentence.", "Another sentence."), model)
-\dontshow{\}) # examplesIf}
+}
 }

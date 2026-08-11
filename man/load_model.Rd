@@ -32,7 +32,7 @@ model files or native libraries. See [models()] for the available
 pinned models.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+\dontrun{
 model <- load_model()
-\dontshow{\}) # examplesIf}
+}
 }

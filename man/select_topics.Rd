@@ -14,11 +14,15 @@ select_topics(
   n_representatives = 1L,
   keep_models = TRUE,
   batch_size = 32L,
+  cores = 1L,
   ...
 )
 }
 \arguments{
-\item{text}{A character vector of documents.}
+\item{text}{A character vector of documents, or a prepared
+[topic_corpus()]. Passing a corpus (or letting `select_topics()` build one
+internally) embeds and tokenizes the documents once and reuses that work
+across every candidate, instead of re-tokenizing per candidate.}
 
 \item{n_topics}{Integer vector of candidate topic counts, each at least 2
 and below the number of documents. Default `c(5, 10, 15, 20, 25, 30)`.}
@@ -45,6 +49,11 @@ only the comparison table when memory matters.}
 \item{batch_size}{Number of texts encoded per model call when encoding is
 needed. Default `32`.}
 
+\item{cores}{Number of forked worker processes. Default `1` (serial). Above
+one, the shared corpus is tokenized in parallel and the candidates — which
+are independent and deterministic — are fitted in parallel, on Unix-alikes
+(serial fallback on Windows). Results are identical for any core count.}
+
 \item{...}{Further arguments passed to [topics()] (for example
 `stop_words` or `weighting`).}
 }
@@ -59,7 +68,7 @@ A base data frame with one row per candidate and columns
 \description{
 Fits [topics()] once per candidate topic count — deterministically,
 on one shared set of embeddings — and returns the quality metrics that
-justify a granularity choice: mean topic coherence, topic topic_diversity, and
+justify a granularity choice: mean topic coherence, topic diversity, and
 the share of embedding variance separated between topics.
 }
 \details{

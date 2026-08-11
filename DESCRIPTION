@@ -2,12 +2,21 @@ Package: sbert
 Type: Package
 Title: Sentence Embeddings with 'Sentence-BERT' Models
 Version: 0.5.2
-Authors@R: person(
-    given = "Mohammed",
-    family = "Saqr",
-    role = c("aut", "cre", "cph"),
-    email = "mohammed.saqr@uef.fi",
-    comment = c(ORCID = "0000-0001-5881-3109")
+Authors@R: c(
+    person(
+      given = "Mohammed",
+      family = "Saqr",
+      role = c("aut", "cph"),
+      email = "mohammed.saqr@uef.fi",
+      comment = c(ORCID = "0000-0001-5881-3109")
+    ),
+    person(
+      given = "Sonsoles",
+      family = "L\u00f3pez-Pernas",
+      role = c("aut", "cre", "cph"),
+      email = "sonsoles.lopez@uef.fi",
+      comment = c(ORCID = "0000-0002-9621-1392")
+    )
   )
 Description: Computes sentence embeddings in R without requiring
     'Python' by running revision-pinned 'Sentence-BERT' models through
@@ -21,8 +30,8 @@ Description: Computes sentence embeddings in R without requiring
     visualizations. Model files are downloaded only after an explicit user
     request and are stored outside the package library.
 License: MIT + file LICENSE
-URL: https://pak.dynasite.org/sbert, https://github.com/mohsaqr/sbert
-BugReports: https://github.com/mohsaqr/sbert/issues
+URL: https://sonsoles.me/sbert, https://github.com/sonsoleslp/sbert
+BugReports: https://github.com/sonsoleslp/sbert/issues
 Encoding: UTF-8
 LazyData: true
 Depends:
@@ -32,6 +41,7 @@ Imports:
     grDevices,
     graphics,
     onnxr (>= 0.1.2),
+    parallel,
     tok (>= 0.2.3),
     stats,
     tools,

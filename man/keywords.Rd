@@ -28,7 +28,7 @@ session default.}
 bigrams).}
 
 \item{topic_diversity}{Maximal-marginal-relevance trade-off in `[0, 1)`: `0`
-ranks purely by topic_similarity, larger values penalize keywords similar to
+ranks purely by similarity, larger values penalize keywords similar to
 ones already selected. Default `0.3`.}
 
 \item{stop_words}{Words excluded from candidates. Defaults to
@@ -42,10 +42,10 @@ Default `3`.}
 \value{
 A base data frame with one row per keyword and columns
   `document_id`, `document_name`, `rank`, `keyword`, and `topic_similarity`
-  (cosine topic_similarity between the keyword and its document).
+  (cosine similarity between the keyword and its document).
 }
 \description{
-Ranks each document's own words and phrases by cosine topic_similarity between
+Ranks each document's own words and phrases by cosine similarity between
 their embeddings and the document embedding, computed with the same model,
 and selects the top `n` by maximal marginal relevance so the keywords are
 relevant without being redundant (the KeyBERT design).

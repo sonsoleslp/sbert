@@ -25,3 +25,8 @@
 ^docs$
 ^pkgdown$
 ^vignettes/articles$
+^logo\.png$
+^\.github$
+^covid\.csv$
+^README\.Rmd$
+^README\.html$

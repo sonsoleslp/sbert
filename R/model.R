@@ -11,8 +11,10 @@
 #' @param verify Whether to verify file sizes and SHA-256 hashes before loading.
 #' @return An object of class `sbert_model`.
 #' @export
-#' @examplesIf interactive()
+#' @examples
+#' \dontrun{
 #' model <- load_model()
+#' }
 load_model <- function(
   model = "all-MiniLM-L6-v2",
   cache_dir = default_cache_dir(),

@@ -6,7 +6,7 @@
 #'
 #' Fits [topics()] once per candidate topic count — deterministically,
 #' on one shared set of embeddings — and returns the quality metrics that
-#' justify a granularity choice: mean topic coherence, topic topic_diversity, and
+#' justify a granularity choice: mean topic coherence, topic diversity, and
 #' the share of embedding variance separated between topics.
 #'
 #' There is no single correct topic count; this verb replaces the habit of
@@ -15,7 +15,10 @@
 #' coherence stops improving (or starts degrading) rather than a global
 #' maximum.
 #'
-#' @param text A character vector of documents.
+#' @param text A character vector of documents, or a prepared
+#'   [topic_corpus()]. Passing a corpus (or letting `select_topics()` build one
+#'   internally) embeds and tokenizes the documents once and reuses that work
+#'   across every candidate, instead of re-tokenizing per candidate.
 #' @param n_topics Integer vector of candidate topic counts, each at least 2
 #'   and below the number of documents. Default `c(5, 10, 15, 20, 25, 30)`.
 #' @param model A loaded sbert model, a pinned model name, or `NULL` for the
@@ -33,6 +36,10 @@
 #'   only the comparison table when memory matters.
 #' @param batch_size Number of texts encoded per model call when encoding is
 #'   needed. Default `32`.
+#' @param cores Number of forked worker processes. Default `1` (serial). Above
+#'   one, the shared corpus is tokenized in parallel and the candidates — which
+#'   are independent and deterministic — are fitted in parallel, on Unix-alikes
+#'   (serial fallback on Windows). Results are identical for any core count.
 #' @param ... Further arguments passed to [topics()] (for example
 #'   `stop_words` or `weighting`).
 #' @return A base data frame with one row per candidate and columns
@@ -65,49 +72,85 @@ select_topics <- function(
   n_representatives = 1L,
   keep_models = TRUE,
   batch_size = 32L,
+  cores = 1L,
   ...
 ) {
   measure <- match.arg(measure)
+  if (!inherits(text, "sbert_topic_corpus")) {
+    stopifnot(is.character(text), !anyNA(text))
+  }
+  n_documents <- if (inherits(text, "sbert_topic_corpus")) {
+    length(text$text)
+  } else {
+    length(text)
+  }
   stopifnot(
-    is.character(text),
-    length(text) >= 3L,
-    !anyNA(text),
+    n_documents >= 3L,
     is.numeric(n_topics),
     length(n_topics) >= 1L,
     all(is.finite(n_topics)),
     all(n_topics == as.integer(n_topics)),
     all(n_topics >= 2L),
-    all(n_topics < length(text)),
+    all(n_topics < n_documents),
     !anyDuplicated(n_topics)
   )
-  if (is.null(embeddings)) {
-    resolved <- resolve_sbert_model(model)
-    embeddings <- encode_topic_documents(
-      unname(text),
-      model = resolved,
-      batch_size = batch_size
+
+  # Prepare the corpus once — embed and tokenize a single time — then fit every
+  # candidate against it. The tokenization no longer repeats per candidate, so a
+  # sweep costs one tokenization plus the per-model clustering, not one full
+  # tokenization per model. topic_corpus() returns an existing corpus unchanged,
+  # so a prepared corpus can also be passed in directly.
+  dots <- list(...)
+  corpus_arg_names <- intersect(names(dots), c("stop_words", "min_token_length", "stem"))
+  corpus <- do.call(
+    topic_corpus,
+    c(
+      list(text, model = model, embeddings = embeddings, batch_size = batch_size, cores = cores),
+      dots[corpus_arg_names]
     )
-  }
+  )
+  model_dots <- dots[setdiff(names(dots), corpus_arg_names)]
 
   candidates <- sort(as.integer(n_topics))
-  models <- lapply(
-    candidates,
-    function(candidate) {
-      topics(
-        text,
-        n_topics = candidate,
-        embeddings = embeddings,
-        n_terms = n_terms,
-        n_representatives = n_representatives,
-        ...
+  fit_candidate <- function(candidate) {
+    do.call(
+      topics,
+      c(
+        list(
+          corpus,
+          n_topics = candidate,
+          n_terms = n_terms,
+          n_representatives = n_representatives
+        ),
+        model_dots
       )
-    }
-  )
+    )
+  }
+  # Candidates are independent and deterministic, so fitting them across forks
+  # gives identical models in any order. The corpus is already prepared, so no
+  # tokenization or encoding happens inside the parallel section.
+  candidate_cores <- resolve_cores(cores, .Machine$integer.max)
+  candidate_cores <- min(candidate_cores, length(candidates))
+  models <- if (candidate_cores > 1L) {
+    parallel::mclapply(candidates, fit_candidate, mc.cores = candidate_cores)
+  } else {
+    lapply(candidates, fit_candidate)
+  }
+  if (any(vapply(models, inherits, logical(1), "try-error"))) {
+    models <- lapply(candidates, fit_candidate)
+  }
   names(models) <- as.character(candidates)
 
   rows <- Map(
     function(candidate, fitted) {
-      coherence <- coherence(fitted, measure = measure, n_terms = n_terms)
+      # Every candidate shares the corpus, so coherence reuses the corpus tokens
+      # instead of re-tokenizing per candidate (its dominant cost otherwise).
+      coherence <- coherence(
+        fitted,
+        measure = measure,
+        n_terms = n_terms,
+        token_lists = corpus$token_lists
+      )
       explained <- if (fitted$diagnostics$totss > 0) {
         fitted$diagnostics$betweenss / fitted$diagnostics$totss
       } else {

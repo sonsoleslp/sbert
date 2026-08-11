@@ -13,7 +13,9 @@ topic_document_incidence <- function(
   terms,
   min_token_length,
   stem = FALSE,
-  stop_words = character()
+  stop_words = character(),
+  token_lists = NULL,
+  cores = 1L
 ) {
   stopifnot(
     is.character(text),
@@ -30,13 +32,18 @@ topic_document_incidence <- function(
 
   reference_terms <- unique(terms)
   # Reuse the fit-time stop_words so that, under stemming, each stem's chosen
-  # display surface is identical to the one in the topic term table.
-  token_lists <- tokenize_topic_documents(
-    text,
-    stop_words = stop_words,
-    min_token_length = as.integer(min_token_length),
-    stem = stem
-  )
+  # display surface is identical to the one in the topic term table. When a
+  # prepared corpus already tokenized these documents, reuse those token lists
+  # instead of tokenizing again — the presence matrix is identical either way.
+  if (is.null(token_lists)) {
+    token_lists <- tokenize_topic_documents(
+      text,
+      stop_words = stop_words,
+      min_token_length = as.integer(min_token_length),
+      stem = stem,
+      cores = cores
+    )
+  }
   presence <- vapply(
     token_lists,
     function(document_tokens) {
@@ -111,6 +118,14 @@ score_topic_coherence <- function(
 #' @param n_terms Number of top terms per topic to score. Capped at the number
 #'   of terms actually available for each topic.
 #' @param smoothing Additive smoothing for the UMass co-occurrence count.
+#' @param token_lists Optional precomputed per-document token lists, aligned to
+#'   `object$documents`, that skip re-tokenizing the corpus (as produced by
+#'   [topic_corpus()]). Leave `NULL` to tokenize internally; the score is
+#'   identical either way.
+#' @param cores Number of forked worker processes for tokenization when it is
+#'   not already cached. Default `1` (serial). Values above one use
+#'   `parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
+#'   result is identical regardless of the count.
 #' @return A data frame with one row per topic and columns `topic`, `label`,
 #'   `measure`, `n_terms`, and `coherence`. The corpus-level mean is attached as
 #'   the `"mean_coherence"` attribute. Topics with fewer than two scorable terms
@@ -130,7 +145,9 @@ coherence <- function(
   object,
   measure = c("npmi", "umass"),
   n_terms = 10L,
-  smoothing = 1
+  smoothing = 1,
+  token_lists = NULL,
+  cores = 1L
 ) {
   measure <- match.arg(measure)
   stopifnot(
@@ -158,7 +175,9 @@ coherence <- function(
       character()
     } else {
       object$settings$stop_words
-    }
+    },
+    token_lists = token_lists,
+    cores = cores
   )
   document_frequency <- colSums(incidence)
   co_document_frequency <- crossprod(incidence)

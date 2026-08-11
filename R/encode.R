@@ -234,9 +234,11 @@ run_sbert_onnx <- function(onnx_model, inputs, token_type_ids = TRUE) {
 #' @return A numeric matrix with one row per input and one column per
 #'   embedding dimension of the loaded model.
 #' @export
-#' @examplesIf interactive()
+#' @examples
+#' \dontrun{
 #' model <- load_model()
 #' embeddings <- encode(c("A short sentence.", "Another sentence."), model)
+#' }
 encode <- function(
   text,
   model = NULL,

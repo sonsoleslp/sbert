@@ -74,8 +74,8 @@ read from the graph itself. Unlike registry models, the package makes no
 numerical-parity claim: you vouch for the configuration.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+\dontrun{
 model <- load_custom("thenlper/gte-small")
 encode(c("one sentence", "another sentence"), model)
-\dontshow{\}) # examplesIf}
+}
 }

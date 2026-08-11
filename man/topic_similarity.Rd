@@ -13,7 +13,7 @@ topic_similarity(x, y = NULL)
 all pairwise similarities among rows of `x`.}
 }
 \value{
-A numeric topic_similarity matrix.
+A numeric similarity matrix.
 }
 \description{
 Compute Cosine Similarity

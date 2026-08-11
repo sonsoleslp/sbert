@@ -1,5 +1,45 @@
 # sbert 0.5.2
 
+- `topics()`, `select_topics()`, `topic_corpus()`, and `coherence()` gain a
+  `cores` argument for parallel tokenization; `select_topics()` also fits its
+  independent candidates in parallel. Because document tokenization and
+  per-candidate fitting are deterministic and order-preserving, results are
+  byte-identical for any core count — `cores` changes only speed, never output.
+  Parallelism uses `parallel::mclapply` on Unix-alikes and falls back to serial
+  on Windows and for small corpora; the default is `cores = 1`. On an 8-core
+  machine a five-count sweep on 15,000 documents drops from about 12 s to 7 s.
+- Added `topic_corpus()`: prepare a corpus once — embedding every document and
+  tokenizing it for term scoring — and reuse it across many models. `topics()`
+  and `select_topics()` accept the prepared corpus in place of raw text and
+  skip both the encoding and the tokenization, which previously repeated on
+  every call. A sweep or hand-written loop over topic counts now costs one
+  tokenization (and one encoding) plus the per-model clustering, rather than
+  repeating the whole corpus pass per model; the speedup grows with the number
+  of models fitted. Results are byte-identical to preparing the corpus inside
+  each call, and `select_topics()` now shares one prepared corpus across all
+  candidates internally.
+- `select_topics()` no longer re-tokenizes the corpus inside `coherence()` on
+  every candidate — the dominant cost of a sweep. `coherence()` gains an
+  optional `token_lists` argument so the shared corpus tokenization is reused;
+  scores are byte-identical. Combined with the corpus reuse above, a five-count
+  sweep on 15,000 documents dropped from about 164 s to 12 s (~13x) with no
+  change to any result.
+- `topics()` (and `select_topics()`, which calls it per candidate) no longer
+  exhausts memory or stalls on large corpora. The farthest-point centroid
+  initializer was rewritten from an O(n_topics^2 * n * d) recompute-everything
+  pass — which repeatedly allocated full document-by-dimension matrices and
+  could crash the R session — to an incremental O(n_topics * n * d) pass that
+  keeps a running nearest-centroid distance (about 24x faster at 20k documents,
+  with a fraction of the peak memory). The expensive up-front distinct-row
+  dedup was dropped in favour of an exact in-loop check, and per-document
+  centroid cosines are now vectorized. Topic assignments, terms, and
+  representatives are bit-identical to previous versions.
+- Added the `covid` dataset: 4,170 COVID-19 research abstracts (2020-2024) on
+  education, children, schools, and society, each with a publication year.
+  Editorial notices (retractions, corrections, errata) are removed during
+  preparation; 323 records carry a `"[No abstract available]"` placeholder and
+  3,671 abstracts are distinct. A companion pkgdown article, "Topic Modeling
+  COVID-19 Research Abstracts", walks the full sweep-fit-read workflow.
 - Added `plot(topic_model, type = "representatives")`, a per-topic ranked text
   list of the centroid-nearest documents (with their cosine similarity to the
   centroid), an `n_representatives` argument, and `type = "fit"`, a per-topic

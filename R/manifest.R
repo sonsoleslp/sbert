@@ -384,8 +384,8 @@ resolve_sbert_manifest <- function(model = .sbert_default_model) {
 #' @param detail Whether to include the technical columns. The default
 #'   `FALSE` returns the menu (`model`, `dimensions`, `max_tokens`,
 #'   `languages`, `size_mb`); `TRUE` adds `pooling` (`"mean"` or `"cls"`),
-#'   `prefix` (text automatically prepended by [encode()]), `license`,
-#'   `id`, and `revision`.
+#'   `prefix` (text automatically prepended by [encode()]), `engine`
+#'   (`"onnx"` or `"static"`), `license`, `id`, and `revision`.
 #' @return A data frame with one row per model.
 #' @export
 #' @examples

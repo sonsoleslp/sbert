@@ -18,7 +18,7 @@ normalize_embedding_rows <- function(embeddings) {
 #' @param x Numeric embedding matrix, or one numeric vector.
 #' @param y Optional second embedding matrix or vector. When omitted, computes
 #'   all pairwise similarities among rows of `x`.
-#' @return A numeric topic_similarity matrix.
+#' @return A numeric similarity matrix.
 #' @export
 #' @examples
 #' x <- rbind(c(1, 0), c(0, 1), c(1, 1))

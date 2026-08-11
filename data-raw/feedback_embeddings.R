@@ -1,5 +1,5 @@
 # Build inst/extdata/feedback_embeddings.rds — the precomputed fixture the
-# topic-modeling vignette uses so it stays buildable without a model download.
+# levebee vignette uses so it stays buildable without a model download.
 #
 # Recipe (matches the vignette narrative): the first 600 distinct English
 # translations of feedback_translations, in order of first appearance, encoded

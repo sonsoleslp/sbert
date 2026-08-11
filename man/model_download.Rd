@@ -31,7 +31,7 @@ revision and checked against package-controlled SHA-256 values. See
 `all-MiniLM-L6-v2`.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+\dontrun{
 model_download()
-\dontshow{\}) # examplesIf}
+}
 }

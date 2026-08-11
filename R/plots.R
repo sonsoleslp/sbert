@@ -63,7 +63,16 @@ draw_topic_bar_panel <- function(
   value_format,
   cex_names = 0.75
 ) {
-  headroom <- if (length(values) > 0 && max(values) > 0) max(values) * 1.18 else 1
+  # Leave generous room past the longest bar for its value label, which is
+  # drawn to the right of the bar end. Wide decimals like "0.253" need more than
+  # a token margin, so headroom scales with the label's character width.
+  value_labels <- sprintf(value_format, values)
+  widest_chars <- if (length(value_labels) > 0) max(nchar(value_labels)) else 0L
+  headroom <- if (length(values) > 0 && max(values) > 0) {
+    max(values) * (1.1 + 0.06 * widest_chars)
+  } else {
+    1
+  }
   positions <- graphics::barplot(
     values,
     names.arg = labels,
@@ -78,7 +87,7 @@ draw_topic_bar_panel <- function(
   graphics::text(
     x = values,
     y = positions,
-    labels = sprintf(value_format, values),
+    labels = value_labels,
     pos = 4,
     cex = 0.62,
     col = "grey30"
@@ -537,13 +546,18 @@ plot_topic_map <- function(x, colors, max_points) {
 #' @param ... Unused; present for S3 compatibility.
 #' @return Invisibly, `x`.
 #' @export
-#' @examplesIf interactive()
+#' @examples
 #' text <- c(
 #'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
+#'   "Stocks and bonds trade", "Markets price shares",
+#'   "Neural nets learn patterns", "Models train on data"
 #' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topics <- topics(text, 2, embeddings = embeddings, keep_embeddings = TRUE)
+#' embeddings <- rbind(
+#'   c(1, 0, 0), c(0.9, 0.1, 0),
+#'   c(0, 1, 0), c(0.1, 0.9, 0),
+#'   c(0, 0, 1), c(0.05, 0, 0.95)
+#' )
+#' topics <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
 #' plot(topics, type = "sizes")
 #' plot(topics, type = "terms")
 #' plot(topics, type = "terms", by = "frequency")

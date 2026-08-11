@@ -208,9 +208,11 @@ verify_custom_files <- function(model_directory, manifest) {
 #' @param quiet Whether to suppress download progress.
 #' @return An object of class `sbert_model`.
 #' @export
-#' @examplesIf interactive()
+#' @examples
+#' \dontrun{
 #' model <- load_custom("thenlper/gte-small")
 #' encode(c("one sentence", "another sentence"), model)
+#' }
 load_custom <- function(
   id,
   revision = NULL,

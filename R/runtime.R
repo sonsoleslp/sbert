@@ -8,8 +8,10 @@
 #'   automatic detection.
 #' @return The result returned by [onnxr::onnx_install()], invisibly.
 #' @export
-#' @examplesIf interactive()
+#' @examples
+#' \dontrun{
 #' install_runtime()
+#' }
 install_runtime <- function(cuda = NULL) {
   stopifnot(
     is.null(cuda) ||

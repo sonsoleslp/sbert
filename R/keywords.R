@@ -71,7 +71,7 @@ mmr_select <- function(relevance, candidate_similarity, n, topic_diversity) {
 
 #' Extract Keywords from Documents by Embedding Similarity
 #'
-#' Ranks each document's own words and phrases by cosine topic_similarity between
+#' Ranks each document's own words and phrases by cosine similarity between
 #' their embeddings and the document embedding, computed with the same model,
 #' and selects the top `n` by maximal marginal relevance so the keywords are
 #' relevant without being redundant (the KeyBERT design).
@@ -89,7 +89,7 @@ mmr_select <- function(relevance, candidate_similarity, n, topic_diversity) {
 #' @param ngrams Maximum phrase length in tokens. Default `2` (unigrams and
 #'   bigrams).
 #' @param topic_diversity Maximal-marginal-relevance trade-off in `[0, 1)`: `0`
-#'   ranks purely by topic_similarity, larger values penalize keywords similar to
+#'   ranks purely by similarity, larger values penalize keywords similar to
 #'   ones already selected. Default `0.3`.
 #' @param stop_words Words excluded from candidates. Defaults to
 #'   [stop_words()].
@@ -98,7 +98,7 @@ mmr_select <- function(relevance, candidate_similarity, n, topic_diversity) {
 #' @param batch_size Number of texts encoded per model call. Default `32`.
 #' @return A base data frame with one row per keyword and columns
 #'   `document_id`, `document_name`, `rank`, `keyword`, and `topic_similarity`
-#'   (cosine topic_similarity between the keyword and its document).
+#'   (cosine similarity between the keyword and its document).
 #' @export
 #' @examples
 #' \dontrun{

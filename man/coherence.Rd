@@ -4,7 +4,14 @@
 \alias{coherence}
 \title{Score Topic Coherence}
 \usage{
-coherence(object, measure = c("npmi", "umass"), n_terms = 10L, smoothing = 1)
+coherence(
+  object,
+  measure = c("npmi", "umass"),
+  n_terms = 10L,
+  smoothing = 1,
+  token_lists = NULL,
+  cores = 1L
+)
 }
 \arguments{
 \item{object}{An `sbert_topic_model` returned by [topics()].}
@@ -17,6 +24,16 @@ information, bounded in `[-1, 1]`; larger is more coherent).}
 of terms actually available for each topic.}
 
 \item{smoothing}{Additive smoothing for the UMass co-occurrence count.}
+
+\item{token_lists}{Optional precomputed per-document token lists, aligned to
+`object$documents`, that skip re-tokenizing the corpus (as produced by
+[topic_corpus()]). Leave `NULL` to tokenize internally; the score is
+identical either way.}
+
+\item{cores}{Number of forked worker processes for tokenization when it is
+not already cached. Default `1` (serial). Values above one use
+`parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
+result is identical regardless of the count.}
 }
 \value{
 A data frame with one row per topic and columns `topic`, `label`,

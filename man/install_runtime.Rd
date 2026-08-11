@@ -19,7 +19,7 @@ Explicitly downloads the native ONNX Runtime used by the CRAN package
 `onnxr`. This is never called during package installation or loading.
 }
 \examples{
-\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
+\dontrun{
 install_runtime()
-\dontshow{\}) # examplesIf}
+}
 }

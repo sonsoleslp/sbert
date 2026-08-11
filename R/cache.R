@@ -143,8 +143,10 @@ download_sbert_artifact <- function(
 #' @param timeout Minimum download timeout in seconds.
 #' @return Invisibly, the model directory.
 #' @export
-#' @examplesIf interactive()
+#' @examples
+#' \dontrun{
 #' model_download()
+#' }
 model_download <- function(
   model = "all-MiniLM-L6-v2",
   cache_dir = default_cache_dir(),

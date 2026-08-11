@@ -30,7 +30,7 @@ translations. The messages are short instructional hints and encouragements
 source languages include Czech, Slovak, Polish, German, Hungarian,
 Romanian, Ukrainian, Russian, Mongolian, and Vietnamese. The corpus is a
 realistic, quirk-preserving benchmark for the package's embedding,
-topic_similarity, segmentation, and topic-modeling workflow: translations repeat
+similarity, segmentation, and topic-modeling workflow: translations repeat
 (templates such as "Try again." recur), some source messages remain in
 their original language, and a few are identical to their translation.
 }
