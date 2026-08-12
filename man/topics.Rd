@@ -24,7 +24,8 @@ topics(
   seeds = NULL,
   seed_embeddings = NULL,
   fixed_seeds = FALSE,
-  cores = 1L
+  cores = 1L,
+  numbers = c("keep", "remove")
 )
 }
 \arguments{
@@ -100,6 +101,10 @@ term scoring. Default `1` (serial). Values above one use
 for small corpora; the tokenization — and therefore every result — is
 identical regardless of the count. Ignored when a prepared [topic_corpus()]
 is supplied (its tokens are already computed).}
+
+\item{numbers}{How to treat purely numeric tokens (years, counts) in topic
+terms. `"keep"` (default) keeps them; `"remove"` drops tokens made only of
+digits, while retaining alphanumerics such as `covid19`.}
 }
 \value{
 An object of class `sbert_topic_model` containing document

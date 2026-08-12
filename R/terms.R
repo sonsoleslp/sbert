@@ -23,6 +23,9 @@
 #'   weighting, damping very frequent words.
 #' @param stem Collapse inflected forms onto a shared Porter stem, displaying
 #'   the most frequent surface form. Requires `SnowballC`.
+#' @param numbers How to treat purely numeric tokens: `"keep"` or `"remove"`
+#'   (drop digit-only tokens such as years and counts). Defaults to the model's
+#'   fitted setting.
 #' @param smoothing Additive (Dirichlet) smoothing for the `beta` column. Only
 #'   terms a topic actually used are returned, so with `smoothing = 0`
 #'   (default) each topic's `beta` sums to one, while any positive value
@@ -60,6 +63,7 @@ terms.sbert_topic_model <- function(
   weighting = NULL,
   reduce_frequent_words = NULL,
   stem = NULL,
+  numbers = NULL,
   smoothing = 0,
   sort_by = c("score", "beta"),
   ...
@@ -87,6 +91,11 @@ terms.sbert_topic_model <- function(
     reduce_frequent_words
   }
   stem <- if (is.null(stem)) settings$stem else stem
+  numbers <- if (is.null(numbers)) {
+    if (is.null(settings$numbers)) "keep" else settings$numbers
+  } else {
+    numbers
+  }
   stopifnot(
     is.numeric(smoothing),
     length(smoothing) == 1L,
@@ -100,7 +109,8 @@ terms.sbert_topic_model <- function(
       x$documents$text,
       stop_words = stop_words,
       min_token_length = min_token_length,
-      stem = stem
+      stem = stem,
+      numbers = numbers
     ),
     use.names = FALSE
   )))
@@ -117,7 +127,8 @@ terms.sbert_topic_model <- function(
     min_token_length = min_token_length,
     weighting = weighting,
     reduce_frequent_words = reduce_frequent_words,
-    stem = stem
+    stem = stem,
+    numbers = numbers
   )
 
   # p(term | topic) from the same counts the scores were built on, so `beta`

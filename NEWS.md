@@ -1,5 +1,31 @@
 # sbert 0.5.2
 
+- `topics()`, `select_topics()`, and `topic_corpus()` gain a `numbers` argument.
+  `"keep"` (default, unchanged) keeps numeric tokens; `"remove"` drops tokens
+  made only of digits — years, counts — from topic terms while retaining
+  alphanumerics such as `covid19`. The setting is recorded on the model so
+  `coherence()` stays consistent. Custom stop words already compose through the
+  `stop_words` argument of these verbs and `keywords()`; `stop_words(add =)`
+  keeps the defaults plus your terms, a bare vector replaces the list, and
+  `character()` disables filtering. Documented with examples.
+- The topic tokenizer is about 1.5x faster: a single-pass base-R `strsplit`
+  split replaces the previous `gregexpr` + `regmatches` pair. Output is
+  byte-identical (same token grammar, verified across Unicode, apostrophe, and
+  empty-document edge cases) and no dependency is added. This speeds up
+  `topics()`, `select_topics()`, `topic_corpus()`, and `coherence()`, and stacks
+  with the `cores` argument.
+- `segment()` and `topic_gamma()` gain a `cores` argument. Splitting documents
+  into sentences or clauses is the dominant non-encoding cost of sentence-level
+  `topic_gamma()`, and it is per-document independent, so forking it across
+  cores gives a several-fold speed-up (about 4-5x on eight cores) with
+  byte-identical output. Encoding is parallelized separately via
+  `load_model(threads =)`.
+- `topic_gamma()` gains `dedupe_segments` (default `FALSE`). Real corpora often
+  repeat many segments (boilerplate sentences, short clauses); enabling this
+  encodes each distinct segment once and expands by position, roughly halving
+  the encoding cost on such corpora. Off by default because encoding a smaller
+  batched set can shift a rare borderline assignment at the ~1e-7 level; with
+  the static `potion-base-8M` model the result is identical.
 - `topics()`, `select_topics()`, `topic_corpus()`, and `coherence()` gain a
   `cores` argument for parallel tokenization; `select_topics()` also fits its
   independent candidates in parallel. Because document tokenization and

@@ -220,6 +220,10 @@ segment_document <- function(text, level, merge_below, abbreviations) {
 #' @param abbreviations Character vector of abbreviations (each ending in a
 #'   period) whose periods never end a sentence. Defaults to the built-in
 #'   gazetteer from [abbreviations()]; matching is case-insensitive.
+#' @param cores Number of forked worker processes used to split documents.
+#'   Default `1` (serial). Values above one use `parallel::mclapply` on
+#'   Unix-alikes and fall back to serial on Windows or for small inputs; the
+#'   segmentation is identical regardless of the count.
 #' @return A base data frame with one row per segment and columns
 #'   `document_id` (integer position in `text`), `document_name` (name of the
 #'   input element, or `""`), `segment` (integer position within the
@@ -238,7 +242,8 @@ segment <- function(
   text,
   level = c("clause", "sentence", "phrase"),
   merge_below = 0L,
-  abbreviations = default_abbreviations()
+  abbreviations = default_abbreviations(),
+  cores = 1L
 ) {
   level <- match.arg(level)
   stopifnot(
@@ -258,13 +263,33 @@ segment <- function(
   if (is.null(document_names)) {
     document_names <- rep.int("", length(text))
   }
-  segment_lists <- lapply(
-    unname(text),
-    segment_document,
-    level = level,
-    merge_below = merge_below,
-    abbreviations = abbreviations
-  )
+  # Splitting a document is independent of every other document, so the per-
+  # document list is built in parallel across forks when asked and recombined in
+  # order — byte-identical to the serial pass, only faster.
+  n_cores <- resolve_cores(cores, length(text))
+  segment_one <- function(document) {
+    segment_document(
+      document,
+      level = level,
+      merge_below = merge_below,
+      abbreviations = abbreviations
+    )
+  }
+  segment_lists <- if (n_cores > 1L) {
+    chunks <- parallel::splitIndices(length(text), n_cores)
+    parts <- parallel::mclapply(
+      chunks,
+      function(indices) lapply(unname(text)[indices], segment_one),
+      mc.cores = n_cores
+    )
+    if (any(vapply(parts, inherits, logical(1), "try-error"))) {
+      lapply(unname(text), segment_one)
+    } else {
+      unlist(parts, recursive = FALSE, use.names = FALSE)
+    }
+  } else {
+    lapply(unname(text), segment_one)
+  }
   counts <- lengths(segment_lists)
   data.frame(
     document_id = rep.int(seq_along(text), counts),

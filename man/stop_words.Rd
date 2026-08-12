@@ -24,7 +24,20 @@ corpus-wide vocabulary from topic labels (words every document shares
 carry no discriminative information). `remove` un-lists built-in entries
 whose surface form is meaningful in a specific corpus.
 }
+\details{
+For a fully custom list, pass any character vector straight to the
+`stop_words` argument of [topics()], [select_topics()], [topic_corpus()], or
+[keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
+the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
+list entirely, or `character()` to disable stop-word filtering.
+}
 \examples{
 head(stop_words())
-stop_words(add = c("students", "learning"), remove = "against")
+# keep the defaults and add domain terms
+custom <- stop_words(add = c("students", "learning"), remove = "against")
+
+# use a custom list when modeling
+text <- c("students learning math", "markets and trading stocks")
+embeddings <- rbind(c(1, 0), c(0, 1))
+topics(text, n_topics = 2, embeddings = embeddings, stop_words = custom)
 }

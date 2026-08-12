@@ -13,6 +13,7 @@
   weighting = NULL,
   reduce_frequent_words = NULL,
   stem = NULL,
+  numbers = NULL,
   smoothing = 0,
   sort_by = c("score", "beta"),
   ...
@@ -39,6 +40,10 @@ weighting, damping very frequent words.}
 
 \item{stem}{Collapse inflected forms onto a shared Porter stem, displaying
 the most frequent surface form. Requires `SnowballC`.}
+
+\item{numbers}{How to treat purely numeric tokens: `"keep"` or `"remove"`
+(drop digit-only tokens such as years and counts). Defaults to the model's
+fitted setting.}
 
 \item{smoothing}{Additive (Dirichlet) smoothing for the `beta` column. Only
 terms a topic actually used are returned, so with `smoothing = 0`

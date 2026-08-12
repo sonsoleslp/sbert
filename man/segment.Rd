@@ -8,7 +8,8 @@ segment(
   text,
   level = c("clause", "sentence", "phrase"),
   merge_below = 0L,
-  abbreviations = default_abbreviations()
+  abbreviations = default_abbreviations(),
+  cores = 1L
 )
 }
 \arguments{
@@ -24,6 +25,11 @@ segmentation.}
 \item{abbreviations}{Character vector of abbreviations (each ending in a
 period) whose periods never end a sentence. Defaults to the built-in
 gazetteer from [abbreviations()]; matching is case-insensitive.}
+
+\item{cores}{Number of forked worker processes used to split documents.
+Default `1` (serial). Values above one use `parallel::mclapply` on
+Unix-alikes and fall back to serial on Windows or for small inputs; the
+segmentation is identical regardless of the count.}
 }
 \value{
 A base data frame with one row per segment and columns

@@ -73,6 +73,21 @@ model_download()
 embeddings <- encode(covid_content$Abstract, batch_size = 32)
 ```
 
+Every abstract shares a scientific boilerplate — *covid*, *pandemic*, *study*,
+*results* — and the label of *every* topic would otherwise repeat it. Those
+words carry no signal about what separates one topic from another, so they are
+excluded up front; `numbers = "remove"` drops bare years and counts (*2020*,
+*19*) for the same reason. Domain stop words are the standard way to keep
+topic labels informative.
+
+```{r stopwords}
+covid_stops <- stop_words(add = c(
+  "covid", "coronavirus", "sars", "cov", "pandemic", "disease",
+  "study", "studies", "result", "results", "conclusion", "conclusions",
+  "background", "method", "methods", "objective", "aim"
+))
+```
+
 There is no correct topic count. `select_topics()` fits one model per candidate
 and reports the numbers that justify a choice:
 
@@ -81,7 +96,9 @@ sweep <- select_topics(
   covid_content$Abstract,
   n_topics = c(4, 6, 8, 10, 12),
   embeddings = embeddings,
-  measure = "npmi"
+  measure = "npmi",
+  stop_words = covid_stops,
+  numbers = "remove"
 )
 sweep
 ```
@@ -90,13 +107,15 @@ sweep
 plot(sweep)
 ```
 
-Coherence climbs from four topics to a clear peak at **eight** and falls off on
-either side; topic diversity peaks there too, even as `explained` keeps rising
-with the count. Eight is therefore the granularity this corpus actually
-supports — the point after which adding topics stops improving coherence.
+Read the count from the table rather than by habit: coherence rises, peaks, and
+falls as topics multiply, while `explained` keeps climbing regardless. The
+count with the highest coherence is the granularity this corpus best supports —
+the point after which splitting topics stops buying coherence — so the model is
+fitted there.
 
 ```{r model}
-topic_model <- fitted(sweep, n_topics = 8)
+best_n <- sweep$n_topics[which.max(sweep$coherence)]
+topic_model <- fitted(sweep, n_topics = best_n)
 ```
 
 # Corpus at a glance
@@ -120,12 +139,13 @@ cat(
 ```
 
 <div class="caveat">
-<strong>Read the topics as a lens, not a taxonomy.</strong> Eight was chosen
+<strong>Read the topics as a lens, not a taxonomy.</strong> The count was chosen
 because coherence peaks there, not because it is uniquely correct. Labels are
-the three most distinctive class-based TF-IDF terms, not validated names. A
-bibliographic export is never perfectly on-theme, so one small cluster collects
-genuinely off-topic papers (veterinary and materials research) — the model
-isolating them rather than contaminating the education topics.
+the three most distinctive class-based TF-IDF terms — with corpus boilerplate
+and bare numbers excluded — not validated names. A bibliographic export is never
+perfectly on-theme, so one small cluster collects genuinely off-topic papers
+(veterinary and materials research) — the model isolating them rather than
+contaminating the education topics.
 </div>
 
 # The topics
@@ -137,7 +157,7 @@ names(overview) <- c("Topic", "Distinctive terms", "Abstracts", "Share")
 knitr::kable(overview, row.names = FALSE)
 ```
 
-`plot(type = "fit")` lays out all eight topics at once — the three keyword views
+`plot(type = "fit")` lays out every topic at once — the three keyword views
 (raw within-topic count, class-based TF-IDF, and generative probability) beside
 each topic's representative abstracts, one row per topic:
 

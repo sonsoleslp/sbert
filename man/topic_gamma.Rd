@@ -10,7 +10,9 @@ topic_gamma(
   model = NULL,
   embeddings = NULL,
   level = c("clause", "sentence", "phrase"),
-  batch_size = 32L
+  batch_size = 32L,
+  cores = 1L,
+  dedupe_segments = FALSE
 )
 }
 \arguments{
@@ -29,6 +31,22 @@ embeddings whose rows align with `segment(text, level = level)`.}
 
 \item{batch_size}{Batch size passed to [encode()] when `model` is
 used.}
+
+\item{cores}{Number of forked worker processes used to split documents into
+segments (passed to [segment()]). Default `1`. Segmenting a large corpus
+dominates the non-encoding cost, so `cores > 1` can noticeably speed up
+sentence- and clause-level gamma; the result is identical for any count.
+Encoding itself is parallelized separately, via `load_model(threads =)`.}
+
+\item{dedupe_segments}{When `TRUE`, encode each distinct segment only once
+and expand the embeddings back by position, rather than encoding every
+occurrence. Real corpora are often close to half duplicate segments, so
+this can roughly halve encoding time (the dominant cost). Only applies when
+`embeddings` are not supplied. Assignments match encoding every occurrence
+up to the ~1e-7 floating-point effect of encoding a smaller batched set,
+which can flip a rare borderline segment; it is therefore opt-in and off by
+default. With the static `potion-base-8M` model, encoding has no batch
+effect and the result is identical.}
 }
 \value{
 A base data frame with one row per document-topic pair and columns

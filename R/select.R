@@ -101,7 +101,7 @@ select_topics <- function(
   # tokenization per model. topic_corpus() returns an existing corpus unchanged,
   # so a prepared corpus can also be passed in directly.
   dots <- list(...)
-  corpus_arg_names <- intersect(names(dots), c("stop_words", "min_token_length", "stem"))
+  corpus_arg_names <- intersect(names(dots), c("stop_words", "min_token_length", "stem", "numbers"))
   corpus <- do.call(
     topic_corpus,
     c(

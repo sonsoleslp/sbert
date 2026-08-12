@@ -46,3 +46,23 @@ testthat::test_that("stemming keeps topic terms distinct and deduplicated", {
   testthat::expect_false(all(c("animal", "animals") %in% terms))
   testthat::expect_false(all(c("colour", "colours") %in% terms))
 })
+
+testthat::test_that("numbers = 'remove' drops purely numeric tokens", {
+  text <- c("the year 2020 had 15 covid19 studies", "aged 65 patients")
+  keep <- sbert:::tokenize_topic_documents(text, default_stop_words(), 2L, numbers = "keep")
+  drop <- sbert:::tokenize_topic_documents(text, default_stop_words(), 2L, numbers = "remove")
+  testthat::expect_true("2020" %in% keep[[1]])
+  testthat::expect_false(any(grepl("^[0-9]+$", unlist(drop))))
+  # alphanumerics and words survive
+  testthat::expect_true("covid19" %in% drop[[1]])
+  testthat::expect_true("studies" %in% drop[[1]])
+  testthat::expect_true("patients" %in% drop[[2]])
+})
+
+testthat::test_that("numbers = 'keep' is the default and unchanged", {
+  text <- c("count 42 things", "measure 7 items")
+  testthat::expect_identical(
+    sbert:::tokenize_topic_documents(text, default_stop_words(), 2L),
+    sbert:::tokenize_topic_documents(text, default_stop_words(), 2L, numbers = "keep")
+  )
+})

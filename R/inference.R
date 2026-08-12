@@ -238,6 +238,20 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' @param level Segmentation granularity passed to [segment()].
 #' @param batch_size Batch size passed to [encode()] when `model` is
 #'   used.
+#' @param cores Number of forked worker processes used to split documents into
+#'   segments (passed to [segment()]). Default `1`. Segmenting a large corpus
+#'   dominates the non-encoding cost, so `cores > 1` can noticeably speed up
+#'   sentence- and clause-level gamma; the result is identical for any count.
+#'   Encoding itself is parallelized separately, via `load_model(threads =)`.
+#' @param dedupe_segments When `TRUE`, encode each distinct segment only once
+#'   and expand the embeddings back by position, rather than encoding every
+#'   occurrence. Real corpora are often close to half duplicate segments, so
+#'   this can roughly halve encoding time (the dominant cost). Only applies when
+#'   `embeddings` are not supplied. Assignments match encoding every occurrence
+#'   up to the ~1e-7 floating-point effect of encoding a smaller batched set,
+#'   which can flip a rare borderline segment; it is therefore opt-in and off by
+#'   default. With the static `potion-base-8M` model, encoding has no batch
+#'   effect and the result is identical.
 #' @return A base data frame with one row per document-topic pair and columns
 #'   `document_id`, `topic`, `gamma`, and `n_segments`. `gamma` sums to 1
 #'   within each document; documents with no segments contribute no rows.
@@ -258,7 +272,9 @@ topic_gamma <- function(
   model = NULL,
   embeddings = NULL,
   level = c("clause", "sentence", "phrase"),
-  batch_size = 32L
+  batch_size = 32L,
+  cores = 1L,
+  dedupe_segments = FALSE
 ) {
   level <- match.arg(level)
   stopifnot(
@@ -270,20 +286,43 @@ topic_gamma <- function(
     length(batch_size) == 1L,
     is.finite(batch_size),
     batch_size >= 1,
-    batch_size == as.integer(batch_size)
+    batch_size == as.integer(batch_size),
+    is.logical(dedupe_segments),
+    length(dedupe_segments) == 1L,
+    !is.na(dedupe_segments)
   )
 
-  segments <- segment(text, level = level)
+  segments <- segment(text, level = level, cores = cores)
   if (nrow(segments) == 0L) {
     stop("No document produced any segment.", call. = FALSE)
   }
-  embedding_matrix <- resolve_new_embeddings(
-    segments$text,
-    model,
-    embeddings,
-    batch_size,
-    n_expected = nrow(segments)
-  )
+  if (dedupe_segments && is.null(embeddings)) {
+    # Repeated segments ("See Fig. 3.", boilerplate sentences) are common; a
+    # real corpus is often ~half duplicates. Encode each distinct segment once
+    # and expand back by position, halving encoding on such corpora. Assignments
+    # are unchanged from encoding every occurrence, up to the ~1e-7 batch-
+    # composition effect on the (now smaller) encoded set — hence opt-in.
+    distinct_segments <- unique(segments$text)
+    distinct_embeddings <- resolve_new_embeddings(
+      distinct_segments,
+      model,
+      NULL,
+      batch_size,
+      n_expected = length(distinct_segments)
+    )
+    embedding_matrix <- distinct_embeddings[
+      match(segments$text, distinct_segments), ,
+      drop = FALSE
+    ]
+  } else {
+    embedding_matrix <- resolve_new_embeddings(
+      segments$text,
+      model,
+      embeddings,
+      batch_size,
+      n_expected = nrow(segments)
+    )
+  }
   assignment <- assign_topic_embeddings(embedding_matrix, object$centers)
 
   n_topics <- nrow(object$topics)

@@ -24,6 +24,12 @@
 #' carry no discriminative information). `remove` un-lists built-in entries
 #' whose surface form is meaningful in a specific corpus.
 #'
+#' For a fully custom list, pass any character vector straight to the
+#' `stop_words` argument of [topics()], [select_topics()], [topic_corpus()], or
+#' [keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
+#' the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
+#' list entirely, or `character()` to disable stop-word filtering.
+#'
 #' @param language Currently only `"en"` is supported.
 #' @param add Character vector of extra words to exclude (matched
 #'   case-insensitively).
@@ -32,7 +38,13 @@
 #' @export
 #' @examples
 #' head(stop_words())
-#' stop_words(add = c("students", "learning"), remove = "against")
+#' # keep the defaults and add domain terms
+#' custom <- stop_words(add = c("students", "learning"), remove = "against")
+#'
+#' # use a custom list when modeling
+#' text <- c("students learning math", "markets and trading stocks")
+#' embeddings <- rbind(c(1, 0), c(0, 1))
+#' topics(text, n_topics = 2, embeddings = embeddings, stop_words = custom)
 stop_words <- function(language = "en", add = NULL, remove = NULL) {
   stopifnot(
     is.character(language),
@@ -71,7 +83,7 @@ resolve_cores <- function(cores, n_items) {
   max(1L, min(cores, available, n_items))
 }
 
-tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = FALSE, cores = 1L) {
+tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = FALSE, cores = 1L, numbers = "keep") {
   stopifnot(
     is.character(text),
     !anyNA(text),
@@ -84,7 +96,10 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
     min_token_length == as.integer(min_token_length),
     is.logical(stem),
     length(stem) == 1L,
-    !is.na(stem)
+    !is.na(stem),
+    is.character(numbers),
+    length(numbers) == 1L,
+    numbers %in% c("keep", "remove")
   )
 
   # Regex tokenization and stop-word/length filtering are per-document and
@@ -98,7 +113,8 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
       chunks,
       function(indices) {
         tokenize_topic_documents(
-          text[indices], stop_words, min_token_length, stem = FALSE, cores = 1L
+          text[indices], stop_words, min_token_length, stem = FALSE,
+          cores = 1L, numbers = numbers
         )
       },
       mc.cores = n_cores
@@ -116,18 +132,34 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
   # Normalize the curly apostrophe (U+2019) to the straight one so that
   # contractions like "it's" and "it’s" are the same token.
   normalized_text <- gsub("\u2019", "'", tolower(enc2utf8(text)), fixed = TRUE)
-  token_pattern <- "(*UTF)(*UCP)[[:alnum:]]+(?:['][[:alnum:]]+)*"
-  token_matches <- gregexpr(token_pattern, normalized_text, perl = TRUE)
-  token_lists <- regmatches(normalized_text, token_matches)
   normalized_stopwords <- unique(
     gsub("\u2019", "'", tolower(enc2utf8(stop_words)), fixed = TRUE)
   )
 
+  # Single-pass tokenization, byte-identical to the grammar
+  # `[[:alnum:]]+(?:'[[:alnum:]]+)*` but faster than a gregexpr + regmatches
+  # pair: split on runs of non-(alnum or apostrophe), then within each piece
+  # strip edge apostrophes and split any run of two or more apostrophes (which
+  # never sit inside a token). Uses only base R.
+  pieces <- strsplit(normalized_text, "(*UTF)(*UCP)[^[:alnum:]']+", perl = TRUE)
   filtered <- lapply(
-    token_lists,
-    function(tokens) {
+    pieces,
+    function(raw_pieces) {
+      raw_pieces <- raw_pieces[nzchar(raw_pieces)]
+      if (length(raw_pieces) == 0L) {
+        return(character(0))
+      }
+      tokens <- gsub("^'+|'+$", "", raw_pieces)
+      tokens <- unlist(strsplit(tokens, "''+"), use.names = FALSE)
+      tokens <- tokens[nzchar(tokens)]
       keep <- nchar(tokens, type = "chars") >= min_token_length &
         !tokens %in% normalized_stopwords
+      if (numbers == "remove") {
+        # Drop purely numeric tokens (years, counts) while keeping alphanumerics
+        # such as "covid19". Runs joined only by digits are numbers; letters make
+        # a word.
+        keep <- keep & grepl("[^0-9']", tokens)
+      }
       unname(tokens[keep])
     }
   )
@@ -188,7 +220,8 @@ topic_term_scores <- function(
   reduce_frequent_words = FALSE,
   stem = FALSE,
   token_lists = NULL,
-  cores = 1L
+  cores = 1L,
+  numbers = "keep"
 ) {
   weighting <- match.arg(weighting)
   stopifnot(
@@ -218,7 +251,8 @@ topic_term_scores <- function(
   # reuse across many models. The result is identical to tokenizing in place.
   if (is.null(token_lists)) {
     token_lists <- tokenize_topic_documents(
-      text, stop_words, min_token_length, stem = stem, cores = cores
+      text, stop_words, min_token_length, stem = stem, cores = cores,
+      numbers = numbers
     )
   }
   all_tokens <- unlist(token_lists, use.names = FALSE)
@@ -598,7 +632,7 @@ encode_topic_documents <- function(text, model, batch_size) {
 #'   text: the corpus only *caches* the embedding and tokenization steps, it
 #'   does not change them. The corpus fixes the embedding source (`model` or
 #'   `embeddings`) and the tokenization settings (`stop_words`,
-#'   `min_token_length`, `stem`); [topics()] then refuses conflicting overrides
+#'   `min_token_length`, `stem`, `numbers`); [topics()] then refuses conflicting overrides
 #'   for those, while per-model settings (`n_topics`, `n_terms`,
 #'   `min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`, ...)
 #'   are still chosen per call.
@@ -627,8 +661,10 @@ topic_corpus <- function(
   stop_words = default_stop_words(),
   min_token_length = 2L,
   stem = FALSE,
-  cores = 1L
+  cores = 1L,
+  numbers = c("keep", "remove")
 ) {
+  numbers <- match.arg(numbers)
   if (inherits(text, "sbert_topic_corpus")) {
     return(text)
   }
@@ -710,7 +746,8 @@ topic_corpus <- function(
     stop_words,
     as.integer(min_token_length),
     stem = stem,
-    cores = cores
+    cores = cores,
+    numbers = numbers
   )
 
   structure(
@@ -723,7 +760,8 @@ topic_corpus <- function(
       settings = list(
         stop_words = stop_words,
         min_token_length = as.integer(min_token_length),
-        stem = stem
+        stem = stem,
+        numbers = numbers
       )
     ),
     class = "sbert_topic_corpus"
@@ -781,6 +819,9 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   `character()` to disable stop-word filtering.
 #' @param min_term_frequency Minimum corpus-wide token frequency.
 #' @param min_token_length Minimum Unicode character length for a topic token.
+#' @param numbers How to treat purely numeric tokens (years, counts) in topic
+#'   terms. `"keep"` (default) keeps them; `"remove"` drops tokens made only of
+#'   digits, while retaining alphanumerics such as `covid19`.
 #' @param weighting Class-based term-weighting scheme. `"ctfidf"` (default) uses
 #'   `tf * log(1 + A / f_x)`; `"bm25"` uses the BM25 inverse-frequency variant
 #'   `tf * log(1 + (A - f_x + 0.5) / (f_x + 0.5))`, which more aggressively
@@ -846,9 +887,11 @@ topics <- function(
   seeds = NULL,
   seed_embeddings = NULL,
   fixed_seeds = FALSE,
-  cores = 1L
+  cores = 1L,
+  numbers = c("keep", "remove")
 ) {
   weighting <- match.arg(weighting)
+  numbers <- match.arg(numbers)
 
   # A prepared topic_corpus carries the corpus-level work already done once:
   # the embeddings, the tokenization, and the token settings. Reusing it across
@@ -872,6 +915,7 @@ topics <- function(
     stop_words <- corpus$settings$stop_words
     min_token_length <- corpus$settings$min_token_length
     stem <- corpus$settings$stem
+    numbers <- if (is.null(corpus$settings$numbers)) "keep" else corpus$settings$numbers
     corpus_model_information <- corpus$model
   } else {
     # A data frame goes in whole: `column` names the text to model, every other
@@ -1087,7 +1131,8 @@ topics <- function(
     reduce_frequent_words = reduce_frequent_words,
     stem = stem,
     token_lists = precomputed_tokens,
-    cores = cores
+    cores = cores,
+    numbers = numbers
   )
   topic_labels <- vapply(
     seq_len(n_topics),
@@ -1151,6 +1196,7 @@ topics <- function(
         reduce_frequent_words = reduce_frequent_words,
         stem = stem,
         stop_words = stop_words,
+        numbers = numbers,
         seeds = if (is.null(seeds)) NULL else unname(
           if (is.list(seeds)) {
             vapply(seeds, function(seed) paste(seed, collapse = " "), character(1))

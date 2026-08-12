@@ -3,7 +3,31 @@
 Gaps against the 2025–2026 state of the art (BERTopic feature set, current
 embedding tooling), filtered by the package's principles: deterministic,
 base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment
-2026-08-02.
+2026-08-12.
+
+## Done (performance + docs round, 2026-08)
+
+- [x] **O(k) centroid initializer** — rewrote the farthest-point seeding from
+      O(k^2) to O(k); fixes the large-corpus memory blowup that crashed the
+      session, ~24x faster init, bit-identical selections
+- [x] **`topic_corpus()`** — embed and tokenize a corpus once, reuse across many
+      models; `select_topics()` shares it internally and no longer re-tokenizes
+      per candidate (including inside `coherence()`)
+- [x] **`cores` argument** — parallel tokenization, segmentation, and sweep
+      candidates on `topics()`, `select_topics()`, `topic_corpus()`,
+      `coherence()`, `segment()`, `topic_gamma()`; byte-identical for any count
+- [x] **`strsplit` tokenizer** — single-pass base-R tokenization, ~1.5x faster,
+      byte-identical, no new dependency
+- [x] **`topic_gamma(dedupe_segments = )`** — encode distinct segments once
+      (opt-in; ~2x less encoding on repetitive corpora)
+- [x] **`numbers = "keep"/"remove"`** — drop digit-only tokens (years, counts)
+      from topic terms on `topics()`, `select_topics()`, `topic_corpus()`,
+      `terms()`; recorded in settings so `coherence()` stays consistent
+- [x] **Custom stop words documented** — `stop_words(add = )` plus a bare vector
+      or `character()` on any topic verb; examples added
+- [x] **`covid` dataset + articles** — COVID-19 abstracts; a topic-modeling
+      article and a parallel/high-throughput article
+
 
 ## Done (this round)
 
@@ -37,6 +61,11 @@ base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment
       similarity as a third `coherence()` measure.
 - [ ] **Topic stability** — label-invariant agreement (ARI) across
       perturbed refits (bootstrap resampling of documents).
+- [ ] **Multilingual stop words** — `stop_words(language = )` currently only
+      wires up `"en"`; the hook exists. Build vetted lists (e.g. Snowball via
+      `tm` at build time, no runtime dep) for users' non-English corpora.
+      Deferred: every bundled modeled corpus is English, so no shipped example
+      needs it yet.
 
 ## Embedding layer
 
@@ -54,9 +83,9 @@ base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment
 
 ## Housekeeping
 
-- [x] R CMD check --as-cran clean (done at 0.5.1)
+- [x] R CMD check --as-cran clean (kept clean through the 0.5.2 work)
 - [x] Fold the analysis tutorials into the package vignette
-      (`topic-modeling` vignette ships)
+      (`levebee_vignette` ships; covid and parallel articles are pkgdown-only)
 - [ ] Decide whether `topics()`'s built-in representatives should use
       margin ranking (currently raw distance; `representatives()` is
       the margin path)
