@@ -19,7 +19,8 @@ topic_corpus(
   stop_words = default_stop_words(),
   min_token_length = 2L,
   stem = FALSE,
-  cores = 1L
+  cores = 1L,
+  numbers = c("keep", "remove")
 )
 ```
 
@@ -77,6 +78,12 @@ topic_corpus(
   result — is identical regardless of the count. Ignored when a prepared
   \[topic_corpus()\] is supplied (its tokens are already computed).
 
+- numbers:
+
+  How to treat purely numeric tokens (years, counts) in topic terms.
+  \`"keep"\` (default) keeps them; \`"remove"\` drops tokens made only
+  of digits, while retaining alphanumerics such as \`covid19\`.
+
 ## Value
 
 An object of class \`sbert_topic_corpus\`: a list with the prepared
@@ -90,8 +97,8 @@ The results are byte-identical to calling \[topics()\] on the raw text:
 the corpus only \*caches\* the embedding and tokenization steps, it does
 not change them. The corpus fixes the embedding source (\`model\` or
 \`embeddings\`) and the tokenization settings (\`stop_words\`,
-\`min_token_length\`, \`stem\`); \[topics()\] then refuses conflicting
-overrides for those, while per-model settings (\`n_topics\`,
+\`min_token_length\`, \`stem\`, \`numbers\`); \[topics()\] then refuses
+conflicting overrides for those, while per-model settings (\`n_topics\`,
 \`n_terms\`, \`min_term_frequency\`, \`weighting\`,
 \`reduce_frequent_words\`, \`seeds\`, ...) are still chosen per call.
 

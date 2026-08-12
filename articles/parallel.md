@@ -68,20 +68,24 @@ model <- load_model("all-MiniLM-L6-v2", threads = 8)
 embeddings <- encode(text, model)     # inference spread over 8 threads
 ```
 
-### `cores` — parallel tokenization and sweeps
+### `cores` — parallel tokenization, segmentation, and sweeps
 
 `cores` is available on
 [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
 [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
 [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
-and [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md).
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md),
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md), and
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md).
 Above one it forks worker processes to:
 
 - **tokenize** the corpus in parallel (documents split across workers),
-  and
 - in
   [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
-  **fit the independent candidates** in parallel.
+  **fit the independent candidates** in parallel, and
+- in [`segment()`](https://sonsoles.me/sbert/reference/segment.md) /
+  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md),
+  **split documents** in parallel.
 
 ``` r
 
@@ -95,9 +99,96 @@ sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
 **Platform notes.** `cores` uses
 [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html), which
 forks — available on Linux and macOS, and **falls back to serial on
-Windows**. Forking has overhead, so parallel tokenization only engages
-for corpora of **2,000 documents or more**; smaller inputs run serially
-by design. A good default is `cores = parallel::detectCores() - 1`.
+Windows**. Forking has overhead, so parallel work only engages for
+corpora of **2,000 documents or more**; smaller inputs run serially by
+design. A good default is `cores = parallel::detectCores() - 1`.
+
+## Sentence-level `topic_gamma()`
+
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+reports each document’s *mixture* of topics by splitting it into
+sentences (or clauses), embedding every segment, and pooling the
+assignments. It has three cost stages, each with its own lever:
+
+1.  **Segmenting** the documents — parallelize with `cores`.
+2.  **Encoding** every segment — the dominant cost; multithread with
+    `load_model(threads =)`, and optionally deduplicate (below).
+3.  **Pooling** into per-document mixtures — already negligible.
+
+``` r
+
+model <- load_model("all-MiniLM-L6-v2", threads = 8)
+gamma <- topic_gamma(
+  topic_model, documents,
+  model = model,
+  level = "sentence",
+  cores = 8               # split documents across cores
+)
+```
+
+### Reuse the segment embeddings
+
+Encoding is the dominant stage, so the largest — and fully reproducible
+— win is to *not encode twice*. If you already have the segment
+embeddings, pass them and
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+skips encoding entirely, dropping to just segmentation and pooling.
+Supply one row per segment, aligned to `segment(text, level)$text`:
+
+``` r
+
+# segment and encode once, deterministically
+segments <- segment(documents, level = "sentence", cores = 8)
+segment_embeddings <- encode(segments$text, model)
+
+# every downstream call reuses them — no re-encoding
+gamma <- topic_gamma(
+  topic_model, documents,
+  embeddings = segment_embeddings,
+  level = "sentence",
+  cores = 8
+)
+```
+
+This is what pays off when you run several sentence-level steps on one
+corpus —
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md),
+sentence-level
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
+or a [`blend()`](https://sonsoles.me/sbert/reference/blend.md) that
+carries document context into each sentence — since they can all share a
+single encode.
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+re-segments internally with the same `level`, so the order is
+deterministic and the rows line up. The result is byte-identical to
+letting it encode; only encoded-once-versus-twice changes.
+
+### Deduplicating repeated segments
+
+A long corpus repeats many segments — boilerplate sentences, short stock
+clauses — and a real corpus is often close to half duplicates.
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+normally encodes every occurrence; `dedupe_segments = TRUE` encodes each
+*distinct* segment once and expands the result by position, which can
+roughly halve the encoding cost:
+
+``` r
+
+gamma <- topic_gamma(
+  topic_model, documents,
+  model = model,
+  level = "sentence",
+  cores = 8,
+  dedupe_segments = TRUE
+)
+```
+
+**One-time shift, not free reproducibility.** Deduplication is **off by
+default** because encoding a smaller batched set perturbs the embeddings
+at the ~1e-7 level, which can flip a rare borderline segment’s
+assignment — the same trade-off as changing `batch_size`. With the
+static `potion-base-8M` model, whose encoding has no batch effect, the
+result is identical either way.
 
 ## The maximum-speed recipe
 

@@ -31,36 +31,32 @@ stop_words(language = "en", add = NULL, remove = NULL)
 
 A sorted character vector of lowercase stop words.
 
+## Details
+
+For a fully custom list, pass any character vector straight to the
+\`stop_words\` argument of \[topics()\], \[select_topics()\],
+\[topic_corpus()\], or \[keywords()\] — for example \`stop_words(add =
+c("covid", "patient"))\` to keep the defaults plus domain terms, a bare
+\`c("covid", "patient")\` to replace the list entirely, or
+\`character()\` to disable stop-word filtering.
+
 ## Examples
 
 ``` r
 head(stop_words())
 #> [1] "a"       "about"   "after"   "again"   "against" "all"    
-stop_words(add = c("students", "learning"), remove = "against")
-#>   [1] "a"          "about"      "after"      "again"      "all"       
-#>   [6] "am"         "an"         "and"        "any"        "are"       
-#>  [11] "as"         "at"         "be"         "because"    "been"      
-#>  [16] "before"     "being"      "below"      "between"    "both"      
-#>  [21] "but"        "by"         "can"        "could"      "did"       
-#>  [26] "do"         "does"       "doing"      "down"       "during"    
-#>  [31] "each"       "few"        "for"        "from"       "further"   
-#>  [36] "had"        "has"        "have"       "having"     "he"        
-#>  [41] "her"        "here"       "hers"       "herself"    "him"       
-#>  [46] "himself"    "his"        "how"        "i"          "if"        
-#>  [51] "in"         "into"       "is"         "it"         "its"       
-#>  [56] "itself"     "just"       "learning"   "me"         "more"      
-#>  [61] "most"       "my"         "myself"     "no"         "nor"       
-#>  [66] "not"        "now"        "of"         "off"        "on"        
-#>  [71] "once"       "only"       "or"         "other"      "our"       
-#>  [76] "ours"       "ourselves"  "out"        "over"       "own"       
-#>  [81] "same"       "she"        "should"     "so"         "some"      
-#>  [86] "students"   "such"       "than"       "that"       "the"       
-#>  [91] "their"      "theirs"     "them"       "themselves" "then"      
-#>  [96] "there"      "these"      "they"       "this"       "those"     
-#> [101] "through"    "to"         "too"        "under"      "until"     
-#> [106] "up"         "very"       "was"        "we"         "were"      
-#> [111] "what"       "when"       "where"      "which"      "while"     
-#> [116] "who"        "whom"       "why"        "will"       "with"      
-#> [121] "would"      "you"        "your"       "yours"      "yourself"  
-#> [126] "yourselves"
+# keep the defaults and add domain terms
+custom <- stop_words(add = c("students", "learning"), remove = "against")
+
+# use a custom list when modeling
+text <- c("students learning math", "markets and trading stocks")
+embeddings <- rbind(c(1, 0), c(0, 1))
+topics(text, n_topics = 2, embeddings = embeddings, stop_words = custom)
+#> <sbert_topic_model>
+#>   documents: 2
+#>   topics: 2
+#>   model: precomputed embeddings
+#>   algorithm: deterministic k-means (Lloyd)
+#>   topic sizes: 1, 1
+#>   between/total SS: 100.0%
 ```

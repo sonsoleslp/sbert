@@ -18,6 +18,7 @@ terms(
   weighting = NULL,
   reduce_frequent_words = NULL,
   stem = NULL,
+  numbers = NULL,
   smoothing = 0,
   sort_by = c("score", "beta"),
   ...
@@ -62,6 +63,12 @@ terms(
 
   Collapse inflected forms onto a shared Porter stem, displaying the
   most frequent surface form. Requires \`SnowballC\`.
+
+- numbers:
+
+  How to treat purely numeric tokens: \`"keep"\` or \`"remove"\` (drop
+  digit-only tokens such as years and counts). Defaults to the model's
+  fitted setting.
 
 - smoothing:
 

@@ -39,7 +39,18 @@
 
 <div id="sbert-roadmap" class="section level1">
 
-<p>Gaps against the 2025–2026 state of the art (BERTopic feature set, current embedding tooling), filtered by the package’s principles: deterministic, base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment 2026-08-02.</p>
+<p>Gaps against the 2025–2026 state of the art (BERTopic feature set, current embedding tooling), filtered by the package’s principles: deterministic, base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment 2026-08-12.</p>
+<div class="section level2">
+<h2 id="done-performance--docs-round-2026-08">Done (performance + docs round, 2026-08)<a class="anchor" aria-label="anchor" href="#done-performance--docs-round-2026-08"></a></h2>
+<ul class="task-list"><li><label><input type="checkbox" checked><strong>O(k) centroid initializer</strong> — rewrote the farthest-point seeding from O(k^2) to O(k); fixes the large-corpus memory blowup that crashed the session, ~24x faster init, bit-identical selections</label></li>
+<li><label><input type="checkbox" checked><strong><code><a href="reference/topic_corpus.html">topic_corpus()</a></code></strong> — embed and tokenize a corpus once, reuse across many models; <code><a href="reference/select_topics.html">select_topics()</a></code> shares it internally and no longer re-tokenizes per candidate (including inside <code><a href="reference/coherence.html">coherence()</a></code>)</label></li>
+<li><label><input type="checkbox" checked><strong><code>cores</code> argument</strong> — parallel tokenization, segmentation, and sweep candidates on <code><a href="reference/topics.html">topics()</a></code>, <code><a href="reference/select_topics.html">select_topics()</a></code>, <code><a href="reference/topic_corpus.html">topic_corpus()</a></code>, <code><a href="reference/coherence.html">coherence()</a></code>, <code><a href="reference/segment.html">segment()</a></code>, <code><a href="reference/topic_gamma.html">topic_gamma()</a></code>; byte-identical for any count</label></li>
+<li><label><input type="checkbox" checked><strong><code>strsplit</code> tokenizer</strong> — single-pass base-R tokenization, ~1.5x faster, byte-identical, no new dependency</label></li>
+<li><label><input type="checkbox" checked><strong><code>topic_gamma(dedupe_segments = )</code></strong> — encode distinct segments once (opt-in; ~2x less encoding on repetitive corpora)</label></li>
+<li><label><input type="checkbox" checked><strong><code>numbers = "keep"/"remove"</code></strong> — drop digit-only tokens (years, counts) from topic terms on <code><a href="reference/topics.html">topics()</a></code>, <code><a href="reference/select_topics.html">select_topics()</a></code>, <code><a href="reference/topic_corpus.html">topic_corpus()</a></code>, <code><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms()</a></code>; recorded in settings so <code><a href="reference/coherence.html">coherence()</a></code> stays consistent</label></li>
+<li><label><input type="checkbox" checked><strong>Custom stop words documented</strong> — <code>stop_words(add = )</code> plus a bare vector or <code><a href="https://rdrr.io/r/base/character.html" class="external-link">character()</a></code> on any topic verb; examples added</label></li>
+<li><label><input type="checkbox" checked><strong><code>covid</code> dataset + articles</strong> — COVID-19 abstracts; a topic-modeling article and a parallel/high-throughput article</label></li>
+</ul></div>
 <div class="section level2">
 <h2 id="done-this-round">Done (this round)<a class="anchor" aria-label="anchor" href="#done-this-round"></a></h2>
 <ul class="task-list"><li><label><input type="checkbox" checked><code><a href="reference/keywords.html">keywords()</a></code> — embedding-ranked keyword/phrase extraction with MMR diversification (KeyBERT design)</label></li>
@@ -58,6 +69,7 @@
 <li><label><input type="checkbox"><strong>MMR term diversification + bigrams for topic terms</strong> — reuse <code>mmr_select()</code> on term embeddings; extend <code>topic_term_scores()</code> to n-grams.</label></li>
 <li><label><input type="checkbox"><strong>Embedding-based coherence</strong> — mean pairwise term-embedding similarity as a third <code><a href="reference/coherence.html">coherence()</a></code> measure.</label></li>
 <li><label><input type="checkbox"><strong>Topic stability</strong> — label-invariant agreement (ARI) across perturbed refits (bootstrap resampling of documents).</label></li>
+<li><label><input type="checkbox"><strong>Multilingual stop words</strong> — <code>stop_words(language = )</code> currently only wires up <code>"en"</code>; the hook exists. Build vetted lists (e.g. Snowball via <code>tm</code> at build time, no runtime dep) for users’ non-English corpora. Deferred: every bundled modeled corpus is English, so no shipped example needs it yet.</label></li>
 </ul></div>
 <div class="section level2">
 <h2 id="embedding-layer">Embedding layer<a class="anchor" aria-label="anchor" href="#embedding-layer"></a></h2>
@@ -68,8 +80,8 @@
 </ul></div>
 <div class="section level2">
 <h2 id="housekeeping">Housekeeping<a class="anchor" aria-label="anchor" href="#housekeeping"></a></h2>
-<ul class="task-list"><li><label><input type="checkbox" checked>R CMD check –as-cran clean (done at 0.5.1)</label></li>
-<li><label><input type="checkbox" checked>Fold the analysis tutorials into the package vignette (<code>topic-modeling</code> vignette ships)</label></li>
+<ul class="task-list"><li><label><input type="checkbox" checked>R CMD check –as-cran clean (kept clean through the 0.5.2 work)</label></li>
+<li><label><input type="checkbox" checked>Fold the analysis tutorials into the package vignette (<code>levebee_vignette</code> ships; covid and parallel articles are pkgdown-only)</label></li>
 <li><label><input type="checkbox">Decide whether <code><a href="reference/topics.html">topics()</a></code>’s built-in representatives should use margin ranking (currently raw distance; <code><a href="reference/representatives.html">representatives()</a></code> is the margin path)</label></li>
 </ul></div>
 <div class="section level2">

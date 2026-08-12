@@ -63,7 +63,8 @@ segmentation works offline and is fully reproducible.</p>
 <span>  <span class="va">text</span>,</span>
 <span>  level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"clause"</span>, <span class="st">"sentence"</span>, <span class="st">"phrase"</span><span class="op">)</span>,</span>
 <span>  merge_below <span class="op">=</span> <span class="fl">0L</span>,</span>
-<span>  abbreviations <span class="op">=</span> <span class="fu">default_abbreviations</span><span class="op">(</span><span class="op">)</span></span>
+<span>  abbreviations <span class="op">=</span> <span class="fu">default_abbreviations</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  cores <span class="op">=</span> <span class="fl">1L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -90,6 +91,13 @@ segmentation.</p></dd>
 <dd><p>Character vector of abbreviations (each ending in a
 period) whose periods never end a sentence. Defaults to the built-in
 gazetteer from [abbreviations()]; matching is case-insensitive.</p></dd>
+
+
+<dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
+<dd><p>Number of forked worker processes used to split documents.
+Default `1` (serial). Values above one use `parallel::mclapply` on
+Unix-alikes and fall back to serial on Windows or for small inputs; the
+segmentation is identical regardless of the count.</p></dd>
 
 </dl></div>
     <div class="section level2">

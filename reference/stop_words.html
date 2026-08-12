@@ -80,38 +80,33 @@ case-insensitively).</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A sorted character vector of lowercase stop words.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>For a fully custom list, pass any character vector straight to the
+`stop_words` argument of [topics()], [select_topics()], [topic_corpus()], or
+[keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
+the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
+list entirely, or `character()` to disable stop-word filtering.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">stop_words</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "a"       "about"   "after"   "again"   "against" "all"    </span>
-<span class="r-in"><span><span class="fu">stop_words</span><span class="op">(</span>add <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"students"</span>, <span class="st">"learning"</span><span class="op">)</span>, remove <span class="op">=</span> <span class="st">"against"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [1] "a"          "about"      "after"      "again"      "all"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [6] "am"         "an"         "and"        "any"        "are"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [11] "as"         "at"         "be"         "because"    "been"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [16] "before"     "being"      "below"      "between"    "both"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [21] "but"        "by"         "can"        "could"      "did"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [26] "do"         "does"       "doing"      "down"       "during"    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [31] "each"       "few"        "for"        "from"       "further"   </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [36] "had"        "has"        "have"       "having"     "he"        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [41] "her"        "here"       "hers"       "herself"    "him"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [46] "himself"    "his"        "how"        "i"          "if"        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [51] "in"         "into"       "is"         "it"         "its"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [56] "itself"     "just"       "learning"   "me"         "more"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [61] "most"       "my"         "myself"     "no"         "nor"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [66] "not"        "now"        "of"         "off"        "on"        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [71] "once"       "only"       "or"         "other"      "our"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [76] "ours"       "ourselves"  "out"        "over"       "own"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [81] "same"       "she"        "should"     "so"         "some"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [86] "students"   "such"       "than"       "that"       "the"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [91] "their"      "theirs"     "them"       "themselves" "then"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [96] "there"      "these"      "they"       "this"       "those"     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [101] "through"    "to"         "too"        "under"      "until"     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [106] "up"         "very"       "was"        "we"         "were"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [111] "what"       "when"       "where"      "which"      "while"     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [116] "who"        "whom"       "why"        "will"       "with"      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [121] "would"      "you"        "your"       "yours"      "yourself"  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [126] "yourselves"</span>
+<span class="r-in"><span><span class="co"># keep the defaults and add domain terms</span></span></span>
+<span class="r-in"><span><span class="va">custom</span> <span class="op">&lt;-</span> <span class="fu">stop_words</span><span class="op">(</span>add <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"students"</span>, <span class="st">"learning"</span><span class="op">)</span>, remove <span class="op">=</span> <span class="st">"against"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># use a custom list when modeling</span></span></span>
+<span class="r-in"><span><span class="va">text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"students learning math"</span>, <span class="st">"markets and trading stocks"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="topics.html">topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fl">2</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, stop_words <span class="op">=</span> <span class="va">custom</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;sbert_topic_model&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   documents: 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   topics: 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   model: precomputed embeddings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   algorithm: deterministic k-means (Lloyd)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   topic sizes: 1, 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   between/total SS: 100.0%</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

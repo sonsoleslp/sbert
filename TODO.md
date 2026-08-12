@@ -3,7 +3,52 @@
 Gaps against the 2025–2026 state of the art (BERTopic feature set,
 current embedding tooling), filtered by the package’s principles:
 deterministic, base-R, Python-free, pinned models, tidy one-verb APIs.
-Newest assessment 2026-08-02.
+Newest assessment 2026-08-12.
+
+## Done (performance + docs round, 2026-08)
+
+**O(k) centroid initializer** — rewrote the farthest-point seeding from
+O(k^2) to O(k); fixes the large-corpus memory blowup that crashed the
+session, ~24x faster init, bit-identical selections
+
+**[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)**
+— embed and tokenize a corpus once, reuse across many models;
+[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+shares it internally and no longer re-tokenizes per candidate (including
+inside
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md))
+
+**`cores` argument** — parallel tokenization, segmentation, and sweep
+candidates on
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md),
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md),
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md);
+byte-identical for any count
+
+**`strsplit` tokenizer** — single-pass base-R tokenization, ~1.5x
+faster, byte-identical, no new dependency
+
+**`topic_gamma(dedupe_segments = )`** — encode distinct segments once
+(opt-in; ~2x less encoding on repetitive corpora)
+
+**`numbers = "keep"/"remove"`** — drop digit-only tokens (years, counts)
+from topic terms on
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+[`terms()`](https://rdrr.io/r/stats/terms.html); recorded in settings so
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) stays
+consistent
+
+**Custom stop words documented** — `stop_words(add = )` plus a bare
+vector or [`character()`](https://rdrr.io/r/base/character.html) on any
+topic verb; examples added
+
+**`covid` dataset + articles** — COVID-19 abstracts; a topic-modeling
+article and a parallel/high-throughput article
 
 ## Done (this round)
 
@@ -55,6 +100,12 @@ measure.
 **Topic stability** — label-invariant agreement (ARI) across perturbed
 refits (bootstrap resampling of documents).
 
+**Multilingual stop words** — `stop_words(language = )` currently only
+wires up `"en"`; the hook exists. Build vetted lists (e.g. Snowball via
+`tm` at build time, no runtime dep) for users’ non-English corpora.
+Deferred: every bundled modeled corpus is English, so no shipped example
+needs it yet.
+
 ## Embedding layer
 
 **More static models** — potion-base-32M (higher quality) and
@@ -76,10 +127,10 @@ pooling mode. EmbeddingGemma stays excluded while gated.
 
 ## Housekeeping
 
-R CMD check –as-cran clean (done at 0.5.1)
+R CMD check –as-cran clean (kept clean through the 0.5.2 work)
 
-Fold the analysis tutorials into the package vignette (`topic-modeling`
-vignette ships)
+Fold the analysis tutorials into the package vignette
+(`levebee_vignette` ships; covid and parallel articles are pkgdown-only)
 
 Decide whether
 [`topics()`](https://sonsoles.me/sbert/reference/topics.md)’s built-in

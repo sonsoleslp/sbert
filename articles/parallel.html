@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">Running sbert at full
 speed without changing a single result</h3>
             
-            <h4 data-toc-skip class="date">2026-08-11</h4>
+            <h4 data-toc-skip class="date">2026-08-12</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/parallel.Rmd" class="external-link"><code>vignettes/articles/parallel.Rmd</code></a></small>
       <div class="d-none name"><code>parallel.Rmd</code></div>
@@ -146,18 +146,22 @@ model then runs multithreaded:</p>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">text</span>, <span class="va">model</span><span class="op">)</span>     <span class="co"># inference spread over 8 threads</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="cores-parallel-tokenization-and-sweeps">
-<code>cores</code> — parallel tokenization and sweeps<a class="anchor" aria-label="anchor" href="#cores-parallel-tokenization-and-sweeps"></a>
+<h3 id="cores-parallel-tokenization-segmentation-and-sweeps">
+<code>cores</code> — parallel tokenization, segmentation, and
+sweeps<a class="anchor" aria-label="anchor" href="#cores-parallel-tokenization-segmentation-and-sweeps"></a>
 </h3>
 <p><code>cores</code> is available on <code><a href="../reference/topics.html">topics()</a></code>,
-<code><a href="../reference/select_topics.html">select_topics()</a></code>, <code><a href="../reference/topic_corpus.html">topic_corpus()</a></code>, and
-<code><a href="../reference/coherence.html">coherence()</a></code>. Above one it forks worker processes to:</p>
+<code><a href="../reference/select_topics.html">select_topics()</a></code>, <code><a href="../reference/topic_corpus.html">topic_corpus()</a></code>,
+<code><a href="../reference/coherence.html">coherence()</a></code>, <code><a href="../reference/segment.html">segment()</a></code>, and
+<code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>. Above one it forks worker processes to:</p>
 <ul>
 <li>
 <strong>tokenize</strong> the corpus in parallel (documents split
-across workers), and</li>
+across workers),</li>
 <li>in <code><a href="../reference/select_topics.html">select_topics()</a></code>, <strong>fit the independent
-candidates</strong> in parallel.</li>
+candidates</strong> in parallel, and</li>
+<li>in <code><a href="../reference/segment.html">segment()</a></code> / <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>,
+<strong>split documents</strong> in parallel.</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># tokenization runs in parallel; the corpus is prepared once</span></span>
@@ -169,10 +173,93 @@ candidates</strong> in parallel.</li>
 <p><strong>Platform notes.</strong> <code>cores</code> uses
 <code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply</a></code>, which forks — available on Linux and
 macOS, and <strong>falls back to serial on Windows</strong>. Forking has
-overhead, so parallel tokenization only engages for corpora of
-<strong>2,000 documents or more</strong>; smaller inputs run serially by
-design. A good default is
-<code>cores = parallel::detectCores() - 1</code>.</p>
+overhead, so parallel work only engages for corpora of <strong>2,000
+documents or more</strong>; smaller inputs run serially by design. A
+good default is <code>cores = parallel::detectCores() - 1</code>.</p>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="sentence-level-topic_gamma">Sentence-level <code>topic_gamma()</code><a class="anchor" aria-label="anchor" href="#sentence-level-topic_gamma"></a>
+</h2>
+<p><code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> reports each document’s <em>mixture</em>
+of topics by splitting it into sentences (or clauses), embedding every
+segment, and pooling the assignments. It has three cost stages, each
+with its own lever:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Segmenting</strong> the documents — parallelize with
+<code>cores</code>.</li>
+<li>
+<strong>Encoding</strong> every segment — the dominant cost;
+multithread with <code>load_model(threads =)</code>, and optionally
+deduplicate (below).</li>
+<li>
+<strong>Pooling</strong> into per-document mixtures — already
+negligible.</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"all-MiniLM-L6-v2"</span>, threads <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span></span>
+<span>  <span class="va">topic_model</span>, <span class="va">documents</span>,</span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  level <span class="op">=</span> <span class="st">"sentence"</span>,</span>
+<span>  cores <span class="op">=</span> <span class="fl">8</span>               <span class="co"># split documents across cores</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="reuse-the-segment-embeddings">Reuse the segment embeddings<a class="anchor" aria-label="anchor" href="#reuse-the-segment-embeddings"></a>
+</h3>
+<p>Encoding is the dominant stage, so the largest — and fully
+reproducible — win is to <em>not encode twice</em>. If you already have
+the segment embeddings, pass them and <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> skips
+encoding entirely, dropping to just segmentation and pooling. Supply one
+row per segment, aligned to <code>segment(text, level)$text</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># segment and encode once, deterministically</span></span>
+<span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">documents</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="va">segment_embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">segments</span><span class="op">$</span><span class="va">text</span>, <span class="va">model</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># every downstream call reuses them — no re-encoding</span></span>
+<span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span></span>
+<span>  <span class="va">topic_model</span>, <span class="va">documents</span>,</span>
+<span>  embeddings <span class="op">=</span> <span class="va">segment_embeddings</span>,</span>
+<span>  level <span class="op">=</span> <span class="st">"sentence"</span>,</span>
+<span>  cores <span class="op">=</span> <span class="fl">8</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>This is what pays off when you run several sentence-level steps on
+one corpus — <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>, sentence-level
+<code><a href="../reference/representatives.html">representatives()</a></code>, or a <code><a href="../reference/blend.html">blend()</a></code> that carries
+document context into each sentence — since they can all share a single
+encode. <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> re-segments internally with the same
+<code>level</code>, so the order is deterministic and the rows line up.
+The result is byte-identical to letting it encode; only
+encoded-once-versus-twice changes.</p>
+</div>
+<div class="section level3">
+<h3 id="deduplicating-repeated-segments">Deduplicating repeated segments<a class="anchor" aria-label="anchor" href="#deduplicating-repeated-segments"></a>
+</h3>
+<p>A long corpus repeats many segments — boilerplate sentences, short
+stock clauses — and a real corpus is often close to half duplicates.
+<code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> normally encodes every occurrence;
+<code>dedupe_segments = TRUE</code> encodes each <em>distinct</em>
+segment once and expands the result by position, which can roughly halve
+the encoding cost:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span></span>
+<span>  <span class="va">topic_model</span>, <span class="va">documents</span>,</span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  level <span class="op">=</span> <span class="st">"sentence"</span>,</span>
+<span>  cores <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  dedupe_segments <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="warn">
+<p><strong>One-time shift, not free reproducibility.</strong>
+Deduplication is <strong>off by default</strong> because encoding a
+smaller batched set perturbs the embeddings at the ~1e-7 level, which
+can flip a rare borderline segment’s assignment — the same trade-off as
+changing <code>batch_size</code>. With the static
+<code>potion-base-8M</code> model, whose encoding has no batch effect,
+the result is identical either way.</p>
 </div>
 </div>
 </div>
@@ -181,7 +268,7 @@ design. A good default is
 </h2>
 <p>Putting it together for the common case — one corpus, several
 models:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/sbert">sbert</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -199,7 +286,7 @@ models:</p>
 traded for throughput, the static <code>potion-base-8M</code> model
 embeds around 10,000 sentences per second in pure R, with no ONNX
 Runtime involved:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span>   <span class="co"># 31 MB, Model2Vec token lookup</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, <span class="va">fast</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -271,7 +358,7 @@ seed anywhere in the topic pipeline.</p>
 </div>
 <p>The proof runs offline — the same model, fitted single-threaded and
 across four cores, is byte-identical:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">2500L</span></span>
 <span><span class="va">text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>

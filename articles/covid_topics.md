@@ -31,6 +31,22 @@ model_download()
 embeddings <- encode(covid_content$Abstract, batch_size = 32)
 ```
 
+Every abstract shares a scientific boilerplate — *covid*, *pandemic*,
+*study*, *results* — and the label of *every* topic would otherwise
+repeat it. Those words carry no signal about what separates one topic
+from another, so they are excluded up front; `numbers = "remove"` drops
+bare years and counts (*2020*, *19*) for the same reason. Domain stop
+words are the standard way to keep topic labels informative.
+
+``` r
+
+covid_stops <- stop_words(add = c(
+  "covid", "coronavirus", "sars", "cov", "pandemic", "disease",
+  "study", "studies", "result", "results", "conclusion", "conclusions",
+  "background", "method", "methods", "objective", "aim"
+))
+```
+
 There is no correct topic count.
 [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
 fits one model per candidate and reports the numbers that justify a
@@ -42,16 +58,18 @@ sweep <- select_topics(
   covid_content$Abstract,
   n_topics = c(4, 6, 8, 10, 12),
   embeddings = embeddings,
-  measure = "npmi"
+  measure = "npmi",
+  stop_words = covid_stops,
+  numbers = "remove"
 )
 sweep
 #> <sbert_topic_sweep> 5 candidates, coherence measure: npmi
 #>  n_topics  coherence topic_diversity  explained
-#>         4 0.06228923       0.4750000 0.09824599
-#>         6 0.06981488       0.4500000 0.12136775
-#>         8 0.16400373       0.5125000 0.12979221
-#>        10 0.13881058       0.4500000 0.14591512
-#>        12 0.14991624       0.4833333 0.15786363
+#>         4 0.05502642       0.5500000 0.09824599
+#>         6 0.07460328       0.6333333 0.12136775
+#>         8 0.17229509       0.6500000 0.12979221
+#>        10 0.15732535       0.5900000 0.14591512
+#>        12 0.15810223       0.5916667 0.15786363
 #> 
 #> Fitted models retained: fitted(x, n_topics = 8)
 ```
@@ -63,15 +81,16 @@ plot(sweep)
 
 ![](covid_topics_files/figure-html/sweep-plot-1.png)
 
-Coherence climbs from four topics to a clear peak at **eight** and falls
-off on either side; topic diversity peaks there too, even as `explained`
-keeps rising with the count. Eight is therefore the granularity this
-corpus actually supports — the point after which adding topics stops
-improving coherence.
+Read the count from the table rather than by habit: coherence rises,
+peaks, and falls as topics multiply, while `explained` keeps climbing
+regardless. The count with the highest coherence is the granularity this
+corpus best supports — the point after which splitting topics stops
+buying coherence — so the model is fitted there.
 
 ``` r
 
-topic_model <- fitted(sweep, n_topics = 8)
+best_n <- sweep$n_topics[which.max(sweep$coherence)]
+topic_model <- fitted(sweep, n_topics = best_n)
 ```
 
 ## Corpus at a glance
@@ -96,13 +115,14 @@ Years
 
 Topics
 
-**Read the topics as a lens, not a taxonomy.** Eight was chosen because
-coherence peaks there, not because it is uniquely correct. Labels are
-the three most distinctive class-based TF-IDF terms, not validated
-names. A bibliographic export is never perfectly on-theme, so one small
-cluster collects genuinely off-topic papers (veterinary and materials
-research) — the model isolating them rather than contaminating the
-education topics.
+**Read the topics as a lens, not a taxonomy.** The count was chosen
+because coherence peaks there, not because it is uniquely correct.
+Labels are the three most distinctive class-based TF-IDF terms — with
+corpus boilerplate and bare numbers excluded — not validated names. A
+bibliographic export is never perfectly on-theme, so one small cluster
+collects genuinely off-topic papers (veterinary and materials research)
+— the model isolating them rather than contaminating the education
+topics.
 
 ## The topics
 
@@ -113,14 +133,14 @@ education topics.
 |     3 | school / education / children |       483 | 12.6% |
 |     4 | social / education / work     |       437 | 11.4% |
 |     5 | medical / students / clinical |       428 | 11.1% |
-|     6 | education / higher / covid    |       386 | 10.0% |
-|     7 | health / covid / 19           |       290 | 7.5%  |
+|     6 | education / higher / students |       386 | 10.0% |
+|     7 | health / education / public   |       290 | 7.5%  |
 |     8 | shore / penetration / porcine |         2 | 0.1%  |
 
-`plot(type = "fit")` lays out all eight topics at once — the three
-keyword views (raw within-topic count, class-based TF-IDF, and
-generative probability) beside each topic’s representative abstracts,
-one row per topic:
+`plot(type = "fit")` lays out every topic at once — the three keyword
+views (raw within-topic count, class-based TF-IDF, and generative
+probability) beside each topic’s representative abstracts, one row per
+topic:
 
 ``` r
 
@@ -137,8 +157,8 @@ what it claims.
 
 1,041 abstracts · 27.1% of the corpus
 
-**Distinctive terms:** online, learning, students, education, study,
-teaching, teachers, covid
+**Distinctive terms:** online, learning, students, education, teaching,
+teachers, distance, research
 
 Nearest abstract 1 - 2021 (distance 0.255)
 
@@ -186,7 +206,7 @@ the mediati…
 780 abstracts · 20.3% of the corpus
 
 **Distinctive terms:** learning, teaching, online, students, education,
-covid, 19, pandemic
+face, remote, teachers
 
 Nearest abstract 1 - 2020 (distance 0.354)
 
@@ -232,8 +252,8 @@ of learning in Bloom’s taxonomy. To further improve our appr…
 
 483 abstracts · 12.6% of the corpus
 
-**Distinctive terms:** school, education, children, pandemic, teachers,
-parents, covid, 19
+**Distinctive terms:** school, education, children, teachers, parents,
+learning, schools, educational
 
 Nearest abstract 1 - 2021 (distance 0.344)
 
@@ -280,8 +300,8 @@ felt …
 
 437 abstracts · 11.4% of the corpus
 
-**Distinctive terms:** social, education, work, covid, pandemic, 19,
-students, teaching
+**Distinctive terms:** social, education, work, students, teaching,
+article, learning, research
 
 Nearest abstract 1 - 2021 (distance 0.364)
 
@@ -326,8 +346,8 @@ classroom is rendered. © 2021 by Emerald Publishing Limited.
 
 428 abstracts · 11.1% of the corpus
 
-**Distinctive terms:** medical, students, clinical, 19, covid, pandemic,
-health, education
+**Distinctive terms:** medical, students, clinical, health, education,
+learning, training, care
 
 Nearest abstract 1 - 2021 (distance 0.309)
 
@@ -368,12 +388,12 @@ all general and integrated plastic surgery residents in their clinical
 years of training at the University of California, San Francisco.
 Statistical analysis of the survey responses was performed using the Kr…
 
-#### Topic 6 — education / higher / covid
+#### Topic 6 — education / higher / students
 
 386 abstracts · 10.0% of the corpus
 
-**Distinctive terms:** education, higher, covid, pandemic, 19, students,
-universities, university
+**Distinctive terms:** education, higher, students, universities,
+university, institutions, academic, crisis
 
 Nearest abstract 1 - 2022 (distance 0.211)
 
@@ -414,12 +434,12 @@ of the sector should be the price of further government support. Now is
 also the time to reconsider how university research is funded. © 2020.
 Political Quarterly Publishing Co (PQPC)
 
-#### Topic 7 — health / covid / 19
+#### Topic 7 — health / education / public
 
 290 abstracts · 7.5% of the corpus
 
-**Distinctive terms:** health, covid, 19, pandemic, education, public,
-social, 2021
+**Distinctive terms:** health, education, public, social, global,
+research, also, world
 
 Nearest abstract 1 - 2021 (distance 0.329)
 
@@ -554,7 +574,7 @@ with the share of its sentences on each:
 | school / education / children | 11%                |
 | social / education / work     | 11%                |
 | medical / students / clinical | 11%                |
-| education / higher / covid    | 11%                |
+| education / higher / students | 11%                |
 | shore / penetration / porcine | 11%                |
 
 Aggregating every sentence gives a second view of prevalence — the share

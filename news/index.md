@@ -4,6 +4,49 @@
 
 - [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
   [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+  and
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
+  gain a `numbers` argument. `"keep"` (default, unchanged) keeps numeric
+  tokens; `"remove"` drops tokens made only of digits — years, counts —
+  from topic terms while retaining alphanumerics such as `covid19`. The
+  setting is recorded on the model so
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+  stays consistent. Custom stop words already compose through the
+  `stop_words` argument of these verbs and
+  [`keywords()`](https://sonsoles.me/sbert/reference/keywords.md);
+  `stop_words(add =)` keeps the defaults plus your terms, a bare vector
+  replaces the list, and
+  [`character()`](https://rdrr.io/r/base/character.html) disables
+  filtering. Documented with examples.
+- The topic tokenizer is about 1.5x faster: a single-pass base-R
+  `strsplit` split replaces the previous `gregexpr` + `regmatches` pair.
+  Output is byte-identical (same token grammar, verified across Unicode,
+  apostrophe, and empty-document edge cases) and no dependency is added.
+  This speeds up
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+  and [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md),
+  and stacks with the `cores` argument.
+- [`segment()`](https://sonsoles.me/sbert/reference/segment.md) and
+  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  gain a `cores` argument. Splitting documents into sentences or clauses
+  is the dominant non-encoding cost of sentence-level
+  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md),
+  and it is per-document independent, so forking it across cores gives a
+  several-fold speed-up (about 4-5x on eight cores) with byte-identical
+  output. Encoding is parallelized separately via
+  `load_model(threads =)`.
+- [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  gains `dedupe_segments` (default `FALSE`). Real corpora often repeat
+  many segments (boilerplate sentences, short clauses); enabling this
+  encodes each distinct segment once and expands by position, roughly
+  halving the encoding cost on such corpora. Off by default because
+  encoding a smaller batched set can shift a rare borderline assignment
+  at the ~1e-7 level; with the static `potion-base-8M` model the result
+  is identical.
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
   [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
   and [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
   gain a `cores` argument for parallel tokenization;
