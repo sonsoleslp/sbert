@@ -2,6 +2,113 @@
 
 ## sbert 0.5.2
 
+- [`encode()`](https://sonsoles.me/sbert/reference/encode.md) gains a
+  `cache` argument: a path to a content-addressed embedding store. Each
+  document is keyed by a SHA-256 digest of its own text together with
+  the model identity, revision, dimension, maximum length, pooling
+  method and `normalize` setting, so only documents with no matching
+  entry are encoded and the file is updated with whatever was newly
+  computed. Corpora are usually edited rather than replaced, and
+  encoding is about 97% of the cost of a topic workflow, so reuse
+  dominates: re-running an unchanged 3,847-abstract corpus cost 0.07 s
+  against 36.59 s (**515x**, output
+  [`identical()`](https://rdrr.io/r/base/identical.html)), and
+  re-running it after editing 38 documents cost 0.41 s (**89x**) with
+  unchanged rows identical to the previous run and changed rows
+  identical to a fresh encode. Reordering or subsetting a cached corpus
+  encodes nothing at all. Duplicate documents within one call are
+  encoded once and expanded by position — 295 of the 3,847 bundled
+  `covid` abstracts are duplicates.
+
+  The key deliberately excludes `batch_size` and `sort_by_length`, which
+  move embeddings by around 1e-7 through batch composition alone; cached
+  values are therefore stable to whatever computed them first rather
+  than bit-identical to a fresh encode under different batching. A cache
+  that cannot be read, or was written for a different embedding
+  dimension, is discarded with a warning and rebuilt rather than
+  trusted, and writes go to a temporary file and are renamed so an
+  interrupted save cannot leave a half-written cache behind.
+
+- [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
+  accepts `threads = "auto"`, which asks the platform for its
+  performance-core count instead of its logical one. ONNX inference is
+  about 88% of a batch and the only threaded part of the package, but it
+  scales with performance cores only. Measured over three repetitions at
+  200, 600 and 1,500 documents on an Apple M4 (4 performance + 6
+  efficiency), median speedups against a single thread were 1.22x at two
+  threads, **1.29x at four**, 1.22x at six and 1.18x at eight; four
+  threads was fastest at both larger sizes (1.34x at 1,500 documents),
+  after which the efficiency cores contribute contention rather than
+  throughput. `"auto"` selects that knee and is capped at 8 so a library
+  never seizes a whole machine uninvited. Raising the thread count has
+  **no numerical consequence**: output was
+  [`identical()`](https://rdrr.io/r/base/identical.html) in all 45 runs.
+  The default stays `1` so results remain reproducible across machines
+  and within the two-core limit that check environments impose. Note
+  that threaded timings are noisy — run-to-run spread reached 26% at the
+  smallest size against under 3% single-threaded — so a single timing
+  run is not sufficient evidence for tuning.
+
+- Mask-aware mean pooling is about 6.3x faster, and
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) about
+  1.18x faster end to end, with identical output on platforms whose
+  [`sum()`](https://rdrr.io/r/base/sum.html) and
+  [`rowsum()`](https://rdrr.io/r/base/rowsum.html) accumulate in the
+  same precision.
+  [`pool()`](https://sonsoles.me/sbert/reference/pool.md) built a second
+  24 MB copy of every batch with
+  [`sweep()`](https://rdrr.io/r/base/sweep.html) and then summed it with
+  `apply(., c(1, 3), sum)`, an R-level loop over a 3-D array. Because an
+  R array is column-major and its first two margins are adjacent, the
+  batch re-dimensions to `(batch * sequence) x hidden` without moving
+  any data, so masking becomes one recycled multiply and the
+  per-document sum becomes a single C-level
+  [`rowsum()`](https://rdrr.io/r/base/rowsum.html). Verified as
+  [`identical()`](https://rdrr.io/r/base/identical.html) against the
+  previous formulation across 60,000+ shape, mask, method and
+  normalization combinations and on real ONNX output.
+
+  One caveat, and it is a real one: R’s
+  [`sum()`](https://rdrr.io/r/base/sum.html) accumulates into a long
+  double while [`rowsum()`](https://rdrr.io/r/base/rowsum.html)
+  accumulates into a double. On builds with extended-precision long
+  doubles — common x86-64 Linux and Windows builds, where
+  `.Machine$sizeof.longdouble` is 16 — the two can therefore differ in
+  the last bits on inputs with heavy cancellation. Equality was
+  confirmed on arm64 macOS, where `sizeof.longdouble` is 8 and the
+  question does not arise; on extended-precision builds expect agreement
+  to around 1e-16 rather than to the bit. Embedding values of that
+  magnitude do not change any topic assignment.
+
+  The element-scanning part of
+  [`pool()`](https://sonsoles.me/sbert/reference/pool.md)’s validation
+  is now skipped on the internal encoding path, where the mask has
+  already been validated by the tokenizer step. The *structural* checks
+  are kept — dimension agreement is O(1) and its removal would have let
+  a wrongly shaped ONNX output recycle silently into the wrong number of
+  rows. Finiteness is now checked on the pooled result rather than the
+  raw batch: the same guarantee at roughly 1/256 the cost, since any
+  non-finite token value must surface there (an unmasked `Inf` sums to
+  `Inf`, a masked one becomes `Inf * 0 = NaN`).
+  [`pool()`](https://sonsoles.me/sbert/reference/pool.md) itself is
+  unchanged for direct callers and still validates in full.
+
+- [`encode()`](https://sonsoles.me/sbert/reference/encode.md) and
+  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  gain `sort_by_length` (default `FALSE`). Every sequence in a batch is
+  padded to the longest member, so a batch costs the model its maximum
+  length rather than its mean. Grouping inputs of similar length into
+  the same batch shrinks that padding: at clause level 60.1% of all
+  token work is padding in input order against 1.6% when sorted,
+  measured at 1.89x faster for `topic_gamma(level = "clause")` and 1.08x
+  for whole documents, which vary less in length. The permutation is
+  inverted before returning, so row order always matches the input. Off
+  by default because regrouping changes batch composition, which moves
+  embeddings by about 1e-7 — the same trade-off already documented for
+  `dedupe_segments`. On the bundled `covid` corpus that drift changed no
+  `gamma` value and no document’s dominant topic, but it is opt-in
+  rather than assumed.
+
 - [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
   [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
   and
@@ -18,6 +125,7 @@
   replaces the list, and
   [`character()`](https://rdrr.io/r/base/character.html) disables
   filtering. Documented with examples.
+
 - The topic tokenizer is about 1.5x faster: a single-pass base-R
   `strsplit` split replaces the previous `gregexpr` + `regmatches` pair.
   Output is byte-identical (same token grammar, verified across Unicode,
@@ -28,6 +136,7 @@
   [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
   and [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md),
   and stacks with the `cores` argument.
+
 - [`segment()`](https://sonsoles.me/sbert/reference/segment.md) and
   [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
   gain a `cores` argument. Splitting documents into sentences or clauses
@@ -37,6 +146,7 @@
   several-fold speed-up (about 4-5x on eight cores) with byte-identical
   output. Encoding is parallelized separately via
   `load_model(threads =)`.
+
 - [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
   gains `dedupe_segments` (default `FALSE`). Real corpora often repeat
   many segments (boilerplate sentences, short clauses); enabling this
@@ -45,6 +155,7 @@
   encoding a smaller batched set can shift a rare borderline assignment
   at the ~1e-7 level; with the static `potion-base-8M` model the result
   is identical.
+
 - [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
   [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
   [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
@@ -59,6 +170,7 @@
   Unix-alikes and falls back to serial on Windows and for small corpora;
   the default is `cores = 1`. On an 8-core machine a five-count sweep on
   15,000 documents drops from about 12 s to 7 s.
+
 - Added
   [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md):
   prepare a corpus once — embedding every document and tokenizing it for
@@ -74,6 +186,7 @@
   the corpus inside each call, and
   [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
   now shares one prepared corpus across all candidates internally.
+
 - [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
   no longer re-tokenizes the corpus inside
   [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) on
@@ -83,6 +196,7 @@
   tokenization is reused; scores are byte-identical. Combined with the
   corpus reuse above, a five-count sweep on 15,000 documents dropped
   from about 164 s to 12 s (~13x) with no change to any result.
+
 - [`topics()`](https://sonsoles.me/sbert/reference/topics.md) (and
   [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
   which calls it per candidate) no longer exhausts memory or stalls on
@@ -96,6 +210,7 @@
   check, and per-document centroid cosines are now vectorized. Topic
   assignments, terms, and representatives are bit-identical to previous
   versions.
+
 - Added the `covid` dataset: 4,170 COVID-19 research abstracts
   (2020-2024) on education, children, schools, and society, each with a
   publication year. Editorial notices (retractions, corrections, errata)
@@ -103,12 +218,14 @@
   `"[No abstract available]"` placeholder and 3,671 abstracts are
   distinct. A companion pkgdown article, “Topic Modeling COVID-19
   Research Abstracts”, walks the full sweep-fit-read workflow.
+
 - Added `plot(topic_model, type = "representatives")`, a per-topic
   ranked text list of the centroid-nearest documents (with their cosine
   similarity to the centroid), an `n_representatives` argument, and
   `type = "fit"`, a per-topic report placing all three term views
   (count, TF-IDF, beta) alongside the representative documents, one row
   per topic. Term bar panels now annotate each bar with its value.
+
 - `plot(type = "terms")` gains a `by` argument selecting one or more of
   `"score"` (class-based TF-IDF, the default), `"beta"` (generative word
   probability), and `"frequency"` (within-topic count); several metrics
@@ -116,16 +233,20 @@
   restricts `"terms"`, `"representatives"`, and `"fit"` to chosen topic
   numbers, and `per_topic = TRUE` draws a separate figure for each topic
   instead of one gridded figure.
+
 - README updated for the 0.5 API: data-frame input to
   [`topics()`](https://sonsoles.me/sbert/reference/topics.md), the
   retained-model sweep with
   [`fitted()`](https://rdrr.io/r/stats/fitted.values.html), and
   [`terms()`](https://rdrr.io/r/stats/terms.html) retuning without a
   refit. Adds a pointer to the tutorial vignette.
+
 - Repaired README prose damaged by the 0.5.0 rename, where the English
   words “membership” and “diversity” had been rewritten as function
   names.
+
 - Corrected the model count in the README from thirteen to fourteen.
+
 - Named the `n_topics` argument in the README’s
   [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
   example, and stopped shadowing

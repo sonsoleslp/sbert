@@ -67,7 +67,8 @@ which the single-embedding hard assignment cannot express.</p>
 <span>  level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"clause"</span>, <span class="st">"sentence"</span>, <span class="st">"phrase"</span><span class="op">)</span>,</span>
 <span>  batch_size <span class="op">=</span> <span class="fl">32L</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  dedupe_segments <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  dedupe_segments <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  sort_by_length <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -121,6 +122,15 @@ up to the ~1e-7 floating-point effect of encoding a smaller batched set,
 which can flip a rare borderline segment; it is therefore opt-in and off by
 default. With the static `potion-base-8M` model, encoding has no batch
 effect and the result is identical.</p></dd>
+
+
+<dt id="arg-sort-by-length">sort_by_length<a class="anchor" aria-label="anchor" href="#arg-sort-by-length"></a></dt>
+<dd><p>Passed to [encode()]. Groups segments of similar length
+into the same batch so the model computes over less padding. Segment
+lengths vary far more than document lengths — at clause level 60.1<!-- % of -->
+token work is padding in input order against 1.6<!-- % when sorted — so this is -->
+the single largest saving available on this verb, measured at 1.9x. Off by
+default for the same ~1e-7 reason as `dedupe_segments`.</p></dd>
 
 </dl></div>
     <div class="section level2">
