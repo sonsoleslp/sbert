@@ -12,7 +12,8 @@ topic_gamma(
   level = c("clause", "sentence", "phrase"),
   batch_size = 32L,
   cores = 1L,
-  dedupe_segments = FALSE
+  dedupe_segments = FALSE,
+  sort_by_length = FALSE
 )
 }
 \arguments{
@@ -47,6 +48,13 @@ up to the ~1e-7 floating-point effect of encoding a smaller batched set,
 which can flip a rare borderline segment; it is therefore opt-in and off by
 default. With the static `potion-base-8M` model, encoding has no batch
 effect and the result is identical.}
+
+\item{sort_by_length}{Passed to [encode()]. Groups segments of similar length
+into the same batch so the model computes over less padding. Segment
+lengths vary far more than document lengths — at clause level 60.1% of
+token work is padding in input order against 1.6% when sorted — so this is
+the single largest saving available on this verb, measured at 1.9x. Off by
+default for the same ~1e-7 reason as `dedupe_segments`.}
 }
 \value{
 A base data frame with one row per document-topic pair and columns

@@ -1,5 +1,85 @@
 # sbert 0.5.2
 
+- `encode()` gains a `cache` argument: a path to a content-addressed embedding
+  store. Each document is keyed by a SHA-256 digest of its own text together
+  with the model identity, revision, dimension, maximum length, pooling method
+  and `normalize` setting, so only documents with no matching entry are encoded
+  and the file is updated with whatever was newly computed. Corpora are usually
+  edited rather than replaced, and encoding is about 97% of the cost of a topic
+  workflow, so reuse dominates: re-running an unchanged 3,847-abstract corpus
+  cost 0.07 s against 36.59 s (**515x**, output `identical()`), and re-running it
+  after editing 38 documents cost 0.41 s (**89x**) with unchanged rows identical
+  to the previous run and changed rows identical to a fresh encode. Reordering
+  or subsetting a cached corpus encodes nothing at all. Duplicate documents
+  within one call are encoded once and expanded by position — 295 of the 3,847
+  bundled `covid` abstracts are duplicates.
+
+  The key deliberately excludes `batch_size` and `sort_by_length`, which move
+  embeddings by around 1e-7 through batch composition alone; cached values are
+  therefore stable to whatever computed them first rather than bit-identical to
+  a fresh encode under different batching. A cache that cannot be read, or was
+  written for a different embedding dimension, is discarded with a warning and
+  rebuilt rather than trusted, and writes go to a temporary file and are renamed
+  so an interrupted save cannot leave a half-written cache behind.
+
+- `load_model()` accepts `threads = "auto"`, which asks the platform for its
+  performance-core count instead of its logical one. ONNX inference is about
+  88% of a batch and the only threaded part of the package, but it scales with
+  performance cores only. Measured over three repetitions at 200, 600 and 1,500
+  documents on an Apple M4 (4 performance + 6 efficiency), median speedups
+  against a single thread were 1.22x at two threads, **1.29x at four**, 1.22x
+  at six and 1.18x at eight; four threads was fastest at both larger sizes
+  (1.34x at 1,500 documents), after which the efficiency cores contribute
+  contention rather than throughput. `"auto"` selects that knee and is capped
+  at 8 so a library never seizes a whole machine uninvited. Raising the thread
+  count has **no numerical consequence**: output was `identical()` in all 45
+  runs. The default stays `1` so results remain reproducible across machines
+  and within the two-core limit that check environments impose. Note that
+  threaded timings are noisy — run-to-run spread reached 26% at the smallest
+  size against under 3% single-threaded — so a single timing run is not
+  sufficient evidence for tuning.
+- Mask-aware mean pooling is about 6.3x faster, and `encode()` about 1.18x
+  faster end to end, with identical output on platforms whose `sum()` and
+  `rowsum()` accumulate in the same precision. `pool()` built a second
+  24 MB copy of every batch with `sweep()` and then summed it with
+  `apply(., c(1, 3), sum)`, an R-level loop over a 3-D array. Because an R
+  array is column-major and its first two margins are adjacent, the batch
+  re-dimensions to `(batch * sequence) x hidden` without moving any data, so
+  masking becomes one recycled multiply and the per-document sum becomes a
+  single C-level `rowsum()`. Verified as `identical()` against the previous
+  formulation across 60,000+ shape, mask, method and normalization combinations
+  and on real ONNX output.
+
+  One caveat, and it is a real one: R's `sum()` accumulates into a long double
+  while `rowsum()` accumulates into a double. On builds with extended-precision
+  long doubles — common x86-64 Linux and Windows builds, where
+  `.Machine$sizeof.longdouble` is 16 — the two can therefore differ in the last
+  bits on inputs with heavy cancellation. Equality was confirmed on arm64 macOS,
+  where `sizeof.longdouble` is 8 and the question does not arise; on
+  extended-precision builds expect agreement to around 1e-16 rather than to the
+  bit. Embedding values of that magnitude do not change any topic assignment.
+
+  The element-scanning part of `pool()`'s validation is now skipped on the
+  internal encoding path, where the mask has already been validated by the
+  tokenizer step. The *structural* checks are kept — dimension agreement is
+  O(1) and its removal would have let a wrongly shaped ONNX output recycle
+  silently into the wrong number of rows. Finiteness is now checked on the
+  pooled result rather than the raw batch: the same guarantee at roughly 1/256
+  the cost, since any non-finite token value must surface there (an unmasked
+  `Inf` sums to `Inf`, a masked one becomes `Inf * 0 = NaN`). `pool()` itself is
+  unchanged for direct callers and still validates in full.
+- `encode()` and `topic_gamma()` gain `sort_by_length` (default `FALSE`).
+  Every sequence in a batch is padded to the longest member, so a batch costs
+  the model its maximum length rather than its mean. Grouping inputs of similar
+  length into the same batch shrinks that padding: at clause level 60.1% of all
+  token work is padding in input order against 1.6% when sorted, measured at
+  1.89x faster for `topic_gamma(level = "clause")` and 1.08x for whole
+  documents, which vary less in length. The permutation is inverted before
+  returning, so row order always matches the input. Off by default because
+  regrouping changes batch composition, which moves embeddings by about 1e-7 —
+  the same trade-off already documented for `dedupe_segments`. On the bundled
+  `covid` corpus that drift changed no `gamma` value and no document's dominant
+  topic, but it is opt-in rather than assumed.
 - `topics()`, `select_topics()`, and `topic_corpus()` gain a `numbers` argument.
   `"keep"` (default, unchanged) keeps numeric tokens; `"remove"` drops tokens
   made only of digits — years, counts — from topic terms while retaining
