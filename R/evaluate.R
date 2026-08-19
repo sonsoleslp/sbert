@@ -16,7 +16,9 @@ topic_document_incidence <- function(
   stop_words = character(),
   token_lists = NULL,
   cores = 1L,
-  numbers = "keep"
+  numbers = "keep",
+  roman_numerals = "keep",
+  section_numbers = "keep"
 ) {
   stopifnot(
     is.character(text),
@@ -43,7 +45,9 @@ topic_document_incidence <- function(
       min_token_length = as.integer(min_token_length),
       stem = stem,
       cores = cores,
-      numbers = numbers
+      numbers = numbers,
+      roman_numerals = roman_numerals,
+      section_numbers = section_numbers
     )
   }
   presence <- vapply(
@@ -180,7 +184,9 @@ coherence <- function(
     },
     token_lists = token_lists,
     cores = cores,
-    numbers = if (is.null(object$settings$numbers)) "keep" else object$settings$numbers
+    numbers = if (is.null(object$settings$numbers)) "keep" else object$settings$numbers,
+    roman_numerals = if (is.null(object$settings$roman_numerals)) "keep" else object$settings$roman_numerals,
+    section_numbers = if (is.null(object$settings$section_numbers)) "keep" else object$settings$section_numbers
   )
   document_frequency <- colSums(incidence)
   co_document_frequency <- crossprod(incidence)

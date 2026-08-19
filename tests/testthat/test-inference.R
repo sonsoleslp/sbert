@@ -271,3 +271,29 @@ testthat::test_that("representative ties break toward the shorter unit", {
   fruit_rows <- subset(result, topic == fruit_topic)
   testthat::expect_identical(fruit_rows$text[[1L]], "short fruit")
 })
+
+testthat::test_that("topic_gamma accepts raw text or a segment() data frame identically", {
+  set.seed(3)
+  m <- topics(paste("doc", 1:40), n_topics = 4,
+              embeddings = matrix(rnorm(40 * 8), 40, 8))
+  docs <- c("Cats chase mice. Stocks trade.", "Markets price shares. Dogs run.")
+  seg <- segment(docs, level = "sentence")
+  E <- matrix(rnorm(nrow(seg) * 8), nrow(seg), 8)
+
+  g_raw <- topic_gamma(m, docs, embeddings = E, level = "sentence")
+  g_seg <- topic_gamma(m, seg, embeddings = E)
+  testthat::expect_identical(g_raw, g_seg)
+})
+
+testthat::test_that("topic_gamma with a pre-segmented frame keeps embeddings aligned", {
+  set.seed(4)
+  m <- topics(paste("doc", 1:40), n_topics = 4,
+              embeddings = matrix(rnorm(40 * 8), 40, 8))
+  docs <- vapply(1:20, function(i) paste(paste0("w", 1:40), collapse = " "), character(1))
+  seg <- segment(docs, level = "sentence", max_tokens = 15)  # raw path cannot express this
+  E <- matrix(rnorm(nrow(seg) * 8), nrow(seg), 8)
+  g <- topic_gamma(m, seg, embeddings = E)
+  testthat::expect_identical(length(unique(g$document_id)), 20L)
+  # a bad frame is rejected
+  testthat::expect_error(topic_gamma(m, data.frame(a = 1), embeddings = E), "document_id")
+})

@@ -34,3 +34,6 @@ docs/
 
 # Private analysis source data (maintainer-only regeneration input)
 analysis/MCSE_gold.RDS
+
+# R session history
+.Rhistory

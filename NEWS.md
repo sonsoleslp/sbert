@@ -1,5 +1,26 @@
 # sbert 0.5.2
 
+- `topic_gamma()` now accepts either raw documents (segmented internally, as
+  before) or the data frame returned by `segment()`, used as-is. Passing your
+  own segmentation keeps every segment option — `level`, `max_tokens`,
+  `merge_below` — in `segment()` and means a supplied `embeddings` matrix always
+  lines up with the segments, instead of having to match an internal
+  re-segmentation. The two paths give identical `gamma` when the segmentation
+  matches.
+- `segment()` gains `max_tokens`, a cap so no segment overruns an encoder's
+  context window and is silently truncated. An over-long segment is re-split at
+  the finest logical boundaries — clause hinges, `;`, `:`, ` - `, and commas —
+  and the pieces are packed back up to the budget, so splits land on punctuation
+  wherever possible. A run with no such boundary is chopped further, but even
+  then the break is placed just before a function word (a coordinator,
+  preposition, article, or relative pronoun) near the budget edge rather than
+  mid-phrase — so "the schools" is kept together instead of stranding "the".
+  By default the budget counts whitespace words (offline,
+  deterministic). Passing a loaded `model` counts that model's exact sub-word
+  tokens instead, so `max_tokens` can be the model's real limit; token-counted
+  segmentation runs serially since the tokenizer is not forked. `NULL` (default)
+  leaves segments uncapped, byte-identical to before.
+
 - `encode()` gains a `cache` argument: a path to a content-addressed embedding
   store. Each document is keyed by a SHA-256 digest of its own text together
   with the model identity, revision, dimension, maximum length, pooling method
@@ -80,6 +101,19 @@
   the same trade-off already documented for `dedupe_segments`. On the bundled
   `covid` corpus that drift changed no `gamma` value and no document's dominant
   topic, but it is opt-in rather than assumed.
+- `topics()`, `select_topics()`, `topic_corpus()`, and `terms()` gain
+  `roman_numerals` and `section_numbers`, two independent token filters
+  alongside `numbers`. `roman_numerals = "remove"` drops chapter/section/list
+  markers written as Roman numerals (`ii`, `iv`, `xii`), bounded at 100 so that
+  common abbreviations that are also valid numerals — `ml`, `mm`, `cc`, `ci`,
+  `cv` — are always kept. `section_numbers = "remove"` strips both multi-level
+  section and reference indices (`1.2.3`, `4.5.6.7`) and enumeration or list
+  markers (`1.`, `2.`, `figure 12.` — a standalone one- or two-digit number
+  followed by a period) before tokenizing; decimals, four-digit years
+  (`2020.`), hyphenated numbers (`covid-19.`), and larger counts survive, so
+  genuine values are kept even under `numbers = "keep"`. Both default to
+  `"keep"` (byte-identical to before) and are recorded on the model so
+  `coherence()` stays consistent.
 - `topics()`, `select_topics()`, and `topic_corpus()` gain a `numbers` argument.
   `"keep"` (default, unchanged) keeps numeric tokens; `"remove"` drops tokens
   made only of digits — years, counts — from topic terms while retaining

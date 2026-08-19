@@ -287,3 +287,92 @@ testthat::test_that("invalid inputs are rejected", {
   testthat::expect_error(segment("Fine text.", merge_below = 1.5))
   testthat::expect_error(segment("Fine text.", abbreviations = 1L))
 })
+
+testthat::test_that("max_tokens caps segments and prefers logical boundaries", {
+  wc <- function(t) vapply(strsplit(t, "\\s+"), function(w) sum(nzchar(w)), 1L)
+  # a long sentence with internal punctuation splits at the punctuation
+  doc <- paste0(
+    paste(paste0("a", 1:8), collapse = " "), ", ",
+    paste(paste0("b", 1:8), collapse = " "), "; ",
+    paste(paste0("c", 1:8), collapse = " "), "."
+  )
+  s <- segment(doc, level = "sentence", max_tokens = 10)
+  testthat::expect_true(all(wc(s$text) <= 10))
+  testthat::expect_true(nrow(s) >= 3)
+  # each split ends on punctuation, not mid-clause
+  testthat::expect_true(all(grepl("[,;.]\\s*$", s$text)))
+})
+
+testthat::test_that("max_tokens word-chops runs with no punctuation", {
+  wc <- function(t) vapply(strsplit(t, "\\s+"), function(w) sum(nzchar(w)), 1L)
+  raw <- paste(paste0("w", 1:25), collapse = " ")
+  s <- segment(raw, level = "sentence", max_tokens = 10)
+  testthat::expect_true(all(wc(s$text) <= 10))
+  testthat::expect_identical(sum(wc(s$text)), 25L)  # nothing lost
+})
+
+testthat::test_that("max_tokens = NULL is the default and unchanged", {
+  doc <- c(a = "One sentence here. Another, longer, sentence follows; indeed it does.")
+  testthat::expect_identical(
+    segment(doc, level = "sentence"),
+    segment(doc, level = "sentence", max_tokens = NULL)
+  )
+})
+
+testthat::test_that("model is rejected without max_tokens", {
+  testthat::expect_error(
+    segment("text", model = structure(list(), class = "sbert_model")),
+    "max_tokens"
+  )
+})
+
+testthat::test_that("max_tokens holds its invariants across level/merge/cores combinations", {
+  wc <- function(t) vapply(strsplit(t, "\\s+"), function(w) sum(nzchar(w)), 1L)
+  real_words <- function(t) {
+    w <- unlist(strsplit(paste(t, collapse = " "), "\\s+"))
+    sort(w[grepl("[[:alnum:]]", w)])
+  }
+  docs <- c(
+    d1 = "A first sentence here. A second, with a clause; and a colon: done.",
+    d2 = paste(paste0("w", 1:120), collapse = " "),          # no punctuation
+    d3 = "Short. Tiny; another, clause: end.",
+    d4 = "café déjà 東京 word, more words; and yet more here.",
+    d5 = paste(rep("a,", 30), collapse = " "),                # many tiny phrases
+    d6 = "teaching - learning - split - across dashes now"
+  )
+  for (lv in c("clause", "sentence", "phrase")) {
+    for (cap in c(3L, 8L, 40L)) {
+      for (mb in c(0L, 4L)) {
+        s1 <- segment(docs, level = lv, merge_below = mb, max_tokens = cap, cores = 1L)
+        s4 <- segment(docs, level = lv, merge_below = mb, max_tokens = cap, cores = 4L)
+        rownames(s1) <- NULL; rownames(s4) <- NULL
+        testthat::expect_identical(s1, s4)                    # parallel == serial
+        testthat::expect_true(all(wc(s1$text) <= cap))        # cap respected
+        # contiguous per-document segment numbering
+        testthat::expect_true(all(tapply(
+          s1$segment, s1$document_id, function(x) identical(x, seq_along(x))
+        )))
+        # real words preserved vs the uncapped baseline
+        base <- segment(docs, level = lv, merge_below = 0L)
+        for (d in unique(s1$document_id)) {
+          testthat::expect_identical(
+            real_words(s1$text[s1$document_id == d]),
+            real_words(base$text[base$document_id == d])
+          )
+        }
+      }
+    }
+  }
+})
+
+testthat::test_that("max_tokens prefers function-word boundaries over mid-phrase cuts", {
+  wc <- function(t) vapply(strsplit(t, "\\s+"), function(w) sum(nzchar(w)), 1L)
+  # a run with no punctuation/hinge but with function words
+  doc <- "the students learned quickly and the teachers adapted their methods but the schools lacked resources"
+  s <- segment(doc, level = "sentence", max_tokens = 12)
+  testthat::expect_true(all(wc(s$text) <= 12))
+  # no chunk should end on an article/determiner stranded from its noun
+  testthat::expect_false(any(grepl("\\b(the|a|an|their|this|these|those)\\s*$", s$text)))
+  # keeps "the schools" together rather than splitting the noun phrase
+  testthat::expect_true(any(grepl("the schools", s$text)))
+})

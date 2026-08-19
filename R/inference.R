@@ -237,13 +237,23 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' which the single-embedding hard assignment cannot express.
 #'
 #' @param object A fitted [topics()] model.
-#' @param text Character vector of documents.
+#' @param text Either a character vector of documents (segmented here at
+#'   `level`), or the data frame returned by [segment()] (used as-is). Passing
+#'   your own segmentation keeps every segment option — `level`, `max_tokens`,
+#'   `merge_below` — in [segment()], and lets you reuse one set of segment
+#'   embeddings across this and other verbs. A data frame must have
+#'   `document_id` and `text` columns; `gamma` is then computed per
+#'   `document_id`.
 #' @param model A loaded [sbert_model][load_model()], a pinned model
 #'   name, or `NULL` for the default model, used to embed the segments;
 #'   ignored when `embeddings` are supplied.
 #' @param embeddings Optional precomputed numeric matrix of segment
-#'   embeddings whose rows align with `segment(text, level = level)`.
-#' @param level Segmentation granularity passed to [segment()].
+#'   embeddings, one row per segment. When `text` is raw documents the rows must
+#'   align with `segment(text, level = level)`; when `text` is a [segment()]
+#'   data frame they must align with its rows — which is automatic, since no
+#'   re-segmentation happens.
+#' @param level Segmentation granularity passed to [segment()]. Ignored when
+#'   `text` is already a [segment()] data frame.
 #' @param batch_size Batch size passed to [encode()] when `model` is
 #'   used.
 #' @param cores Number of forked worker processes used to split documents into
@@ -251,6 +261,7 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #'   dominates the non-encoding cost, so `cores > 1` can noticeably speed up
 #'   sentence- and clause-level gamma; the result is identical for any count.
 #'   Encoding itself is parallelized separately, via `load_model(threads =)`.
+#'   Ignored when `text` is already a [segment()] data frame.
 #' @param dedupe_segments When `TRUE`, encode each distinct segment only once
 #'   and expand the embeddings back by position, rather than encoding every
 #'   occurrence. Real corpora are often close to half duplicate segments, so
@@ -280,6 +291,10 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' mixed <- "Cats chase mice. Stocks and bonds trade."
 #' segment_embeddings <- rbind(c(1, 0), c(0, 1))
 #' topic_gamma(fitted, mixed, embeddings = segment_embeddings)
+#'
+#' # Segment once (with any options), reuse the segments and their embeddings:
+#' segments <- segment(mixed, level = "sentence")
+#' topic_gamma(fitted, segments, embeddings = segment_embeddings)
 topic_gamma <- function(
   object,
   text,
@@ -294,9 +309,6 @@ topic_gamma <- function(
   level <- match.arg(level)
   stopifnot(
     inherits(object, "sbert_topic_model"),
-    is.character(text),
-    length(text) >= 1L,
-    !anyNA(text),
     is.numeric(batch_size),
     length(batch_size) == 1L,
     is.finite(batch_size),
@@ -313,7 +325,32 @@ topic_gamma <- function(
     !is.na(sort_by_length)
   )
 
-  segments <- segment(text, level = level, cores = cores)
+  # Accept either raw documents (segmented here at `level`) or the data frame
+  # returned by segment() (used as-is). Passing your own segmentation keeps all
+  # its options — `level`, `max_tokens`, `merge_below` — in one place and means a
+  # supplied `embeddings` matrix always lines up with the segments.
+  if (is.data.frame(text)) {
+    if (!all(c("document_id", "text") %in% names(text))) {
+      stop(
+        paste0(
+          "A pre-segmented data frame must have `document_id` and `text` ",
+          "columns, as returned by segment()."
+        ),
+        call. = FALSE
+      )
+    }
+    segments <- text
+    stopifnot(
+      nrow(segments) >= 1L,
+      is.character(segments$text),
+      !anyNA(segments$text),
+      is.numeric(segments$document_id),
+      !anyNA(segments$document_id)
+    )
+  } else {
+    stopifnot(is.character(text), length(text) >= 1L, !anyNA(text))
+    segments <- segment(text, level = level, cores = cores)
+  }
   if (nrow(segments) == 0L) {
     stop("No document produced any segment.", call. = FALSE)
   }

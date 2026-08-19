@@ -23,8 +23,17 @@ base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment
 - [x] **`numbers = "keep"/"remove"`** — drop digit-only tokens (years, counts)
       from topic terms on `topics()`, `select_topics()`, `topic_corpus()`,
       `terms()`; recorded in settings so `coherence()` stays consistent
+- [x] **`roman_numerals` + `section_numbers` token filters** — drop Roman-numeral
+      chapter/list markers (bounded at 100 so `ml`/`mm`/`cc` survive) and
+      multi-level section indices (`1.2.3`); same verbs, recorded in settings
 - [x] **Custom stop words documented** — `stop_words(add = )` plus a bare vector
       or `character()` on any topic verb; examples added
+- [x] **`segment(max_tokens = , model = )`** — cap segment length so nothing
+      overruns an encoder window; re-splits at the finest punctuation first,
+      word-chops only as a fallback; counts words offline or exact model tokens
+- [x] **`topic_gamma()` dual input** — accepts raw documents or a `segment()`
+      data frame, so segmentation options live in one place and supplied
+      embeddings always align; identical `gamma` when segmentation matches
 - [x] **`covid` dataset + articles** — COVID-19 abstracts; a topic-modeling
       article and a parallel/high-throughput article
 

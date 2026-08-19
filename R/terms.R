@@ -26,13 +26,19 @@
 #' @param numbers How to treat purely numeric tokens: `"keep"` or `"remove"`
 #'   (drop digit-only tokens such as years and counts). Defaults to the model's
 #'   fitted setting.
+#' @param roman_numerals How to treat Roman-numeral tokens: `"keep"` or
+#'   `"remove"` (drop chapter/section markers such as `ii`, `iv`, up to 100).
+#'   Defaults to the model's fitted setting.
+#' @param section_numbers How to treat section, reference, and list numbering —
+#'   multi-level indices such as `1.2.3` and enumeration markers such as `1.`,
+#'   `2.`: `"keep"` or `"remove"`. Defaults to the model's fitted setting.
 #' @param smoothing Additive (Dirichlet) smoothing for the `beta` column. Only
 #'   terms a topic actually used are returned, so with `smoothing = 0`
 #'   (default) each topic's `beta` sums to one, while any positive value
 #'   reserves mass for the zero-count vocabulary and the returned rows sum to
 #'   less than one.
 #' @param sort_by Order terms within each topic by `"score"` (default, the
-#'   class-based weight — distinctive words) or `"beta"` (raw \eqn{p(term | topic)}
+#'   class-based weight — distinctive words) or `"beta"` (raw \eqn{p(term | topic)}
 #'   — the words the topic uses most). `n` is applied after ordering.
 #' @param ... Unused, present for generic consistency.
 #' @return A base data frame with one row per topic and term: `topic`,
@@ -64,6 +70,8 @@ terms.sbert_topic_model <- function(
   reduce_frequent_words = NULL,
   stem = NULL,
   numbers = NULL,
+  roman_numerals = NULL,
+  section_numbers = NULL,
   smoothing = 0,
   sort_by = c("score", "beta"),
   ...
@@ -96,6 +104,16 @@ terms.sbert_topic_model <- function(
   } else {
     numbers
   }
+  roman_numerals <- if (is.null(roman_numerals)) {
+    if (is.null(settings$roman_numerals)) "keep" else settings$roman_numerals
+  } else {
+    roman_numerals
+  }
+  section_numbers <- if (is.null(section_numbers)) {
+    if (is.null(settings$section_numbers)) "keep" else settings$section_numbers
+  } else {
+    section_numbers
+  }
   stopifnot(
     is.numeric(smoothing),
     length(smoothing) == 1L,
@@ -110,7 +128,9 @@ terms.sbert_topic_model <- function(
       stop_words = stop_words,
       min_token_length = min_token_length,
       stem = stem,
-      numbers = numbers
+      numbers = numbers,
+      roman_numerals = roman_numerals,
+      section_numbers = section_numbers
     ),
     use.names = FALSE
   )))
@@ -128,7 +148,9 @@ terms.sbert_topic_model <- function(
     weighting = weighting,
     reduce_frequent_words = reduce_frequent_words,
     stem = stem,
-    numbers = numbers
+    numbers = numbers,
+    roman_numerals = roman_numerals,
+    section_numbers = section_numbers
   )
 
   # p(term | topic) from the same counts the scores were built on, so `beta`

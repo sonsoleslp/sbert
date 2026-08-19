@@ -22,6 +22,20 @@
   "THOUGH"
 )
 
+# Weak break points used only as a last resort by max_tokens, when a run has no
+# punctuation or clause hinge to split on. Breaking *before* one of these
+# function words — a coordinator, preposition, article, or relative pronoun —
+# lands on the start of a phrase rather than in the middle of one. Lower-case,
+# because the search runs on already-lowered comparison copies.
+.sbert_segment_break_before <- c(
+  "and", "but", "or", "nor", "yet", "so",
+  "of", "in", "on", "to", "for", "with", "at", "by", "from", "as", "into",
+  "about", "over", "under", "after", "before", "between", "through", "during",
+  "against", "than", "upon", "within", "without", "toward", "towards", "across",
+  "that", "which", "who", "whom", "whose", "when", "where", "while", "because",
+  "a", "an", "the", "this", "these", "those"
+)
+
 # ASCII sentinels that cannot occur in the normalized source text.
 .sbert_segment_boundary <- "@@B@@"
 .sbert_segment_period <- "@@P@@"
@@ -95,13 +109,18 @@ segment_protect_periods <- function(text, abbreviations) {
 }
 
 # Insert a boundary sentinel at every separator permitted by `level`.
-segment_mark <- function(text, level) {
-  text <- gsub(
-    "([.?!])\\s+",
-    paste0("\\1", .sbert_segment_boundary),
-    text,
-    perl = TRUE
-  )
+# `sentence_split = FALSE` skips the sentence-ending "." "?" "!" split, used when
+# re-splitting an already-sentence-segmented piece — which holds no sentence
+# boundary, so the period split (and its abbreviation guard) is pure overhead.
+segment_mark <- function(text, level, sentence_split = TRUE) {
+  if (sentence_split) {
+    text <- gsub(
+      "([.?!])\\s+",
+      paste0("\\1", .sbert_segment_boundary),
+      text,
+      perl = TRUE
+    )
+  }
   if (level %in% c("clause", "phrase")) {
     text <- gsub(
       "([;:])\\s+",
@@ -170,6 +189,177 @@ segment_merge_short <- function(segments, min_words) {
   merged
 }
 
+# A counter for segment length: whitespace words when no model is given
+# (deterministic and offline), or exact encoder tokens when one is. encode()
+# re-enables padding and truncation on every call, so clearing them here to read
+# a true length never affects later encoding.
+segment_unit_counter <- function(model = NULL) {
+  if (is.null(model)) {
+    function(x) {
+      vapply(strsplit(x, "\\s+"), function(w) sum(nzchar(w)), integer(1))
+    }
+  } else {
+    tokenizer <- model$tokenizer
+    tokenizer$no_padding()
+    tokenizer$no_truncation()
+    function(x) {
+      if (length(x) == 0L) {
+        return(integer(0))
+      }
+      encoded <- tokenizer$encode_batch(as.list(x), add_special_tokens = TRUE)
+      vapply(encoded, function(item) length(item$ids), integer(1))
+    }
+  }
+}
+
+# Greedily merge consecutive units so each returned chunk stays within the
+# budget, keeping their original order. A single unit already over budget is
+# emitted on its own (the caller has already broken it down as far as it can).
+segment_pack_units <- function(units, max_units, count_units) {
+  if (length(units) == 0L) {
+    return(character(0))
+  }
+  counts <- count_units(units)
+  chunks <- character(0)
+  current <- character(0)
+  current_count <- 0L
+  for (i in seq_along(units)) {
+    if (length(current) > 0L && current_count + counts[[i]] > max_units) {
+      chunks <- c(chunks, paste(current, collapse = " "))
+      current <- units[i]
+      current_count <- counts[[i]]
+    } else {
+      current <- c(current, units[i])
+      current_count <- current_count + counts[[i]]
+    }
+  }
+  c(chunks, paste(current, collapse = " "))
+}
+
+# Last-resort split for a run with no punctuation or clause hinge. Fills each
+# chunk to the largest that fits the budget, then, rather than cutting there,
+# backs up a short window to end just before a function word so the break lands
+# at the start of a phrase instead of mid-phrase. If the window holds no such
+# word it cuts at the budget. Every chunk fits the budget and no word is lost.
+segment_smart_chop <- function(words, max_units, count_units) {
+  n <- length(words)
+  if (n == 0L) {
+    return(character(0))
+  }
+  # Per-word unit counts, computed once. Word budgets are then exact (each word
+  # is one unit); token budgets use the per-word sum as a close estimate, which
+  # keeps this an O(n) pass rather than re-counting a growing prefix each step.
+  word_units <- count_units(words)
+  cumulative <- cumsum(word_units)
+  lowered <- tolower(words)
+  is_break <- lowered %in% .sbert_segment_break_before
+  chunks <- character(0)
+  i <- 1L
+  while (i <= n) {
+    # Largest j whose chunk still fits the budget (cumulative counts from i).
+    budget_end <- cumulative[i] - word_units[i] + max_units
+    j <- i
+    hi <- findInterval(budget_end, cumulative)
+    if (hi > i) {
+      j <- hi
+    }
+    if (j >= n) {
+      chunks <- c(chunks, paste(words[i:n], collapse = " "))
+      break
+    }
+    # Prefer to end this chunk just before a function word within a window of the
+    # budget edge, so the next chunk starts a phrase rather than continuing one.
+    window <- max(1L, as.integer(floor(0.25 * (j - i + 1L))))
+    cut <- j
+    for (k in seq.int(j, max(i, j - window + 1L))) {
+      if (is_break[[k + 1L]]) {
+        cut <- k
+        break
+      }
+    }
+    chunks <- c(chunks, paste(words[i:cut], collapse = " "))
+    i <- cut + 1L
+  }
+  chunks
+}
+
+# Split already-normalized segments at the finest sub-sentence boundaries
+# (";", ":", " - ", clause hinges, commas). The inputs are existing sentence or
+# clause segments, so they carry no sentence boundary: the period split and its
+# per-abbreviation guard are skipped, which is the bulk of the cost. Only the
+# parenthetical guard is kept, so a comma inside "(a, b)" does not split.
+# Vectorized — the regex passes run once over the whole vector rather than once
+# per segment. Returns a list of atom vectors, one per input.
+segment_phrase_atoms <- function(texts) {
+  guarded <- segment_protect_parentheticals(texts)
+  marked <- segment_mark(guarded, "phrase", sentence_split = FALSE)
+  lapply(
+    strsplit(marked, .sbert_segment_boundary, fixed = TRUE),
+    function(parts) {
+      parts <- segment_restore(parts)
+      parts[nzchar(parts) & grepl("[[:alnum:]]", parts)]
+    }
+  )
+}
+
+# Cap every over-long segment across the whole corpus in one pass. Each over-long
+# segment is re-split at the finest logical boundaries (phrase level), those
+# pieces are packed back up to the budget so the split lands on punctuation
+# wherever possible, and only a piece that alone still exceeds the budget — a run
+# with no internal punctuation — is chopped further, preferring a break just
+# before a function word over the raw budget edge (see segment_smart_chop).
+# Over-long segments are phrase-split together (vectorized) so the cost scales
+# with their number, not with per-segment regex overhead. `count_units` measures
+# words or encoder tokens. Operates on the per-document list and preserves it,
+# including empty documents.
+segment_cap_lists <- function(segment_lists, max_units, count_units) {
+  if (is.null(max_units)) {
+    return(segment_lists)
+  }
+  lengths_per_doc <- lengths(segment_lists)
+  all_segments <- unlist(segment_lists, use.names = FALSE)
+  if (length(all_segments) == 0L) {
+    return(segment_lists)
+  }
+  over <- which(count_units(all_segments) > max_units)
+  if (length(over) == 0L) {
+    return(segment_lists)
+  }
+  atom_lists <- segment_phrase_atoms(all_segments[over])
+  pieces <- as.list(all_segments)
+  for (k in seq_along(over)) {
+    atoms <- atom_lists[[k]]
+    if (length(atoms) == 0L) {
+      atoms <- all_segments[[over[[k]]]]
+    }
+    atom_counts <- count_units(atoms)
+    units <- unlist(
+      Map(
+        function(atom, atom_count) {
+          if (atom_count <= max_units) {
+            atom
+          } else {
+            words <- strsplit(atom, "\\s+")[[1L]]
+            segment_smart_chop(words[nzchar(words)], max_units, count_units)
+          }
+        },
+        atoms,
+        atom_counts
+      ),
+      use.names = FALSE
+    )
+    pieces[[over[[k]]]] <- segment_pack_units(units, max_units, count_units)
+  }
+  # Re-assemble the per-document lists, keeping every document (empty ones too).
+  document_of <- rep.int(seq_along(segment_lists), lengths_per_doc)
+  out <- rep(list(character(0)), length(segment_lists))
+  grouped <- split(pieces, document_of)
+  for (name in names(grouped)) {
+    out[[as.integer(name)]] <- unlist(grouped[[name]], use.names = FALSE)
+  }
+  out
+}
+
 segment_document <- function(text, level, merge_below, abbreviations) {
   normalized <- segment_normalize(text)
   if (!nzchar(normalized)) {
@@ -224,6 +414,24 @@ segment_document <- function(text, level, merge_below, abbreviations) {
 #'   Default `1` (serial). Values above one use `parallel::mclapply` on
 #'   Unix-alikes and fall back to serial on Windows or for small inputs; the
 #'   segmentation is identical regardless of the count.
+#' @param max_tokens Optional cap on segment length, so no segment overruns an
+#'   encoder's context window and is silently truncated. `NULL` (default) leaves
+#'   segments uncapped. When set, any segment over the budget is re-split at the
+#'   finest logical boundaries — clause hinges, `";"`, `":"`, `" - "`, and
+#'   commas — and the pieces are packed back up to the budget, so a split lands
+#'   on punctuation wherever possible. A run with no such boundary is chopped
+#'   further, but even then the break is placed just before a function word (a
+#'   coordinator, preposition, article, or relative pronoun) near the budget
+#'   edge rather than mid-phrase, falling back to the raw edge only when the run
+#'   has no function word either. With `model = NULL` the budget counts
+#'   whitespace-delimited words, a deterministic offline proxy; set it below the
+#'   model's true token limit (for example around 200 for a 256-token model),
+#'   since a tokenizer emits somewhat more tokens than words.
+#' @param model Optional loaded [sbert_model][load_model()]. When supplied with
+#'   `max_tokens`, the budget counts that model's exact sub-word tokens instead
+#'   of words, so `max_tokens` can be the model's real limit. Token-counted
+#'   segmentation runs serially (the tokenizer is not forked), so `cores` is
+#'   ignored in that case.
 #' @return A base data frame with one row per segment and columns
 #'   `document_id` (integer position in `text`), `document_name` (name of the
 #'   input element, or `""`), `segment` (integer position within the
@@ -243,7 +451,9 @@ segment <- function(
   level = c("clause", "sentence", "phrase"),
   merge_below = 0L,
   abbreviations = default_abbreviations(),
-  cores = 1L
+  cores = 1L,
+  max_tokens = NULL,
+  model = NULL
 ) {
   level <- match.arg(level)
   stopifnot(
@@ -256,8 +466,21 @@ segment <- function(
     merge_below >= 0,
     merge_below == as.integer(merge_below),
     is.character(abbreviations),
-    !anyNA(abbreviations)
+    !anyNA(abbreviations),
+    is.null(max_tokens) ||
+      (is.numeric(max_tokens) && length(max_tokens) == 1L &&
+        is.finite(max_tokens) && max_tokens >= 1 &&
+        max_tokens == as.integer(max_tokens)),
+    is.null(model) || inherits(model, "sbert_model")
   )
+  max_tokens <- if (is.null(max_tokens)) NULL else as.integer(max_tokens)
+  if (is.null(max_tokens) && !is.null(model)) {
+    stop("`model` is only used when `max_tokens` is set.", call. = FALSE)
+  }
+  # The unit counter is built once. With a model it holds an external tokenizer
+  # pointer, so token-capped segmentation runs in one process rather than across
+  # forks. Word-based capping stays parallelisable.
+  count_units <- if (is.null(max_tokens)) NULL else segment_unit_counter(model)
 
   document_names <- names(text)
   if (is.null(document_names)) {
@@ -266,7 +489,7 @@ segment <- function(
   # Splitting a document is independent of every other document, so the per-
   # document list is built in parallel across forks when asked and recombined in
   # order — byte-identical to the serial pass, only faster.
-  n_cores <- resolve_cores(cores, length(text))
+  n_cores <- if (is.null(model)) resolve_cores(cores, length(text)) else 1L
   segment_one <- function(document) {
     segment_document(
       document,
@@ -289,6 +512,14 @@ segment <- function(
     }
   } else {
     lapply(unname(text), segment_one)
+  }
+  # Cap over-long segments in one vectorized pass after the base segmentation,
+  # so the regex re-split of every over-long segment happens together rather than
+  # once per segment. Deterministic and independent of `cores`.
+  if (!is.null(max_tokens)) {
+    segment_lists <- segment_cap_lists(
+      segment_lists, max_tokens, count_units
+    )
   }
   counts <- lengths(segment_lists)
   data.frame(

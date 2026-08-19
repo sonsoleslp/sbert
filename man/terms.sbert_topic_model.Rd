@@ -14,6 +14,8 @@
   reduce_frequent_words = NULL,
   stem = NULL,
   numbers = NULL,
+  roman_numerals = NULL,
+  section_numbers = NULL,
   smoothing = 0,
   sort_by = c("score", "beta"),
   ...
@@ -45,6 +47,14 @@ the most frequent surface form. Requires `SnowballC`.}
 (drop digit-only tokens such as years and counts). Defaults to the model's
 fitted setting.}
 
+\item{roman_numerals}{How to treat Roman-numeral tokens: `"keep"` or
+`"remove"` (drop chapter/section markers such as `ii`, `iv`, up to 100).
+Defaults to the model's fitted setting.}
+
+\item{section_numbers}{How to treat section, reference, and list numbering —
+multi-level indices such as `1.2.3` and enumeration markers such as `1.`,
+`2.`: `"keep"` or `"remove"`. Defaults to the model's fitted setting.}
+
 \item{smoothing}{Additive (Dirichlet) smoothing for the `beta` column. Only
 terms a topic actually used are returned, so with `smoothing = 0`
 (default) each topic's `beta` sums to one, while any positive value
@@ -52,7 +62,7 @@ reserves mass for the zero-count vocabulary and the returned rows sum to
 less than one.}
 
 \item{sort_by}{Order terms within each topic by `"score"` (default, the
-class-based weight — distinctive words) or `"beta"` (raw \eqn{p(term | topic)}
+class-based weight — distinctive words) or `"beta"` (raw \eqn{p(term | topic)}
 — the words the topic uses most). `n` is applied after ordering.}
 
 \item{...}{Unused, present for generic consistency.}

@@ -66,3 +66,48 @@ testthat::test_that("numbers = 'keep' is the default and unchanged", {
     sbert:::tokenize_topic_documents(text, default_stop_words(), 2L, numbers = "keep")
   )
 })
+
+testthat::test_that("roman_numerals = 'remove' drops numerals but keeps units", {
+  text <- "chapter iv part xii uses ml and mm and covid19"
+  keep <- sbert:::tokenize_topic_documents(text, default_stop_words(), 2L)
+  drop <- sbert:::tokenize_topic_documents(text, default_stop_words(), 2L, roman_numerals = "remove")
+  testthat::expect_true(all(c("iv", "xii") %in% keep[[1]]))
+  testthat::expect_false(any(c("iv", "xii") %in% drop[[1]]))
+  # scientific units that are also valid Roman numerals are kept
+  testthat::expect_true(all(c("ml", "mm") %in% drop[[1]]))
+  testthat::expect_true("covid19" %in% drop[[1]])
+})
+
+testthat::test_that("section_numbers = 'remove' strips multi-level indices only", {
+  text <- "see section 1.2.3 value 3.14 in table 4.5.6 year 2020"
+  drop <- sbert:::tokenize_topic_documents(
+    text, default_stop_words(), 2L, section_numbers = "remove", numbers = "keep"
+  )
+  # multi-level indices gone; the year survives
+  testthat::expect_true("2020" %in% drop[[1]])
+  # a decimal keeps its parts (period splits it); no "123" or "456" leaked
+  testthat::expect_false(any(c("123", "456") %in% drop[[1]]))
+})
+
+testthat::test_that("roman_numerals/section_numbers default to keep, unchanged", {
+  text <- c("chapter iv section 1.2.3", "measure 7 items")
+  base <- sbert:::tokenize_topic_documents(text, default_stop_words(), 2L)
+  same <- sbert:::tokenize_topic_documents(
+    text, default_stop_words(), 2L, roman_numerals = "keep", section_numbers = "keep"
+  )
+  testthat::expect_identical(base, same)
+})
+
+testthat::test_that("section_numbers = 'remove' also drops enumeration markers", {
+  text <- "1. background 2. methods figure 12. results in 2020 covid-19 section 1.2.3"
+  drop <- sbert:::tokenize_topic_documents(text, default_stop_words(), 2L,
+                                           section_numbers = "remove")
+  toks <- drop[[1]]
+  # enumeration/list markers gone (12. removed; 1./2. were single-digit anyway)
+  testthat::expect_false("12" %in% toks)
+  # genuine values survive even under numbers = "keep"
+  testthat::expect_true("2020" %in% toks)   # four-digit year
+  testthat::expect_true("19" %in% toks)     # covid-19, hyphenated
+  # words intact
+  testthat::expect_true(all(c("background", "methods", "results") %in% toks))
+})

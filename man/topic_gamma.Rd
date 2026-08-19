@@ -19,16 +19,26 @@ topic_gamma(
 \arguments{
 \item{object}{A fitted [topics()] model.}
 
-\item{text}{Character vector of documents.}
+\item{text}{Either a character vector of documents (segmented here at
+`level`), or the data frame returned by [segment()] (used as-is). Passing
+your own segmentation keeps every segment option — `level`, `max_tokens`,
+`merge_below` — in [segment()], and lets you reuse one set of segment
+embeddings across this and other verbs. A data frame must have
+`document_id` and `text` columns; `gamma` is then computed per
+`document_id`.}
 
 \item{model}{A loaded [sbert_model][load_model()], a pinned model
 name, or `NULL` for the default model, used to embed the segments;
 ignored when `embeddings` are supplied.}
 
 \item{embeddings}{Optional precomputed numeric matrix of segment
-embeddings whose rows align with `segment(text, level = level)`.}
+embeddings, one row per segment. When `text` is raw documents the rows must
+align with `segment(text, level = level)`; when `text` is a [segment()]
+data frame they must align with its rows — which is automatic, since no
+re-segmentation happens.}
 
-\item{level}{Segmentation granularity passed to [segment()].}
+\item{level}{Segmentation granularity passed to [segment()]. Ignored when
+`text` is already a [segment()] data frame.}
 
 \item{batch_size}{Batch size passed to [encode()] when `model` is
 used.}
@@ -37,7 +47,8 @@ used.}
 segments (passed to [segment()]). Default `1`. Segmenting a large corpus
 dominates the non-encoding cost, so `cores > 1` can noticeably speed up
 sentence- and clause-level gamma; the result is identical for any count.
-Encoding itself is parallelized separately, via `load_model(threads =)`.}
+Encoding itself is parallelized separately, via `load_model(threads =)`.
+Ignored when `text` is already a [segment()] data frame.}
 
 \item{dedupe_segments}{When `TRUE`, encode each distinct segment only once
 and expand the embeddings back by position, rather than encoding every
@@ -79,4 +90,8 @@ fitted <- topics(text, 2, embeddings = embeddings)
 mixed <- "Cats chase mice. Stocks and bonds trade."
 segment_embeddings <- rbind(c(1, 0), c(0, 1))
 topic_gamma(fitted, mixed, embeddings = segment_embeddings)
+
+# Segment once (with any options), reuse the segments and their embeddings:
+segments <- segment(mixed, level = "sentence")
+topic_gamma(fitted, segments, embeddings = segment_embeddings)
 }

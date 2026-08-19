@@ -16,6 +16,29 @@
   "your", "yours", "yourself", "yourselves"
 )
 
+# Canonical lowercase Roman numerals for 1 to 100, used by numbers-handling to
+# drop chapter/section/list markers ("ii", "iv", "xii"). Bounded at 100 on
+# purpose: every larger canonical form collides with a common scientific
+# abbreviation that is also a valid Roman numeral (ml = 1050, mm = 2000,
+# cc = 200, ci = 101, cv = 105), so extending the range would silently delete
+# units. Single-character forms are included but are moot in practice, since the
+# default min_token_length already drops them.
+.sbert_roman_numerals <- local({
+  int_to_roman <- function(n) {
+    values <- c(100L, 90L, 50L, 40L, 10L, 9L, 5L, 4L, 1L)
+    symbols <- c("c", "xc", "l", "xl", "x", "ix", "v", "iv", "i")
+    out <- ""
+    for (i in seq_along(values)) {
+      while (n >= values[i]) {
+        out <- paste0(out, symbols[i])
+        n <- n - values[i]
+      }
+    }
+    out
+  }
+  vapply(seq_len(100L), int_to_roman, character(1))
+})
+
 #' Obtain and Adjust the Topic Stop-Word List
 #'
 #' Returns the stop words excluded from term extraction and keyword
@@ -83,7 +106,7 @@ resolve_cores <- function(cores, n_items) {
   max(1L, min(cores, available, n_items))
 }
 
-tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = FALSE, cores = 1L, numbers = "keep") {
+tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = FALSE, cores = 1L, numbers = "keep", roman_numerals = "keep", section_numbers = "keep") {
   stopifnot(
     is.character(text),
     !anyNA(text),
@@ -99,7 +122,13 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
     !is.na(stem),
     is.character(numbers),
     length(numbers) == 1L,
-    numbers %in% c("keep", "remove")
+    numbers %in% c("keep", "remove"),
+    is.character(roman_numerals),
+    length(roman_numerals) == 1L,
+    roman_numerals %in% c("keep", "remove"),
+    is.character(section_numbers),
+    length(section_numbers) == 1L,
+    section_numbers %in% c("keep", "remove")
   )
 
   # Regex tokenization and stop-word/length filtering are per-document and
@@ -114,7 +143,8 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
       function(indices) {
         tokenize_topic_documents(
           text[indices], stop_words, min_token_length, stem = FALSE,
-          cores = 1L, numbers = numbers
+          cores = 1L, numbers = numbers, roman_numerals = roman_numerals,
+          section_numbers = section_numbers
         )
       },
       mc.cores = n_cores
@@ -135,6 +165,23 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
   normalized_stopwords <- unique(
     gsub("\u2019", "'", tolower(enc2utf8(stop_words)), fixed = TRUE)
   )
+  if (section_numbers == "remove") {
+    # Strip section/reference numbering before tokenizing, since the tokenizer
+    # splits on the periods and would otherwise leave stray digit tokens.
+    # Multi-level indices ("1.2.3", "4.5.6.7") are three-or-more dot-separated
+    # groups — unambiguous, since a decimal ("3.14") or two-part number ("2.1")
+    # has at most one dot and is left alone.
+    normalized_text <- gsub(
+      "[0-9]+(?:\\.[0-9]+){2,}", " ", normalized_text, perl = TRUE
+    )
+    # Enumeration / list markers ("1. 2. 3.", "figure 12.") are a standalone
+    # one- or two-digit number followed by a period and a space. Kept short and
+    # required to stand alone so four-digit years ("2020."), hyphenated numbers
+    # ("covid-19.") and larger counts survive even under numbers = "keep".
+    normalized_text <- gsub(
+      "(^|\\s)[0-9]{1,2}\\.(?=\\s|$)", " ", normalized_text, perl = TRUE
+    )
+  }
 
   # Single-pass tokenization, byte-identical to the grammar
   # `[[:alnum:]]+(?:'[[:alnum:]]+)*` but faster than a gregexpr + regmatches
@@ -159,6 +206,11 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
         # such as "covid19". Runs joined only by digits are numbers; letters make
         # a word.
         keep <- keep & grepl("[^0-9']", tokens)
+      }
+      if (roman_numerals == "remove") {
+        # Drop chapter/section/list markers written as Roman numerals (bounded
+        # at 100; see .sbert_roman_numerals).
+        keep <- keep & !tokens %in% .sbert_roman_numerals
       }
       unname(tokens[keep])
     }
@@ -221,7 +273,9 @@ topic_term_scores <- function(
   stem = FALSE,
   token_lists = NULL,
   cores = 1L,
-  numbers = "keep"
+  numbers = "keep",
+  roman_numerals = "keep",
+  section_numbers = "keep"
 ) {
   weighting <- match.arg(weighting)
   stopifnot(
@@ -252,7 +306,8 @@ topic_term_scores <- function(
   if (is.null(token_lists)) {
     token_lists <- tokenize_topic_documents(
       text, stop_words, min_token_length, stem = stem, cores = cores,
-      numbers = numbers
+      numbers = numbers, roman_numerals = roman_numerals,
+      section_numbers = section_numbers
     )
   }
   all_tokens <- unlist(token_lists, use.names = FALSE)
@@ -632,7 +687,8 @@ encode_topic_documents <- function(text, model, batch_size) {
 #'   text: the corpus only *caches* the embedding and tokenization steps, it
 #'   does not change them. The corpus fixes the embedding source (`model` or
 #'   `embeddings`) and the tokenization settings (`stop_words`,
-#'   `min_token_length`, `stem`, `numbers`); [topics()] then refuses conflicting overrides
+#'   `min_token_length`, `stem`, `numbers`, `roman_numerals`, `section_numbers`);
+#'   [topics()] then refuses conflicting overrides
 #'   for those, while per-model settings (`n_topics`, `n_terms`,
 #'   `min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`, ...)
 #'   are still chosen per call.
@@ -662,9 +718,13 @@ topic_corpus <- function(
   min_token_length = 2L,
   stem = FALSE,
   cores = 1L,
-  numbers = c("keep", "remove")
+  numbers = c("keep", "remove"),
+  roman_numerals = c("keep", "remove"),
+  section_numbers = c("keep", "remove")
 ) {
   numbers <- match.arg(numbers)
+  roman_numerals <- match.arg(roman_numerals)
+  section_numbers <- match.arg(section_numbers)
   if (inherits(text, "sbert_topic_corpus")) {
     return(text)
   }
@@ -747,7 +807,9 @@ topic_corpus <- function(
     as.integer(min_token_length),
     stem = stem,
     cores = cores,
-    numbers = numbers
+    numbers = numbers,
+    roman_numerals = roman_numerals,
+    section_numbers = section_numbers
   )
 
   structure(
@@ -761,7 +823,9 @@ topic_corpus <- function(
         stop_words = stop_words,
         min_token_length = as.integer(min_token_length),
         stem = stem,
-        numbers = numbers
+        numbers = numbers,
+        roman_numerals = roman_numerals,
+        section_numbers = section_numbers
       )
     ),
     class = "sbert_topic_corpus"
@@ -822,6 +886,21 @@ print.sbert_topic_corpus <- function(x, ...) {
 #' @param numbers How to treat purely numeric tokens (years, counts) in topic
 #'   terms. `"keep"` (default) keeps them; `"remove"` drops tokens made only of
 #'   digits, while retaining alphanumerics such as `covid19`.
+#' @param roman_numerals How to treat Roman-numeral tokens (chapter, section,
+#'   and list markers such as `ii`, `iv`, `xii`). `"keep"` (default) keeps them;
+#'   `"remove"` drops canonical Roman numerals up to 100. The bound is
+#'   deliberate: larger Roman numerals collide with common abbreviations that
+#'   are also valid numerals (`ml`, `mm`, `cc`, `ci`, `cv`), which are always
+#'   kept. A few small numerals that are also words (`iv`, `vi`, `xl`) are
+#'   removed when this is on.
+#' @param section_numbers How to treat section, reference, and list numbering.
+#'   `"keep"` (default) keeps it; `"remove"` strips, before tokenizing, both
+#'   multi-level indices (`1.2.3`, `4.5.6.7` — three or more dot-separated
+#'   groups) and enumeration or list markers (`1.`, `2.`, `figure 12.` — a
+#'   standalone one- or two-digit number followed by a period). Decimals
+#'   (`3.14`), four-digit years (`2020.`), hyphenated numbers (`covid-19.`), and
+#'   larger counts are left untouched, so genuine values survive even when
+#'   `numbers = "keep"`.
 #' @param weighting Class-based term-weighting scheme. `"ctfidf"` (default) uses
 #'   `tf * log(1 + A / f_x)`; `"bm25"` uses the BM25 inverse-frequency variant
 #'   `tf * log(1 + (A - f_x + 0.5) / (f_x + 0.5))`, which more aggressively
@@ -888,10 +967,14 @@ topics <- function(
   seed_embeddings = NULL,
   fixed_seeds = FALSE,
   cores = 1L,
-  numbers = c("keep", "remove")
+  numbers = c("keep", "remove"),
+  roman_numerals = c("keep", "remove"),
+  section_numbers = c("keep", "remove")
 ) {
   weighting <- match.arg(weighting)
   numbers <- match.arg(numbers)
+  roman_numerals <- match.arg(roman_numerals)
+  section_numbers <- match.arg(section_numbers)
 
   # A prepared topic_corpus carries the corpus-level work already done once:
   # the embeddings, the tokenization, and the token settings. Reusing it across
@@ -916,6 +999,8 @@ topics <- function(
     min_token_length <- corpus$settings$min_token_length
     stem <- corpus$settings$stem
     numbers <- if (is.null(corpus$settings$numbers)) "keep" else corpus$settings$numbers
+    roman_numerals <- if (is.null(corpus$settings$roman_numerals)) "keep" else corpus$settings$roman_numerals
+    section_numbers <- if (is.null(corpus$settings$section_numbers)) "keep" else corpus$settings$section_numbers
     corpus_model_information <- corpus$model
   } else {
     # A data frame goes in whole: `column` names the text to model, every other
@@ -1132,7 +1217,9 @@ topics <- function(
     stem = stem,
     token_lists = precomputed_tokens,
     cores = cores,
-    numbers = numbers
+    numbers = numbers,
+    roman_numerals = roman_numerals,
+    section_numbers = section_numbers
   )
   topic_labels <- vapply(
     seq_len(n_topics),
@@ -1197,6 +1284,8 @@ topics <- function(
         stem = stem,
         stop_words = stop_words,
         numbers = numbers,
+        roman_numerals = roman_numerals,
+        section_numbers = section_numbers,
         seeds = if (is.null(seeds)) NULL else unname(
           if (is.list(seeds)) {
             vapply(seeds, function(seed) paste(seed, collapse = " "), character(1))

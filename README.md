@@ -125,6 +125,17 @@ terms(topic_model, n = 12, sort_by = "beta")     # the words a topic uses most
 terms(topic_model, n = 12, weighting = "bm25", stem = TRUE)
 ```
 
+Token filters keep labels informative: `numbers = "remove"` drops bare
+years and counts, `roman_numerals = "remove"` drops chapter and list
+markers (`ii`, `iv`), and `section_numbers = "remove"` strips
+multi-level indices such as `1.2.3`. Each is available on `topics()`,
+`select_topics()`, `topic_corpus()`, and `terms()`.
+
+``` r
+topics(text, n_topics = 30, embeddings = embeddings,
+       numbers = "remove", roman_numerals = "remove", section_numbers = "remove")
+```
+
 Fitted topic models support a full inferential layer — assignment of new
 documents, soft membership, generative word probabilities, and
 mixed-topic document distributions:
@@ -233,6 +244,14 @@ segment(
 guarding abbreviations (`abbreviations()`), decimals, and parentheticals
 so they never end a sentence. The clause level (the default) also splits
 at subordinating hinges while keeping comma enumerations whole.
+`max_tokens` caps segment length so nothing overruns an encoder’s
+context window — an over-long segment is re-split at the finest
+punctuation first, and only word-chopped as a last resort; pass
+`model =` to count that model’s exact tokens.
+
+``` r
+segment(long_documents, level = "sentence", max_tokens = 256, model = model)
+```
 
 Segments can carry their document’s context into the embedding:
 `blend()` keeps `alpha` of each segment’s context-orthogonal residual

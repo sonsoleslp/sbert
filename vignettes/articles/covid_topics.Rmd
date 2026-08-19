@@ -228,18 +228,24 @@ cat(paste(blocks, collapse = "\n"))
 The document model gives each abstract a single label — its dominant theme. A
 long abstract usually spans several topics, though, and unlike the whole-abstract
 embedding, its individual sentences are short enough to escape the 256-token
-truncation. `segment()` splits a document into sentences, deterministically:
+truncation. `segment()` splits a document into sentences, deterministically —
+and `max_tokens` guards against the rare sentence that is itself over the
+window, re-splitting it at punctuation first. The cap counts words here, a
+deterministic offline proxy; 200 words sits comfortably under the 256-token
+limit (pass `model =` to count that model's exact tokens instead):
 
 ```{r segment-demo}
-segment(covid_content$Abstract[1], level = "sentence")
+segments <- segment(covid_content$Abstract, level = "sentence", max_tokens = 200)
+head(segments, 3)
 ```
 
-`topic_gamma()` does this across the corpus — assigning every sentence to its
-nearest topic and returning each abstract's topic *mixture* (`gamma` sums to 1
-within a document):
+`topic_gamma()` takes that segmentation directly — assigning every sentence to
+its nearest topic and returning each abstract's topic *mixture* (`gamma` sums to
+1 within a document). Passing the `segment()` frame keeps the cap and lets a
+single encode be reused rather than segmenting again inside the call:
 
 ```{r gamma}
-gamma <- topic_gamma(topic_model, covid_content$Abstract, level = "sentence")
+gamma <- topic_gamma(topic_model, segments)
 head(gamma)
 ```
 
