@@ -64,7 +64,9 @@ segmentation works offline and is fully reproducible.</p>
 <span>  level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"clause"</span>, <span class="st">"sentence"</span>, <span class="st">"phrase"</span><span class="op">)</span>,</span>
 <span>  merge_below <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  abbreviations <span class="op">=</span> <span class="fu">default_abbreviations</span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  cores <span class="op">=</span> <span class="fl">1L</span></span>
+<span>  cores <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  max_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  model <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -98,6 +100,30 @@ gazetteer from [abbreviations()]; matching is case-insensitive.</p></dd>
 Default `1` (serial). Values above one use `parallel::mclapply` on
 Unix-alikes and fall back to serial on Windows or for small inputs; the
 segmentation is identical regardless of the count.</p></dd>
+
+
+<dt id="arg-max-tokens">max_tokens<a class="anchor" aria-label="anchor" href="#arg-max-tokens"></a></dt>
+<dd><p>Optional cap on segment length, so no segment overruns an
+encoder's context window and is silently truncated. `NULL` (default) leaves
+segments uncapped. When set, any segment over the budget is re-split at the
+finest logical boundaries — clause hinges, `";"`, `":"`, `" - "`, and
+commas — and the pieces are packed back up to the budget, so a split lands
+on punctuation wherever possible. A run with no such boundary is chopped
+further, but even then the break is placed just before a function word (a
+coordinator, preposition, article, or relative pronoun) near the budget
+edge rather than mid-phrase, falling back to the raw edge only when the run
+has no function word either. With `model = NULL` the budget counts
+whitespace-delimited words, a deterministic offline proxy; set it below the
+model's true token limit (for example around 200 for a 256-token model),
+since a tokenizer emits somewhat more tokens than words.</p></dd>
+
+
+<dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
+<dd><p>Optional loaded [sbert_model][load_model()]. When supplied with
+`max_tokens`, the budget counts that model's exact sub-word tokens instead
+of words, so `max_tokens` can be the model's real limit. Token-counted
+segmentation runs serially (the tokenizer is not forked), so `cores` is
+ignored in that case.</p></dd>
 
 </dl></div>
     <div class="section level2">

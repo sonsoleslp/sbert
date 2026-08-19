@@ -20,7 +20,9 @@ topic_corpus(
   min_token_length = 2L,
   stem = FALSE,
   cores = 1L,
-  numbers = c("keep", "remove")
+  numbers = c("keep", "remove"),
+  roman_numerals = c("keep", "remove"),
+  section_numbers = c("keep", "remove")
 )
 ```
 
@@ -84,6 +86,27 @@ topic_corpus(
   \`"keep"\` (default) keeps them; \`"remove"\` drops tokens made only
   of digits, while retaining alphanumerics such as \`covid19\`.
 
+- roman_numerals:
+
+  How to treat Roman-numeral tokens (chapter, section, and list markers
+  such as \`ii\`, \`iv\`, \`xii\`). \`"keep"\` (default) keeps them;
+  \`"remove"\` drops canonical Roman numerals up to 100. The bound is
+  deliberate: larger Roman numerals collide with common abbreviations
+  that are also valid numerals (\`ml\`, \`mm\`, \`cc\`, \`ci\`, \`cv\`),
+  which are always kept. A few small numerals that are also words
+  (\`iv\`, \`vi\`, \`xl\`) are removed when this is on.
+
+- section_numbers:
+
+  How to treat section, reference, and list numbering. \`"keep"\`
+  (default) keeps it; \`"remove"\` strips, before tokenizing, both
+  multi-level indices (\`1.2.3\`, \`4.5.6.7\` — three or more
+  dot-separated groups) and enumeration or list markers (\`1.\`, \`2.\`,
+  \`figure 12.\` — a standalone one- or two-digit number followed by a
+  period). Decimals (\`3.14\`), four-digit years (\`2020.\`), hyphenated
+  numbers (\`covid-19.\`), and larger counts are left untouched, so
+  genuine values survive even when \`numbers = "keep"\`.
+
 ## Value
 
 An object of class \`sbert_topic_corpus\`: a list with the prepared
@@ -97,10 +120,11 @@ The results are byte-identical to calling \[topics()\] on the raw text:
 the corpus only \*caches\* the embedding and tokenization steps, it does
 not change them. The corpus fixes the embedding source (\`model\` or
 \`embeddings\`) and the tokenization settings (\`stop_words\`,
-\`min_token_length\`, \`stem\`, \`numbers\`); \[topics()\] then refuses
-conflicting overrides for those, while per-model settings (\`n_topics\`,
-\`n_terms\`, \`min_term_frequency\`, \`weighting\`,
-\`reduce_frequent_words\`, \`seeds\`, ...) are still chosen per call.
+\`min_token_length\`, \`stem\`, \`numbers\`, \`roman_numerals\`,
+\`section_numbers\`); \[topics()\] then refuses conflicting overrides
+for those, while per-model settings (\`n_topics\`, \`n_terms\`,
+\`min_term_frequency\`, \`weighting\`, \`reduce_frequent_words\`,
+\`seeds\`, ...) are still chosen per call.
 
 ## See also
 

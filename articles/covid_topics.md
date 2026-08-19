@@ -67,7 +67,7 @@ sweep
 #>  n_topics  coherence topic_diversity  explained
 #>         4 0.05502642       0.5500000 0.09824599
 #>         6 0.07460328       0.6333333 0.12136775
-#>         8 0.17229509       0.6500000 0.12979221
+#>         8 0.17229509       0.6500000 0.12979222
 #>        10 0.15732535       0.5900000 0.14591512
 #>        12 0.15810223       0.5916667 0.15786363
 #> 
@@ -517,43 +517,37 @@ theme. A long abstract usually spans several topics, though, and unlike
 the whole-abstract embedding, its individual sentences are short enough
 to escape the 256-token truncation.
 [`segment()`](https://sonsoles.me/sbert/reference/segment.md) splits a
-document into sentences, deterministically:
+document into sentences, deterministically — and `max_tokens` guards
+against the rare sentence that is itself over the window, re-splitting
+it at punctuation first. The cap counts words here, a deterministic
+offline proxy; 200 words sits comfortably under the 256-token limit
+(pass `model =` to count that model’s exact tokens instead):
 
 ``` r
 
-segment(covid_content$Abstract[1], level = "sentence")
-#>    document_id document_name segment
-#> 1            1                     1
-#> 2            1                     2
-#> 3            1                     3
-#> 4            1                     4
-#> 5            1                     5
-#> 6            1                     6
-#> 7            1                     7
-#> 8            1                     8
-#> 9            1                     9
-#> 10           1                    10
-#>                                                                                                                                                                                                                                                                              text
-#> 1                                                                                         The COVID-19 Pandemic and resulting school closures, present a serious threat to young children's care, learning, and the achievement of their developmental potential (UNESCO, 2020a).
-#> 2                                    Disruptions to normal school functioning worldwide have presented challenges for teachers who were generally unprepared to teach using different methodologies (United Nations in Policy brief: Education during Covid-19 and beyond, 2020).
-#> 3  Since a child's right to care and education extends even during emergencies this study was conceptualized to better understand the professional experiences of early childhood teachers as they navigated the teaching learning process during the COVID-19 school disruption.
-#> 4                                      A multiple site qualitative case study was designed to answer two research questions: What were the professional experiences of Caribbean Early Childhood Care and Education (ECCE) teachers at the start of the COVID-19 pandemic period?
-#> 5                                                                                                                                                                        And how did Caribbean ECCE teachers adapt to ensure continuity of children's rights to access education?
-#> 6                                                                                                                                        Almog and Perry-Hazan's (2012) conceptualisation of the Right to Adaptable Education provided the theoretical foundation for this study.
-#> 7                                                                                                                                                                                      Data were collected using a questionnaire sent to teachers from seven Caribbean countries.
-#> 8                                                               Five themes were extricated from the findings: changed teacher experiences, significant new understandings, changed teacher collaboration practices, changed individual qualities, and warning signs for support.
-#> 9                                                                                                                                                               We conclude by making recommendations for macro level support for the ECCE sector during educational disruptions.
-#> 10                                                                                                                                                                                                         © 2022, The Author(s), under exclusive licence to Springer Nature B.V.
+segments <- segment(covid_content$Abstract, level = "sentence", max_tokens = 200)
+head(segments, 3)
+#>   document_id document_name segment
+#> 1           1                     1
+#> 2           1                     2
+#> 3           1                     3
+#>                                                                                                                                                                                                                                                                             text
+#> 1                                                                                        The COVID-19 Pandemic and resulting school closures, present a serious threat to young children's care, learning, and the achievement of their developmental potential (UNESCO, 2020a).
+#> 2                                   Disruptions to normal school functioning worldwide have presented challenges for teachers who were generally unprepared to teach using different methodologies (United Nations in Policy brief: Education during Covid-19 and beyond, 2020).
+#> 3 Since a child's right to care and education extends even during emergencies this study was conceptualized to better understand the professional experiences of early childhood teachers as they navigated the teaching learning process during the COVID-19 school disruption.
 ```
 
 [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-does this across the corpus — assigning every sentence to its nearest
-topic and returning each abstract’s topic *mixture* (`gamma` sums to 1
-within a document):
+takes that segmentation directly — assigning every sentence to its
+nearest topic and returning each abstract’s topic *mixture* (`gamma`
+sums to 1 within a document). Passing the
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) frame
+keeps the cap and lets a single encode be reused rather than segmenting
+again inside the call:
 
 ``` r
 
-gamma <- topic_gamma(topic_model, covid_content$Abstract, level = "sentence")
+gamma <- topic_gamma(topic_model, segments)
 head(gamma)
 #>   document_id topic gamma n_segments
 #> 1           1     1   0.0         10

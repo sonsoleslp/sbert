@@ -265,14 +265,14 @@ as `dedupe_segments`. On the bundled `covid` corpus that drift changed
 **no** `gamma` value and **no** document’s dominant topic, but it is
 opt-in rather than assumed.
 
-### Reuse the segment embeddings
+### Segment once, reuse everywhere
 
 Encoding is the dominant stage, so the largest — and fully reproducible
-— win is to *not encode twice*. If you already have the segment
-embeddings, pass them and
-[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-skips encoding entirely, dropping to just segmentation and pooling.
-Supply one row per segment, aligned to `segment(text, level)$text`:
+— win is to *not encode twice*. Segment the corpus once, encode those
+segments, then hand both the segments **and** their embeddings to
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md):
+it uses your segmentation as-is and skips encoding entirely, dropping to
+just pooling.
 
 ``` r
 
@@ -280,27 +280,32 @@ Supply one row per segment, aligned to `segment(text, level)$text`:
 segments <- segment(documents, level = "sentence", cores = 8)
 segment_embeddings <- encode(segments$text, model)
 
-# every downstream call reuses them — no re-encoding
-gamma <- topic_gamma(
-  topic_model, documents,
-  embeddings = segment_embeddings,
-  level = "sentence",
-  cores = 8
-)
+# pass the segment() frame itself, not raw documents — the rows already align
+gamma <- topic_gamma(topic_model, segments, embeddings = segment_embeddings)
 ```
 
-This is what pays off when you run several sentence-level steps on one
-corpus —
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+accepts either raw documents (which it segments internally) or the data
+frame [`segment()`](https://sonsoles.me/sbert/reference/segment.md)
+returns. Passing the frame means there is no second, internal
+segmentation to disagree with your embeddings — the rows line up by
+construction. That matters the moment you segment with anything other
+than the defaults, for example capping segment length so nothing is
+truncated:
+
+``` r
+
+segments <- segment(documents, level = "sentence", max_tokens = 256, model = model)
+gamma <- topic_gamma(topic_model, segments, embeddings = encode(segments$text, model))
+```
+
+One segmentation, one encode, reused across every sentence-level step —
+this
 [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md),
 sentence-level
 [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
 or a [`blend()`](https://sonsoles.me/sbert/reference/blend.md) that
-carries document context into each sentence — since they can all share a
-single encode.
-[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-re-segments internally with the same `level`, so the order is
-deterministic and the rows line up. The result is byte-identical to
-letting it encode; only encoded-once-versus-twice changes.
+carries document context into each sentence.
 
 ### Deduplicating repeated segments
 

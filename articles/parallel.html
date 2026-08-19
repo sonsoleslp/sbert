@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">Running sbert at full
 speed without changing a single result</h3>
             
-            <h4 data-toc-skip class="date">2026-08-15</h4>
+            <h4 data-toc-skip class="date">2026-08-19</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/parallel.Rmd" class="external-link"><code>vignettes/articles/parallel.Rmd</code></a></small>
       <div class="d-none name"><code>parallel.Rmd</code></div>
@@ -396,33 +396,34 @@ topic, but it is opt-in rather than assumed.</p>
 </div>
 </div>
 <div class="section level3">
-<h3 id="reuse-the-segment-embeddings">Reuse the segment embeddings<a class="anchor" aria-label="anchor" href="#reuse-the-segment-embeddings"></a>
+<h3 id="segment-once-reuse-everywhere">Segment once, reuse everywhere<a class="anchor" aria-label="anchor" href="#segment-once-reuse-everywhere"></a>
 </h3>
 <p>Encoding is the dominant stage, so the largest — and fully
-reproducible — win is to <em>not encode twice</em>. If you already have
-the segment embeddings, pass them and <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> skips
-encoding entirely, dropping to just segmentation and pooling. Supply one
-row per segment, aligned to <code>segment(text, level)$text</code>:</p>
+reproducible — win is to <em>not encode twice</em>. Segment the corpus
+once, encode those segments, then hand both the segments
+<strong>and</strong> their embeddings to <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>: it
+uses your segmentation as-is and skips encoding entirely, dropping to
+just pooling.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># segment and encode once, deterministically</span></span>
 <span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">documents</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="va">segment_embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">segments</span><span class="op">$</span><span class="va">text</span>, <span class="va">model</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># every downstream call reuses them — no re-encoding</span></span>
-<span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span></span>
-<span>  <span class="va">topic_model</span>, <span class="va">documents</span>,</span>
-<span>  embeddings <span class="op">=</span> <span class="va">segment_embeddings</span>,</span>
-<span>  level <span class="op">=</span> <span class="st">"sentence"</span>,</span>
-<span>  cores <span class="op">=</span> <span class="fl">8</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>This is what pays off when you run several sentence-level steps on
-one corpus — <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>, sentence-level
+<span><span class="co"># pass the segment() frame itself, not raw documents — the rows already align</span></span>
+<span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">segments</span>, embeddings <span class="op">=</span> <span class="va">segment_embeddings</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> accepts either raw documents (which it
+segments internally) or the data frame <code><a href="../reference/segment.html">segment()</a></code> returns.
+Passing the frame means there is no second, internal segmentation to
+disagree with your embeddings — the rows line up by construction. That
+matters the moment you segment with anything other than the defaults,
+for example capping segment length so nothing is truncated:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">documents</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, max_tokens <span class="op">=</span> <span class="fl">256</span>, model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
+<span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">segments</span>, embeddings <span class="op">=</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">segments</span><span class="op">$</span><span class="va">text</span>, <span class="va">model</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>One segmentation, one encode, reused across every sentence-level step
+— this <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>, sentence-level
 <code><a href="../reference/representatives.html">representatives()</a></code>, or a <code><a href="../reference/blend.html">blend()</a></code> that carries
-document context into each sentence — since they can all share a single
-encode. <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> re-segments internally with the same
-<code>level</code>, so the order is deterministic and the rows line up.
-The result is byte-identical to letting it encode; only
-encoded-once-versus-twice changes.</p>
+document context into each sentence.</p>
 </div>
 <div class="section level3">
 <h3 id="deduplicating-repeated-segments">Deduplicating repeated segments<a class="anchor" aria-label="anchor" href="#deduplicating-repeated-segments"></a>
@@ -432,14 +433,14 @@ clauses — and <code>dedupe_segments = TRUE</code> encodes each
 <em>distinct</em> segment once, expanding the result by position. How
 much this saves depends entirely on how repetitive your corpus is, so
 measure before reaching for it:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">documents</span>, level <span class="op">=</span> <span class="st">"clause"</span><span class="op">)</span></span>
 <span><span class="fl">1</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">segments</span><span class="op">$</span><span class="va">text</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">segments</span><span class="op">)</span>   <span class="co"># duplicate fraction</span></span></code></pre></div>
 <p>The bundled <code>covid</code> abstracts are only 15% duplicated at
 clause level and 8% at sentence level, so deduplication adds about 3%
 there on top of <code>sort_by_length</code>. A corpus of templated or
 boilerplate-heavy text will do far better.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span></span>
 <span>  <span class="va">topic_model</span>, <span class="va">documents</span>,</span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
@@ -463,7 +464,7 @@ the result is identical either way.</p>
 </h2>
 <p>Putting it together for the common case — one corpus, several
 models:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/sbert">sbert</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -486,7 +487,7 @@ and step 1 costs almost nothing.</p>
 <code>potion-base-8M</code> model embeds with no transformer and no ONNX
 Runtime at all — measured <strong>45× faster</strong> than
 <code>all-MiniLM-L6-v2</code>:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span>   <span class="co"># 31 MB, Model2Vec token lookup</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, <span class="va">fast</span><span class="op">)</span></span></code></pre></div>
 <div class="warn">
@@ -570,7 +571,7 @@ seed anywhere in the topic pipeline.</p>
 </div>
 <p>The proof runs offline — the same model, fitted single-threaded and
 across four cores, is byte-identical:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">2500L</span></span>
 <span><span class="va">text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>

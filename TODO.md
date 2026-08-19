@@ -43,9 +43,25 @@ from topic terms on
 [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) stays
 consistent
 
+**`roman_numerals` + `section_numbers` token filters** — drop
+Roman-numeral chapter/list markers (bounded at 100 so `ml`/`mm`/`cc`
+survive) and multi-level section indices (`1.2.3`); same verbs, recorded
+in settings
+
 **Custom stop words documented** — `stop_words(add = )` plus a bare
 vector or [`character()`](https://rdrr.io/r/base/character.html) on any
 topic verb; examples added
+
+**`segment(max_tokens = , model = )`** — cap segment length so nothing
+overruns an encoder window; re-splits at the finest punctuation first,
+word-chops only as a fallback; counts words offline or exact model
+tokens
+
+**[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+dual input** — accepts raw documents or a
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
+frame, so segmentation options live in one place and supplied embeddings
+always align; identical `gamma` when segmentation matches
 
 **`covid` dataset + articles** — COVID-19 abstracts; a topic-modeling
 article and a parallel/high-throughput article

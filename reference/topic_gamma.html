@@ -81,7 +81,13 @@ which the single-embedding hard assignment cannot express.</p>
 
 
 <dt id="arg-text">text<a class="anchor" aria-label="anchor" href="#arg-text"></a></dt>
-<dd><p>Character vector of documents.</p></dd>
+<dd><p>Either a character vector of documents (segmented here at
+`level`), or the data frame returned by [segment()] (used as-is). Passing
+your own segmentation keeps every segment option — `level`, `max_tokens`,
+`merge_below` — in [segment()], and lets you reuse one set of segment
+embeddings across this and other verbs. A data frame must have
+`document_id` and `text` columns; `gamma` is then computed per
+`document_id`.</p></dd>
 
 
 <dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
@@ -92,11 +98,15 @@ ignored when `embeddings` are supplied.</p></dd>
 
 <dt id="arg-embeddings">embeddings<a class="anchor" aria-label="anchor" href="#arg-embeddings"></a></dt>
 <dd><p>Optional precomputed numeric matrix of segment
-embeddings whose rows align with `segment(text, level = level)`.</p></dd>
+embeddings, one row per segment. When `text` is raw documents the rows must
+align with `segment(text, level = level)`; when `text` is a [segment()]
+data frame they must align with its rows — which is automatic, since no
+re-segmentation happens.</p></dd>
 
 
 <dt id="arg-level">level<a class="anchor" aria-label="anchor" href="#arg-level"></a></dt>
-<dd><p>Segmentation granularity passed to [segment()].</p></dd>
+<dd><p>Segmentation granularity passed to [segment()]. Ignored when
+`text` is already a [segment()] data frame.</p></dd>
 
 
 <dt id="arg-batch-size">batch_size<a class="anchor" aria-label="anchor" href="#arg-batch-size"></a></dt>
@@ -109,7 +119,8 @@ used.</p></dd>
 segments (passed to [segment()]). Default `1`. Segmenting a large corpus
 dominates the non-encoding cost, so `cores &gt; 1` can noticeably speed up
 sentence- and clause-level gamma; the result is identical for any count.
-Encoding itself is parallelized separately, via `load_model(threads =)`.</p></dd>
+Encoding itself is parallelized separately, via `load_model(threads =)`.
+Ignored when `text` is already a [segment()] data frame.</p></dd>
 
 
 <dt id="arg-dedupe-segments">dedupe_segments<a class="anchor" aria-label="anchor" href="#arg-dedupe-segments"></a></dt>
@@ -151,6 +162,13 @@ default for the same ~1e-7 reason as `dedupe_segments`.</p></dd>
 <span class="r-in"><span><span class="va">mixed</span> <span class="op">&lt;-</span> <span class="st">"Cats chase mice. Stocks and bonds trade."</span></span></span>
 <span class="r-in"><span><span class="va">segment_embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">topic_gamma</span><span class="op">(</span><span class="va">fitted</span>, <span class="va">mixed</span>, embeddings <span class="op">=</span> <span class="va">segment_embeddings</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   document_id topic gamma n_segments</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1           1     1   0.5          2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2           1     2   0.5          2</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Segment once (with any options), reuse the segments and their embeddings:</span></span></span>
+<span class="r-in"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="segment.html">segment</a></span><span class="op">(</span><span class="va">mixed</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">topic_gamma</span><span class="op">(</span><span class="va">fitted</span>, <span class="va">segments</span>, embeddings <span class="op">=</span> <span class="va">segment_embeddings</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   document_id topic gamma n_segments</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1           1     1   0.5          2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2           1     2   0.5          2</span>

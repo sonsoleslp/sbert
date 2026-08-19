@@ -32,7 +32,13 @@ topic_gamma(
 
 - text:
 
-  Character vector of documents.
+  Either a character vector of documents (segmented here at \`level\`),
+  or the data frame returned by \[segment()\] (used as-is). Passing your
+  own segmentation keeps every segment option — \`level\`,
+  \`max_tokens\`, \`merge_below\` — in \[segment()\], and lets you reuse
+  one set of segment embeddings across this and other verbs. A data
+  frame must have \`document_id\` and \`text\` columns; \`gamma\` is
+  then computed per \`document_id\`.
 
 - model:
 
@@ -42,12 +48,16 @@ topic_gamma(
 
 - embeddings:
 
-  Optional precomputed numeric matrix of segment embeddings whose rows
-  align with \`segment(text, level = level)\`.
+  Optional precomputed numeric matrix of segment embeddings, one row per
+  segment. When \`text\` is raw documents the rows must align with
+  \`segment(text, level = level)\`; when \`text\` is a \[segment()\]
+  data frame they must align with its rows — which is automatic, since
+  no re-segmentation happens.
 
 - level:
 
-  Segmentation granularity passed to \[segment()\].
+  Segmentation granularity passed to \[segment()\]. Ignored when
+  \`text\` is already a \[segment()\] data frame.
 
 - batch_size:
 
@@ -60,7 +70,8 @@ topic_gamma(
   corpus dominates the non-encoding cost, so \`cores \> 1\` can
   noticeably speed up sentence- and clause-level gamma; the result is
   identical for any count. Encoding itself is parallelized separately,
-  via \`load_model(threads =)\`.
+  via \`load_model(threads =)\`. Ignored when \`text\` is already a
+  \[segment()\] data frame.
 
 - dedupe_segments:
 
@@ -102,6 +113,13 @@ fitted <- topics(text, 2, embeddings = embeddings)
 mixed <- "Cats chase mice. Stocks and bonds trade."
 segment_embeddings <- rbind(c(1, 0), c(0, 1))
 topic_gamma(fitted, mixed, embeddings = segment_embeddings)
+#>   document_id topic gamma n_segments
+#> 1           1     1   0.5          2
+#> 2           1     2   0.5          2
+
+# Segment once (with any options), reuse the segments and their embeddings:
+segments <- segment(mixed, level = "sentence")
+topic_gamma(fitted, segments, embeddings = segment_embeddings)
 #>   document_id topic gamma n_segments
 #> 1           1     1   0.5          2
 #> 2           1     2   0.5          2

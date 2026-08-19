@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">A semantic review of the
 pandemic education literature, 2020-2024</h3>
             
-            <h4 data-toc-skip class="date">2026-08-15</h4>
+            <h4 data-toc-skip class="date">2026-08-19</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/covid_topics.Rmd" class="external-link"><code>vignettes/articles/covid_topics.Rmd</code></a></small>
       <div class="d-none name"><code>covid_topics.Rmd</code></div>
@@ -147,7 +147,7 @@ choice:</p>
 <span><span class="co">#&gt;  n_topics  coherence topic_diversity  explained</span></span>
 <span><span class="co">#&gt;         4 0.05502642       0.5500000 0.09824599</span></span>
 <span><span class="co">#&gt;         6 0.07460328       0.6333333 0.12136775</span></span>
-<span><span class="co">#&gt;         8 0.17229509       0.6500000 0.12979221</span></span>
+<span><span class="co">#&gt;         8 0.17229509       0.6500000 0.12979222</span></span>
 <span><span class="co">#&gt;        10 0.15732535       0.5900000 0.14591512</span></span>
 <span><span class="co">#&gt;        12 0.15810223       0.5916667 0.15786363</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -727,36 +727,31 @@ Francis Group.
 theme. A long abstract usually spans several topics, though, and unlike
 the whole-abstract embedding, its individual sentences are short enough
 to escape the 256-token truncation. <code><a href="../reference/segment.html">segment()</a></code> splits a
-document into sentences, deterministically:</p>
+document into sentences, deterministically — and <code>max_tokens</code>
+guards against the rare sentence that is itself over the window,
+re-splitting it at punctuation first. The cap counts words here, a
+deterministic offline proxy; 200 words sits comfortably under the
+256-token limit (pass <code>model =</code> to count that model’s exact
+tokens instead):</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    document_id document_name segment</span></span>
-<span><span class="co">#&gt; 1            1                     1</span></span>
-<span><span class="co">#&gt; 2            1                     2</span></span>
-<span><span class="co">#&gt; 3            1                     3</span></span>
-<span><span class="co">#&gt; 4            1                     4</span></span>
-<span><span class="co">#&gt; 5            1                     5</span></span>
-<span><span class="co">#&gt; 6            1                     6</span></span>
-<span><span class="co">#&gt; 7            1                     7</span></span>
-<span><span class="co">#&gt; 8            1                     8</span></span>
-<span><span class="co">#&gt; 9            1                     9</span></span>
-<span><span class="co">#&gt; 10           1                    10</span></span>
-<span><span class="co">#&gt;                                                                                                                                                                                                                                                                              text</span></span>
-<span><span class="co">#&gt; 1                                                                                         The COVID-19 Pandemic and resulting school closures, present a serious threat to young children's care, learning, and the achievement of their developmental potential (UNESCO, 2020a).</span></span>
-<span><span class="co">#&gt; 2                                    Disruptions to normal school functioning worldwide have presented challenges for teachers who were generally unprepared to teach using different methodologies (United Nations in Policy brief: Education during Covid-19 and beyond, 2020).</span></span>
-<span><span class="co">#&gt; 3  Since a child's right to care and education extends even during emergencies this study was conceptualized to better understand the professional experiences of early childhood teachers as they navigated the teaching learning process during the COVID-19 school disruption.</span></span>
-<span><span class="co">#&gt; 4                                      A multiple site qualitative case study was designed to answer two research questions: What were the professional experiences of Caribbean Early Childhood Care and Education (ECCE) teachers at the start of the COVID-19 pandemic period?</span></span>
-<span><span class="co">#&gt; 5                                                                                                                                                                        And how did Caribbean ECCE teachers adapt to ensure continuity of children's rights to access education?</span></span>
-<span><span class="co">#&gt; 6                                                                                                                                        Almog and Perry-Hazan's (2012) conceptualisation of the Right to Adaptable Education provided the theoretical foundation for this study.</span></span>
-<span><span class="co">#&gt; 7                                                                                                                                                                                      Data were collected using a questionnaire sent to teachers from seven Caribbean countries.</span></span>
-<span><span class="co">#&gt; 8                                                               Five themes were extricated from the findings: changed teacher experiences, significant new understandings, changed teacher collaboration practices, changed individual qualities, and warning signs for support.</span></span>
-<span><span class="co">#&gt; 9                                                                                                                                                               We conclude by making recommendations for macro level support for the ECCE sector during educational disruptions.</span></span>
-<span><span class="co">#&gt; 10                                                                                                                                                                                                         © 2022, The Author(s), under exclusive licence to Springer Nature B.V.</span></span></code></pre></div>
-<p><code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> does this across the corpus — assigning
-every sentence to its nearest topic and returning each abstract’s topic
-<em>mixture</em> (<code>gamma</code> sums to 1 within a document):</p>
+<code class="sourceCode R"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, max_tokens <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">segments</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   document_id document_name segment</span></span>
+<span><span class="co">#&gt; 1           1                     1</span></span>
+<span><span class="co">#&gt; 2           1                     2</span></span>
+<span><span class="co">#&gt; 3           1                     3</span></span>
+<span><span class="co">#&gt;                                                                                                                                                                                                                                                                             text</span></span>
+<span><span class="co">#&gt; 1                                                                                        The COVID-19 Pandemic and resulting school closures, present a serious threat to young children's care, learning, and the achievement of their developmental potential (UNESCO, 2020a).</span></span>
+<span><span class="co">#&gt; 2                                   Disruptions to normal school functioning worldwide have presented challenges for teachers who were generally unprepared to teach using different methodologies (United Nations in Policy brief: Education during Covid-19 and beyond, 2020).</span></span>
+<span><span class="co">#&gt; 3 Since a child's right to care and education extends even during emergencies this study was conceptualized to better understand the professional experiences of early childhood teachers as they navigated the teaching learning process during the COVID-19 school disruption.</span></span></code></pre></div>
+<p><code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> takes that segmentation directly —
+assigning every sentence to its nearest topic and returning each
+abstract’s topic <em>mixture</em> (<code>gamma</code> sums to 1 within a
+document). Passing the <code><a href="../reference/segment.html">segment()</a></code> frame keeps the cap and
+lets a single encode be reused rather than segmenting again inside the
+call:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">segments</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">gamma</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   document_id topic gamma n_segments</span></span>
 <span><span class="co">#&gt; 1           1     1   0.0         10</span></span>

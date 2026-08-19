@@ -15,7 +15,9 @@ segment(
   level = c("clause", "sentence", "phrase"),
   merge_below = 0L,
   abbreviations = default_abbreviations(),
-  cores = 1L
+  cores = 1L,
+  max_tokens = NULL,
+  model = NULL
 )
 ```
 
@@ -47,6 +49,31 @@ segment(
   \`1\` (serial). Values above one use \`parallel::mclapply\` on
   Unix-alikes and fall back to serial on Windows or for small inputs;
   the segmentation is identical regardless of the count.
+
+- max_tokens:
+
+  Optional cap on segment length, so no segment overruns an encoder's
+  context window and is silently truncated. \`NULL\` (default) leaves
+  segments uncapped. When set, any segment over the budget is re-split
+  at the finest logical boundaries — clause hinges, \`";"\`, \`":"\`,
+  \`" - "\`, and commas — and the pieces are packed back up to the
+  budget, so a split lands on punctuation wherever possible. A run with
+  no such boundary is chopped further, but even then the break is placed
+  just before a function word (a coordinator, preposition, article, or
+  relative pronoun) near the budget edge rather than mid-phrase, falling
+  back to the raw edge only when the run has no function word either.
+  With \`model = NULL\` the budget counts whitespace-delimited words, a
+  deterministic offline proxy; set it below the model's true token limit
+  (for example around 200 for a 256-token model), since a tokenizer
+  emits somewhat more tokens than words.
+
+- model:
+
+  Optional loaded \[sbert_model\]\[load_model()\]. When supplied with
+  \`max_tokens\`, the budget counts that model's exact sub-word tokens
+  instead of words, so \`max_tokens\` can be the model's real limit.
+  Token-counted segmentation runs serially (the tokenizer is not
+  forked), so \`cores\` is ignored in that case.
 
 ## Value
 
