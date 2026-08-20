@@ -376,3 +376,21 @@ testthat::test_that("max_tokens prefers function-word boundaries over mid-phrase
   # keeps "the schools" together rather than splitting the noun phrase
   testthat::expect_true(any(grepl("the schools", s$text)))
 })
+
+testthat::test_that("max_tokens keeps a name with its initials when re-splitting", {
+  seg <- paste(
+    "A long sentence about instruction (Tomlinson, C. A., and T. Moon. 2013.",
+    "Assessment and Student Success in a Differentiated Classroom, Alexandria)",
+    "that runs well over any small budget and must be split into pieces here"
+  )
+  s <- segment(seg, level = "sentence", max_tokens = 15)
+  # the surname is never severed from its initials at the comma
+  testthat::expect_true(any(grepl("Tomlinson, C. A.", s$text, fixed = TRUE)))
+  # ordinary comma lists still split
+  list_seg <- segment(
+    paste(rep("apples, oranges, and pears,", 6), collapse = " "),
+    level = "sentence", max_tokens = 6
+  )
+  wc <- vapply(strsplit(list_seg$text, "\\s+"), function(w) sum(nzchar(w)), 1L)
+  testthat::expect_true(all(wc <= 6))
+})

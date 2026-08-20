@@ -112,7 +112,10 @@ segment_protect_periods <- function(text, abbreviations) {
 # `sentence_split = FALSE` skips the sentence-ending "." "?" "!" split, used when
 # re-splitting an already-sentence-segmented piece — which holds no sentence
 # boundary, so the period split (and its abbreviation guard) is pure overhead.
-segment_mark <- function(text, level, sentence_split = TRUE) {
+# `protect_initials = TRUE` keeps a comma that precedes an initial (a lone
+# letter and period, as in "Tomlinson, C. A.") from splitting a name from its
+# initials; ordinary comma lists still split.
+segment_mark <- function(text, level, sentence_split = TRUE, protect_initials = FALSE) {
   if (sentence_split) {
     text <- gsub(
       "([.?!])\\s+",
@@ -148,8 +151,13 @@ segment_mark <- function(text, level, sentence_split = TRUE) {
     )
   }
   if (level == "phrase") {
+    comma_pattern <- if (protect_initials) {
+      ",\\s+(?![A-Za-z]\\.)"
+    } else {
+      ",\\s+"
+    }
     text <- gsub(
-      ",\\s+",
+      comma_pattern,
       paste0(",", .sbert_segment_boundary),
       text,
       perl = TRUE
@@ -292,7 +300,9 @@ segment_smart_chop <- function(words, max_units, count_units) {
 # per segment. Returns a list of atom vectors, one per input.
 segment_phrase_atoms <- function(texts) {
   guarded <- segment_protect_parentheticals(texts)
-  marked <- segment_mark(guarded, "phrase", sentence_split = FALSE)
+  marked <- segment_mark(
+    guarded, "phrase", sentence_split = FALSE, protect_initials = TRUE
+  )
   lapply(
     strsplit(marked, .sbert_segment_boundary, fixed = TRUE),
     function(parts) {
@@ -418,8 +428,10 @@ segment_document <- function(text, level, merge_below, abbreviations) {
 #'   encoder's context window and is silently truncated. `NULL` (default) leaves
 #'   segments uncapped. When set, any segment over the budget is re-split at the
 #'   finest logical boundaries — clause hinges, `";"`, `":"`, `" - "`, and
-#'   commas — and the pieces are packed back up to the budget, so a split lands
-#'   on punctuation wherever possible. A run with no such boundary is chopped
+#'   commas (though a comma that would sever a name from its initials, as in
+#'   `"Tomlinson, C. A."`, does not split) — and the pieces are packed back up to
+#'   the budget, so a split lands on punctuation wherever possible. A run with no
+#'   such boundary is chopped
 #'   further, but even then the break is placed just before a function word (a
 #'   coordinator, preposition, article, or relative pronoun) near the budget
 #'   edge rather than mid-phrase, falling back to the raw edge only when the run
