@@ -56,16 +56,18 @@ segment(
   context window and is silently truncated. \`NULL\` (default) leaves
   segments uncapped. When set, any segment over the budget is re-split
   at the finest logical boundaries — clause hinges, \`";"\`, \`":"\`,
-  \`" - "\`, and commas — and the pieces are packed back up to the
-  budget, so a split lands on punctuation wherever possible. A run with
-  no such boundary is chopped further, but even then the break is placed
-  just before a function word (a coordinator, preposition, article, or
-  relative pronoun) near the budget edge rather than mid-phrase, falling
-  back to the raw edge only when the run has no function word either.
-  With \`model = NULL\` the budget counts whitespace-delimited words, a
-  deterministic offline proxy; set it below the model's true token limit
-  (for example around 200 for a 256-token model), since a tokenizer
-  emits somewhat more tokens than words.
+  \`" - "\`, and commas (though a comma that would sever a name from its
+  initials, as in \`"Tomlinson, C. A."\`, does not split) — and the
+  pieces are packed back up to the budget, so a split lands on
+  punctuation wherever possible. A run with no such boundary is chopped
+  further, but even then the break is placed just before a function word
+  (a coordinator, preposition, article, or relative pronoun) near the
+  budget edge rather than mid-phrase, falling back to the raw edge only
+  when the run has no function word either. With \`model = NULL\` the
+  budget counts whitespace-delimited words, a deterministic offline
+  proxy; set it below the model's true token limit (for example around
+  200 for a 256-token model), since a tokenizer emits somewhat more
+  tokens than words.
 
 - model:
 
