@@ -39,6 +39,8 @@ Deduplicate, segment, and context-blend documents before modeling.
 
 - [`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) :
   Deduplicate a Text Corpus with Frequencies
+- [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
+  : Strip Enumeration and List Markers from Text
 - [`segment()`](https://sonsoles.me/sbert/reference/segment.md) :
   Segment Text into Sentences, Clauses, or Phrases
 - [`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)

@@ -317,21 +317,7 @@ white feminism were embedded into the development and delivery of a
 graduate level social work research course that was rapidly adapted to
 being t…
 
-Nearest abstract 2 - 2021 (distance 0.364)
-
-It took a global pandemic for me to recognize how my social work
-teaching was an act of feminist praxis. I have long identified as a
-feminist and regularly engage efforts to advance equity for women,
-primarily centered on the abolition of prisons which disproportionately
-incarcerate Indigenous and Black women in Canada. Surprisingly, I have
-never considered how my feminism shows up in my teaching. The following
-reflexive essay explores the ways in which the feminist principles of
-centring emotions, rejecting patriarchal hierarchy, and challenging
-white feminism were embedded into the development and delivery of a
-graduate level social work research course that was rapidly adapted to
-being t…
-
-Nearest abstract 3 - 2021 (distance 0.453)
+Nearest abstract 2 - 2021 (distance 0.453)
 
 In this chapter, I trace instances of meaning-making through fragments
 of two interviews. Using restorying and the construction of parallel
@@ -341,6 +327,20 @@ elements of each semi-structured interview. In a revisitation of the
 narrative threads of identity, community, and change, the image of Black
 women as literacy educators who co-construct meaning in and out of the
 classroom is rendered. © 2021 by Emerald Publishing Limited.
+
+Nearest abstract 3 - 2021 (distance 0.385)
+
+This article frames three individual perspectives on the experience of
+unsettling disciplinary and institutional subjectivities through
+teaching and learning practices in Creative Writing and Literary
+Studies. At the centre of this experience is a common engagement of
+teaching and learning with sovereign knowledges. More specifically, the
+accounts in the article are drawn from experiences in 2020, when the
+forces of extra-academic life – especially lockdown during COVID-19 in
+Victoria – intensified the objectives and the means of challenging the
+boundaries of settler colonial expertise. The authors find that
+collaborative and iterative sharing of teaching experiences and methods
+not only su…
 
 #### Topic 5 — medical / students / clinical
 
@@ -362,20 +362,7 @@ Widespread changes were observed in the surgical training environment.
 One hundred percent of programs reduced the number of residents on
 rounds and 95.2% reduced the size of their in-hospital reside…
 
-Nearest abstract 2 - 2021 (distance 0.309)
-
-Objective: Describe the early impact of the COVID-19 pandemic on general
-surgery residency training nationwide. Design: A 31-question electronic
-survey was distributed to general surgery program directors. Qualitative
-data underwent iterative coding analysis. Quantitative data were
-evaluated with summary statistics and bivariate analyses. Participants:
-Eighty-four residency programs (33.6% response rate) with representation
-across US geographic regions, program affiliations, and sizes. Results:
-Widespread changes were observed in the surgical training environment.
-One hundred percent of programs reduced the number of residents on
-rounds and 95.2% reduced the size of their in-hospital reside…
-
-Nearest abstract 3 - 2021 (distance 0.374)
+Nearest abstract 2 - 2021 (distance 0.374)
 
 Objective: The COVID-19 pandemic has drastically transformed the
 healthcare community and medical education across the United States. The
@@ -387,6 +374,19 @@ which included the Generalized Anxiety Disorder 7-Item Scale (GAD-7), to
 all general and integrated plastic surgery residents in their clinical
 years of training at the University of California, San Francisco.
 Statistical analysis of the survey responses was performed using the Kr…
+
+Nearest abstract 3 - 2021 (distance 0.216)
+
+Problem Value-added medical education (VAME) has been difficult to
+implement due to student and educator constraints. The COVID-19 pandemic
+caused mass transitions to online learning, removed students from
+clinical settings, and underscored students’ desires for meaningful VAME
+opportunities. The authors introduced the Stanford Frontline COVID-19
+Consult Service (SFCS), through which off-service medical and physician
+assistant (PA) students provided assistance to clinicians in the form of
+rapid research regarding COVID-19 clinical questions. Approach The SFCS,
+a student-derived VAME initiative, was implemented from March to May
+2020 by Stanford University medical students, PA students, and …
 
 #### Topic 6 — education / higher / students
 

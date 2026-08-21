@@ -2,6 +2,34 @@
 
 ## sbert 0.5.2
 
+- Added
+  [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
+  and a matching `list_markers` argument on
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+  and
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md).
+  Enumeration and list markers (“1.”, “2.”, “(i)”, “(a)”, “(iv)”) barely
+  survive tokenization, so the place they actually show is the source
+  text — the embeddings and
+  [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md).
+  Unlike `numbers`/`roman_numerals`/`section_numbers`, which filter the
+  extracted terms, `list_markers = "remove"` cleans the documents
+  themselves, so the markers stay out of the representatives too. Real
+  words, years, counts, and decimals are left untouched. Default
+  `"keep"` is byte-identical.
+
+- [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
+  and a fitted model’s built-in representatives now return distinct
+  texts. A representative list of the same string repeated is never
+  useful, and duplicates are common once documents are segmented.
+
+- [`segment()`](https://sonsoles.me/sbert/reference/segment.md) splits a
+  run-together sentence boundary — a lower-case letter, a period, then
+  an upper-case letter, as in “results.The next” — rather than treating
+  it as an acronym; genuine acronyms (“U.S.”) and decimals (“3.14”) are
+  left intact.
+
 - [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
   now accepts either raw documents (segmented internally, as before) or
   the data frame returned by
