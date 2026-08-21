@@ -297,3 +297,17 @@ testthat::test_that("topic_gamma with a pre-segmented frame keeps embeddings ali
   # a bad frame is rejected
   testthat::expect_error(topic_gamma(m, data.frame(a = 1), embeddings = E), "document_id")
 })
+
+testthat::test_that("representatives are distinct texts", {
+  set.seed(5)
+  txt <- rep(c("The results were significant.", "See the figure for details."), each = 10)
+  m <- topics(txt, n_topics = 2,
+              embeddings = rbind(matrix(rep(c(1,0), 10), 10, 2, byrow = TRUE),
+                                 matrix(rep(c(0,1), 10), 10, 2, byrow = TRUE)) +
+                           matrix(rnorm(40, sd = 0.01), 20, 2),
+              n_representatives = 4)
+  for (t in unique(m$representatives$topic)) {
+    reps <- m$representatives$text[m$representatives$topic == t]
+    testthat::expect_identical(length(reps), length(unique(reps)))
+  }
+})

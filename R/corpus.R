@@ -30,6 +30,51 @@ dedupe <- function(text) {
   )
 }
 
+#' Strip Enumeration and List Markers from Text
+#'
+#' Removes list and enumeration markers — `"1."`, `"2."`, `"(i)"`, `"(a)"`,
+#' `"(iv)"` — from each document. The `numbers`, `roman_numerals`, and
+#' `section_numbers` arguments of [topics()] clean only the extracted *terms*;
+#' this cleans the source *text*, so markers no longer over-fragment
+#' [segment()], skew the embeddings, or surface in
+#' [representatives()][representatives]. Run it once, before embedding or
+#' segmentation, as a companion to [dedupe()].
+#'
+#' A marker must stand alone — whitespace or a string boundary on both sides —
+#' so real words in parentheses (`"(civil)"`), four-digit years (`"(2020)"`),
+#' counts (`"(n=100)"`), multi-word parentheticals (`"(see Fig 1)"`), and
+#' decimals (`"1.5"`) are left untouched. Removed forms are a standalone
+#' one- or two-digit number followed by a period (`"1."`, `"12."`), and a
+#' parenthesized one- or two-digit number, single letter, or Roman numeral up to
+#' 39 (`"(1)"`, `"(a)"`, `"(iv)"`).
+#'
+#' @param text A character vector.
+#' @return `text` with markers removed and runs of whitespace collapsed to a
+#'   single space; each element trimmed.
+#' @seealso [dedupe()], and the `numbers` / `roman_numerals` / `section_numbers`
+#'   arguments of [topics()] for cleaning the terms rather than the text.
+#' @export
+#' @examples
+#' strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
+#' strip_list_markers("the concept of (civil) society in (2020)")
+strip_list_markers <- function(text) {
+  stopifnot(is.character(text), !anyNA(text))
+  if (length(text) == 0L) {
+    return(text)
+  }
+  # A Roman numeral from 1 to 39, non-empty (the lookahead forbids the empty
+  # match that the otherwise-all-optional pattern would allow).
+  roman <- "(?=[ivxlcdm])x{0,3}(?:ix|iv|v?i{0,3})"
+  parenthesized <- paste0("(?i:[0-9]{1,2}|[a-z]|", roman, ")")
+  text <- gsub("(^|\\s)[0-9]{1,2}\\.(?=\\s|$)", " ", text, perl = TRUE)
+  text <- gsub(
+    paste0("(^|\\s)\\(", parenthesized, "\\)(?=\\s|$)"),
+    " ", text,
+    perl = TRUE
+  )
+  trimws(gsub("[[:space:]]+", " ", text, perl = TRUE))
+}
+
 #' Topic Sizes on the Distinct and Weighted Scales
 #'
 #' Returns the size of every topic as fitted (distinct documents) and,

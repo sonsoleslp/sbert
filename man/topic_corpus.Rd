@@ -16,7 +16,8 @@ topic_corpus(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  list_markers = c("keep", "remove")
 )
 }
 \arguments{
@@ -73,6 +74,15 @@ standalone one- or two-digit number followed by a period). Decimals
 (`3.14`), four-digit years (`2020.`), hyphenated numbers (`covid-19.`), and
 larger counts are left untouched, so genuine values survive even when
 `numbers = "keep"`.}
+
+\item{list_markers}{How to treat enumeration and list markers (`1.`, `2.`,
+`(i)`, `(a)`, `(iv)`). Unlike `numbers`, `roman_numerals`, and
+`section_numbers`, which filter the extracted *terms*, these markers barely
+survive tokenization anyway — where they show is the source text. So
+`"remove"` cleans the documents themselves (via [strip_list_markers()])
+before embedding and term extraction, which also keeps them out of the
+embeddings and the [representatives()][representatives]. `"keep"` is the
+default. Real words, years, counts, and decimals are never touched.}
 }
 \value{
 An object of class `sbert_topic_corpus`: a list with the prepared

@@ -1,5 +1,22 @@
 # sbert 0.5.2
 
+- Added `strip_list_markers()` and a matching `list_markers` argument on
+  `topics()`, `select_topics()`, and `topic_corpus()`. Enumeration and list
+  markers ("1.", "2.", "(i)", "(a)", "(iv)") barely survive tokenization, so the
+  place they actually show is the source text — the embeddings and
+  `representatives()`. Unlike `numbers`/`roman_numerals`/`section_numbers`, which
+  filter the extracted terms, `list_markers = "remove"` cleans the documents
+  themselves, so the markers stay out of the representatives too. Real words,
+  years, counts, and decimals are left untouched. Default `"keep"` is
+  byte-identical.
+- `representatives()` and a fitted model's built-in representatives now return
+  distinct texts. A representative list of the same string repeated is never
+  useful, and duplicates are common once documents are segmented.
+- `segment()` splits a run-together sentence boundary — a lower-case letter, a
+  period, then an upper-case letter, as in "results.The next" — rather than
+  treating it as an acronym; genuine acronyms ("U.S.") and decimals ("3.14") are
+  left intact.
+
 - `topic_gamma()` now accepts either raw documents (segmented internally, as
   before) or the data frame returned by `segment()`, used as-is. Passing your
   own segmentation keeps every segment option — `level`, `max_tokens`,

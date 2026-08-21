@@ -123,6 +123,16 @@ segment_mark <- function(text, level, sentence_split = TRUE, protect_initials = 
       text,
       perl = TRUE
     )
+    # A missing space: a lower-case letter, a period, then an upper-case letter
+    # ("results.The next") is a run-together sentence boundary, not an acronym
+    # (acronyms are upper-case, e.g. "U.S."), so split there too. Abbreviation
+    # and decimal periods are already masked, so they never match.
+    text <- gsub(
+      "(*UTF)(*UCP)([[:lower:]][.?!])([[:upper:]])",
+      paste0("\\1", .sbert_segment_boundary, "\\2"),
+      text,
+      perl = TRUE
+    )
   }
   if (level %in% c("clause", "phrase")) {
     text <- gsub(

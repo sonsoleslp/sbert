@@ -529,6 +529,9 @@ representatives <- function(
       } else {
         order(topic_rows$distance, nchar(topic_rows$text), topic_rows$text)
       }
+      # Distinct units only: a repeated string is never a useful example, and
+      # duplicates are common once documents are segmented.
+      ordering <- ordering[!duplicated(topic_rows$text[ordering])]
       chosen <- utils::head(topic_rows[ordering, , drop = FALSE], as.integer(n))
       chosen$rank <- seq_len(nrow(chosen))
       chosen

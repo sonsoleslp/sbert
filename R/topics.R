@@ -639,6 +639,10 @@ topic_representatives <- function(documents, n_topics, n_representatives) {
     function(topic_id) {
       topic_documents <- documents[documents$topic == topic_id, , drop = FALSE]
       ranking <- order(topic_documents$distance, topic_documents$document_id)
+      # Distinct texts only: a representative list of the same string repeated is
+      # never useful, and duplicates are common once documents are segmented.
+      # The nearest occurrence of each distinct text is kept.
+      ranking <- ranking[!duplicated(topic_documents$text[ranking])]
       selected <- utils::head(ranking, n_representatives)
       data.frame(
         topic = rep.int(as.integer(topic_id), length(selected)),
@@ -720,11 +724,13 @@ topic_corpus <- function(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  list_markers = c("keep", "remove")
 ) {
   numbers <- match.arg(numbers)
   roman_numerals <- match.arg(roman_numerals)
   section_numbers <- match.arg(section_numbers)
+  list_markers <- match.arg(list_markers)
   if (inherits(text, "sbert_topic_corpus")) {
     return(text)
   }
@@ -736,6 +742,9 @@ topic_corpus <- function(
   metadata <- prepared$metadata
   if (!is.null(embeddings) && length(prepared$kept) < prepared$n_supplied) {
     embeddings <- embeddings[prepared$kept, , drop = FALSE]
+  }
+  if (list_markers == "remove") {
+    text <- strip_list_markers(text)
   }
   stopifnot(
     is.character(text),
@@ -901,6 +910,14 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   (`3.14`), four-digit years (`2020.`), hyphenated numbers (`covid-19.`), and
 #'   larger counts are left untouched, so genuine values survive even when
 #'   `numbers = "keep"`.
+#' @param list_markers How to treat enumeration and list markers (`1.`, `2.`,
+#'   `(i)`, `(a)`, `(iv)`). Unlike `numbers`, `roman_numerals`, and
+#'   `section_numbers`, which filter the extracted *terms*, these markers barely
+#'   survive tokenization anyway — where they show is the source text. So
+#'   `"remove"` cleans the documents themselves (via [strip_list_markers()])
+#'   before embedding and term extraction, which also keeps them out of the
+#'   embeddings and the [representatives()][representatives]. `"keep"` is the
+#'   default. Real words, years, counts, and decimals are never touched.
 #' @param weighting Class-based term-weighting scheme. `"ctfidf"` (default) uses
 #'   `tf * log(1 + A / f_x)`; `"bm25"` uses the BM25 inverse-frequency variant
 #'   `tf * log(1 + (A - f_x + 0.5) / (f_x + 0.5))`, which more aggressively
@@ -969,12 +986,14 @@ topics <- function(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  list_markers = c("keep", "remove")
 ) {
   weighting <- match.arg(weighting)
   numbers <- match.arg(numbers)
   roman_numerals <- match.arg(roman_numerals)
   section_numbers <- match.arg(section_numbers)
+  list_markers <- match.arg(list_markers)
 
   # A prepared topic_corpus carries the corpus-level work already done once:
   # the embeddings, the tokenization, and the token settings. Reusing it across
@@ -1011,6 +1030,13 @@ topics <- function(
     metadata <- prepared$metadata
     if (!is.null(embeddings) && length(prepared$kept) < prepared$n_supplied) {
       embeddings <- embeddings[prepared$kept, , drop = FALSE]
+    }
+    # Unlike numbers/roman_numerals/section_numbers, which filter the extracted
+    # terms, list markers ("1.", "(i)") barely survive tokenization anyway; the
+    # place they show is the source text — the embeddings and representatives.
+    # So `list_markers = "remove"` cleans the text itself, once, up front.
+    if (list_markers == "remove") {
+      text <- strip_list_markers(text)
     }
   }
   stopifnot(

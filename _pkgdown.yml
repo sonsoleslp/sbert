@@ -30,6 +30,7 @@ reference:
   desc: Deduplicate, segment, and context-blend documents before modeling.
   contents:
   - dedupe
+  - strip_list_markers
   - segment
   - abbreviations
   - blend

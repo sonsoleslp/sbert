@@ -50,3 +50,25 @@ testthat::test_that("dedupe and sizes compose into the weighted workflow", {
   testthat::expect_identical(sum(sizes$n_weighted), 6)
   testthat::expect_identical(sum(sizes$n_documents), 4L)
 })
+
+testthat::test_that("strip_list_markers removes markers but keeps real content", {
+  testthat::expect_identical(
+    strip_list_markers(c("1. background 2. methods", "(i) first (ii) second")),
+    c("background methods", "first second")
+  )
+  # real words / years / counts / decimals are left alone
+  testthat::expect_identical(
+    strip_list_markers("the concept of (civil) society in (2020) with 1.5 units"),
+    "the concept of (civil) society in (2020) with 1.5 units"
+  )
+})
+
+testthat::test_that("topics(list_markers='remove') cleans representative text", {
+  docs <- c("1. First finding about learning outcomes for the students here",
+            "(i) Second point regarding the teaching methods used widely now",
+            "(a) Third result on the school funding levels observed overall")
+  E <- rbind(c(1, 0), c(0, 1), c(0.5, 0.5))
+  m <- topics(docs, n_topics = 2, embeddings = E, list_markers = "remove")
+  testthat::expect_false(any(grepl("^\\s*(1\\.|\\(i\\)|\\(a\\))", m$representatives$text)))
+  testthat::expect_false(any(grepl("^\\s*(1\\.|\\(i\\)|\\(a\\))", m$documents$text)))
+})
