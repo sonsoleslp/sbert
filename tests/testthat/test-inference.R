@@ -311,3 +311,11 @@ testthat::test_that("representatives are distinct texts", {
     testthat::expect_identical(length(reps), length(unique(reps)))
   }
 })
+
+testthat::test_that("representatives skip letterless units", {
+  docs <- c("2 .", "Students improved their scores this year overall widely",
+            "100", "Teachers adapted their methods to the setting quite fast")
+  E <- rbind(c(1, 0), c(0.95, 0.05), c(0, 1), c(0.05, 0.95))
+  m <- topics(docs, n_topics = 2, embeddings = E, n_representatives = 2)
+  testthat::expect_true(all(grepl("(*UTF)\\p{L}", m$representatives$text, perl = TRUE)))
+})

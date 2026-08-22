@@ -454,6 +454,12 @@ segment_document <- function(text, level, merge_below, abbreviations) {
 #'   of words, so `max_tokens` can be the model's real limit. Token-counted
 #'   segmentation runs serially (the tokenizer is not forked), so `cores` is
 #'   ignored in that case.
+#' @param min_content Minimum alphabetic-content ratio, in `[0, 1]`, for a
+#'   segment to be kept (see [content_ratio()]). Segments below the floor —
+#'   citation fragments, page and reference bits, number lists — are dropped.
+#'   Prose scores near 1 and reference noise far below, so a value around `0.5`
+#'   removes the noise while keeping real clauses. `0` (default) keeps every
+#'   segment.
 #' @return A base data frame with one row per segment and columns
 #'   `document_id` (integer position in `text`), `document_name` (name of the
 #'   input element, or `""`), `segment` (integer position within the
@@ -475,7 +481,8 @@ segment <- function(
   abbreviations = default_abbreviations(),
   cores = 1L,
   max_tokens = NULL,
-  model = NULL
+  model = NULL,
+  min_content = 0
 ) {
   level <- match.arg(level)
   stopifnot(
@@ -493,7 +500,9 @@ segment <- function(
       (is.numeric(max_tokens) && length(max_tokens) == 1L &&
         is.finite(max_tokens) && max_tokens >= 1 &&
         max_tokens == as.integer(max_tokens)),
-    is.null(model) || inherits(model, "sbert_model")
+    is.null(model) || inherits(model, "sbert_model"),
+    is.numeric(min_content), length(min_content) == 1L,
+    is.finite(min_content), min_content >= 0, min_content <= 1
   )
   max_tokens <- if (is.null(max_tokens)) NULL else as.integer(max_tokens)
   if (is.null(max_tokens) && !is.null(model)) {
@@ -542,6 +551,14 @@ segment <- function(
     segment_lists <- segment_cap_lists(
       segment_lists, max_tokens, count_units
     )
+  }
+  # Drop low-content segments — citation fragments, number lists, reference
+  # noise — by alphabetic density. A domain-agnostic filter: prose scores near
+  # 1, references far below. min_content = 0 (default) keeps everything.
+  if (min_content > 0) {
+    segment_lists <- lapply(segment_lists, function(parts) {
+      if (length(parts) == 0L) parts else parts[content_ratio(parts) >= min_content]
+    })
   }
   counts <- lengths(segment_lists)
   data.frame(

@@ -529,9 +529,13 @@ representatives <- function(
       } else {
         order(topic_rows$distance, nchar(topic_rows$text), topic_rows$text)
       }
-      # Distinct units only: a repeated string is never a useful example, and
-      # duplicates are common once documents are segmented.
-      ordering <- ordering[!duplicated(topic_rows$text[ordering])]
+      # Distinct units that contain a real word (a run of two or more letters):
+      # a repeated string is never a useful example, and a unit with no real word
+      # ("2 .", "100", "1983, p.") is noise, not an example.
+      ordered_text <- topic_rows$text[ordering]
+      ordering <- ordering[
+        !duplicated(ordered_text) & grepl("(*UTF)\\p{L}{2}", ordered_text, perl = TRUE)
+      ]
       chosen <- utils::head(topic_rows[ordering, , drop = FALSE], as.integer(n))
       chosen$rank <- seq_len(nrow(chosen))
       chosen

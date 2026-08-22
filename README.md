@@ -125,15 +125,30 @@ terms(topic_model, n = 12, sort_by = "beta")     # the words a topic uses most
 terms(topic_model, n = 12, weighting = "bm25", stem = TRUE)
 ```
 
-Token filters keep labels informative: `numbers = "remove"` drops bare
-years and counts, `roman_numerals = "remove"` drops chapter and list
-markers (`ii`, `iv`), and `section_numbers = "remove"` strips
-multi-level indices such as `1.2.3`. Each is available on `topics()`,
-`select_topics()`, `topic_corpus()`, and `terms()`.
+Cleaning happens at two levels, kept deliberately separate. **Token
+filters** tidy the *labels* without touching the text or its embedding:
+`numbers`, `roman_numerals`, and `section_numbers` (each `"keep"` or
+`"remove"`) drop bare years, chapter numerals, and indices such as
+`1.2.3` from the topic terms only, so a number still shapes the
+embedding while staying out of a cluttered label.
 
 ``` r
 topics(text, n_topics = 30, embeddings = embeddings,
        numbers = "remove", roman_numerals = "remove", section_numbers = "remove")
+```
+
+**`clean_corpus()`** cleans the *source text* before encoding —
+repairing junk characters, stripping list markers and reference
+numbering, and dropping whole low-content units (citation lists,
+reference footnotes) by their alphabetic density. Because Sentence-BERT
+is robust to a little noise, this is about fixing genuinely broken text
+and removing non-content rows, not scrubbing every token. Clean once,
+then encode the result:
+
+``` r
+docs <- clean_corpus(raw_text, min_content = 0.5)   # or a data frame + column =
+embeddings <- encode(docs)
+topics(docs, n_topics = 30, embeddings = embeddings)
 ```
 
 Fitted topic models support a full inferential layer — assignment of new
@@ -326,6 +341,9 @@ vignette("levebee_vignette", package = "sbert")
 - Normalization: row-wise L2 normalization by default
 - Segmentation: deterministic sentence, clause, and phrase splitting
   with an abbreviation gazetteer and decimal/parenthetical guards
+- Corpus cleaning: `clean_corpus()` repairs junk characters, strips list
+  and reference numbering, and drops low-content units by alphabetic
+  density
 - Topic discovery: deterministic k-means with farthest-point
   initialization
 - Topic descriptions: representative documents and BERTopic-style

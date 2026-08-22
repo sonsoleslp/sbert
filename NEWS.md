@@ -1,14 +1,33 @@
 # sbert 0.5.2
 
-- Added `strip_list_markers()` and a matching `list_markers` argument on
-  `topics()`, `select_topics()`, and `topic_corpus()`. Enumeration and list
-  markers ("1.", "2.", "(i)", "(a)", "(iv)") barely survive tokenization, so the
-  place they actually show is the source text — the embeddings and
-  `representatives()`. Unlike `numbers`/`roman_numerals`/`section_numbers`, which
-  filter the extracted terms, `list_markers = "remove"` cleans the documents
-  themselves, so the markers stay out of the representatives too. Real words,
-  years, counts, and decimals are left untouched. Default `"keep"` is
-  byte-identical.
+- Added `clean_corpus()`, one place for the text-level cleaning that should
+  happen before encoding, so the same clean text feeds the encoder, the topic
+  terms, and the representatives. It repairs junk and strips non-content markup
+  — HTML entities and tags, URLs, DOIs, email addresses, bracketed numeric
+  citations (`[12]`), page references (`p. 1`, `pp. 15-30`), curly quotes,
+  dashes, bullets, control, zero-width, BOM and replacement characters, and
+  non-breaking spaces — then strips list markers (`1.`, `(i)`, `(a)`, `(109)`,
+  and bare Roman-numeral section markers such as `IV.` and a leading `V.`) and
+  section/reference numbering (`1.2.3`, and alphanumeric indices such as `II.2`
+  and `AA.2`), applies any custom `remove` patterns
+  (the extension point for domain-specific noise the generic cleaners leave, for
+  example `remove = "OJ No L?\\s*\\d+"`), optionally removes numeric and
+  Roman-numeral tokens, and drops
+  documents below a `min_content` alphabetic-density floor — citation lists,
+  reference footnotes, number tables — carrying a data frame's other columns
+  along so metadata stays aligned. Supporting helpers `strip_list_markers()` and
+  `content_ratio()` are exported too. `content_ratio()` is the fraction of a
+  string's non-space characters that are letters, a domain-agnostic measure of
+  prose versus reference noise (real sentences score near 1; "OJ No L 297,
+  24.11.1979, p. 1." scores about 0.25), and `min_content` judges it on the
+  repaired text before the number strips so a stripped reference cannot slip
+  through. Because Sentence-BERT tolerates a little noise, this targets broken
+  text and non-content rows rather than scrubbing every token.
+- The `numbers`, `roman_numerals`, and `section_numbers` term filters stay on
+  `topics()`, `select_topics()`, `topic_corpus()`, and `terms()`: they tidy the
+  topic *labels* without touching the document text or its embedding, which is
+  the point of keeping them separate from `clean_corpus()`. Text-level cleaning
+  that would change the embedding lives in `clean_corpus()`.
 - `representatives()` and a fitted model's built-in representatives now return
   distinct texts. A representative list of the same string repeated is never
   useful, and duplicates are common once documents are segmented.

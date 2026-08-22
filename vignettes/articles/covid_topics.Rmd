@@ -55,10 +55,38 @@ is deterministic: rerunning reproduces every number and figure.
 
 # Building the model
 
-Drop the records indexed without an abstract.
+Drop the records indexed without an abstract, then clean the source text before
+encoding. `clean_corpus()` repairs junk characters, strips any list and
+reference numbering, and — with `min_content` — drops whole low-content rows
+such as citation lists. It carries the other columns along, so `Year` stays
+aligned. Sentence-BERT tolerates a little noise, so the goal is fixing broken
+text and removing non-content rows, not scrubbing every token. On a few messy
+examples the effect is easiest to see:
+
+```{r clean-demo, echo=FALSE}
+messy <- c(
+  "1. The programme raised attainment in 2020, see section 3.2.1.",
+  "(3) OJ No L 297, 24.11.1979, p. 1.",
+  "Peer&nbsp;support <b>improved</b> outcomes [12] across schools.",
+  "Full report at https://example.org/study.pdf and doi:10.1/x."
+)
+knitr::kable(
+  data.frame(Before = messy, After = clean_corpus(messy)),
+  caption = "clean_corpus() with defaults: list and reference numbering, HTML tags, bracketed citations, URLs and DOIs removed and characters repaired, while real words are kept."
+)
+```
+
+The citation-only row above scores far below the prose rows on alphabetic
+density, so `min_content = 0.5` drops it entirely rather than embedding it. The
+generic cleaners deliberately stop short of domain-specific reference forms; for
+those, `remove` takes custom patterns — `clean_corpus(text, remove = "OJ No
+L?\\s*\\d+")` strips European Union Official Journal identifiers, for example.
+The same clean text then feeds the encoder, the topic terms, and the
+representative abstracts.
 
 ```{r corpus}
 covid_content <- covid[covid$Abstract != "[No abstract available]", ]
+covid_content <- clean_corpus(covid_content, column = "Abstract", min_content = 0.5)
 ```
 
 `encode()` turns each abstract into a 384-dimensional vector with the pinned
