@@ -9,11 +9,40 @@ every number and figure.
 
 ## Building the model
 
-Drop the records indexed without an abstract.
+Drop the records indexed without an abstract, then clean the source text
+before encoding.
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
+repairs junk characters, strips any list and reference numbering, and —
+with `min_content` — drops whole low-content rows such as citation
+lists. It carries the other columns along, so `Year` stays aligned.
+Sentence-BERT tolerates a little noise, so the goal is fixing broken
+text and removing non-content rows, not scrubbing every token. On a few
+messy examples the effect is easiest to see:
+
+| Before | After |
+|:---|:---|
+| 1\. The programme raised attainment in 2020, see section 3.2.1. | The programme raised attainment in 2020, see section. |
+| \(3\) OJ No L 297, 24.11.1979, p. 1. | OJ No L 297. |
+| Peer support **improved** outcomes \[12\] across schools. | Peer support improved outcomes across schools. |
+| Full report at <https://example.org/study.pdf> and <doi:10.1/x>. | Full report at and |
+
+clean_corpus() with defaults: list and reference numbering, HTML tags,
+bracketed citations, URLs and DOIs removed and characters repaired,
+while real words are kept. {.table}
+
+The citation-only row above scores far below the prose rows on
+alphabetic density, so `min_content = 0.5` drops it entirely rather than
+embedding it. The generic cleaners deliberately stop short of
+domain-specific reference forms; for those, `remove` takes custom
+patterns — `clean_corpus(text, remove = "OJ No L?\\s*\\d+")` strips
+European Union Official Journal identifiers, for example. The same clean
+text then feeds the encoder, the topic terms, and the representative
+abstracts.
 
 ``` r
 
 covid_content <- covid[covid$Abstract != "[No abstract available]", ]
+covid_content <- clean_corpus(covid_content, column = "Abstract", min_content = 0.5)
 ```
 
 [`encode()`](https://sonsoles.me/sbert/reference/encode.md) turns each
@@ -64,12 +93,12 @@ sweep <- select_topics(
 )
 sweep
 #> <sbert_topic_sweep> 5 candidates, coherence measure: npmi
-#>  n_topics  coherence topic_diversity  explained
-#>         4 0.05502642       0.5500000 0.09824599
-#>         6 0.07460328       0.6333333 0.12136775
-#>         8 0.17229509       0.6500000 0.12979221
-#>        10 0.15732535       0.5900000 0.14591512
-#>        12 0.15810223       0.5916667 0.15786363
+#>  n_topics  coherence topic_diversity explained
+#>         4 0.05818542       0.6000000 0.0984003
+#>         6 0.07303481       0.6166667 0.1213267
+#>         8 0.17293698       0.6375000 0.1297750
+#>        10 0.15692884       0.5900000 0.1457480
+#>        12 0.15765139       0.6000000 0.1577964
 #> 
 #> Fitted models retained: fitted(x, n_topics = 8)
 ```
@@ -128,13 +157,13 @@ topics.
 
 | Topic | Distinctive terms             | Abstracts | Share |
 |------:|:------------------------------|----------:|:------|
-|     1 | online / learning / students  |      1041 | 27.1% |
-|     2 | learning / teaching / online  |       780 | 20.3% |
-|     3 | school / education / children |       483 | 12.6% |
-|     4 | social / education / work     |       437 | 11.4% |
-|     5 | medical / students / clinical |       428 | 11.1% |
-|     6 | education / higher / students |       386 | 10.0% |
-|     7 | health / education / public   |       290 | 7.5%  |
+|     1 | online / learning / students  |      1033 | 26.9% |
+|     2 | learning / teaching / online  |       781 | 20.3% |
+|     3 | school / education / children |       477 | 12.4% |
+|     4 | social / education / work     |       444 | 11.5% |
+|     5 | medical / students / clinical |       431 | 11.2% |
+|     6 | education / higher / students |       385 | 10.0% |
+|     7 | health / education / public   |       294 | 7.6%  |
 |     8 | shore / penetration / porcine |         2 | 0.1%  |
 
 `plot(type = "fit")` lays out every topic at once — the three keyword
@@ -155,39 +184,12 @@ what it claims.
 
 #### Topic 1 — online / learning / students
 
-1,041 abstracts · 27.1% of the corpus
+1,033 abstracts · 26.9% of the corpus
 
 **Distinctive terms:** online, learning, students, education, teaching,
 teachers, distance, research
 
-Nearest abstract 1 - 2021 (distance 0.255)
-
-Covid-19 has forced educators to switch to online teaching as the only
-viable option, whether through video lecturing or using other online
-teaching tools. Therefore, the study investigates university teachers’
-perceptions towards their continuing intention of using the online
-platforms after Covid19 situations. To answer such questions, the
-present study conducted a survey of 242 faculties engaged in higher
-education teaching at assistant. We have conducted the present study
-using a sample of 242 faculties. Based on the framework of technology
-adoption model (TAM), this study investigates the research questions in
-the context of India. The study has adopted a mixed-method research
-design c…
-
-Nearest abstract 2 - 2022 (distance 0.266)
-
-This study examines the current state of acceptance of online classes
-using the technology acceptance model. The background of the study is
-the turning point in Korean education in response to the COVID-19
-pandemic and speculation about changes in the post-COVID educational
-environment. To measure the acceptance rate of online classes, a survey
-was conducted on a total of 313 university students taking online
-classes. The data were analyzed using structural equation modeling. The
-results of the study are as follows: First, the perceived ease of use of
-online classes showed a positive effect on perceived usefulness. Second,
-both the perceived ease of use and usefulness of online classes show…
-
-Nearest abstract 3 - 2022 (distance 0.235)
+Nearest abstract 1 - 2022 (distance 0.233)
 
 The COVID-19 pandemic has disrupted existing educational systems
 worldwide. Due to lockdowns in several countries, the educational
@@ -201,14 +203,41 @@ internet self-efficacy (CISE), and online communication self-efficacy
 intention towards the online learning (INT). The study further analyzes
 the mediati…
 
+Nearest abstract 2 - 2021 (distance 0.254)
+
+Covid-19 has forced educators to switch to online teaching as the only
+viable option, whether through video lecturing or using other online
+teaching tools. Therefore, the study investigates university teachers’
+perceptions towards their continuing intention of using the online
+platforms after Covid19 situations. To answer such questions, the
+present study conducted a survey of 242 faculties engaged in higher
+education teaching at assistant. We have conducted the present study
+using a sample of 242 faculties. Based on the framework of technology
+adoption model (TAM), this study investigates the research questions in
+the context of India. The study has adopted a mixed-method research
+design c…
+
+Nearest abstract 3 - 2022 (distance 0.265)
+
+This study examines the current state of acceptance of online classes
+using the technology acceptance model. The background of the study is
+the turning point in Korean education in response to the COVID-19
+pandemic and speculation about changes in the post-COVID educational
+environment. To measure the acceptance rate of online classes, a survey
+was conducted on a total of 313 university students taking online
+classes. The data were analyzed using structural equation modeling. The
+results of the study are as follows: First, the perceived ease of use of
+online classes showed a positive effect on perceived usefulness. Second,
+both the perceived ease of use and usefulness of online classes show…
+
 #### Topic 2 — learning / teaching / online
 
-780 abstracts · 20.3% of the corpus
+781 abstracts · 20.3% of the corpus
 
 **Distinctive terms:** learning, teaching, online, students, education,
-face, remote, teachers
+remote, face, teachers
 
-Nearest abstract 1 - 2020 (distance 0.354)
+Nearest abstract 1 - 2020 (distance 0.353)
 
 General chemistry, CHE 101, at Hampton University is an undergraduate
 course designed to meet curriculum requirements for nonscience majors.
@@ -235,7 +264,7 @@ learned the value of utilizing different types of technology, and the
 students learned some important skills and content. © 2020 American
 Chemical Society and Division of Chemical Education, Inc.
 
-Nearest abstract 3 - 2020 (distance 0.363)
+Nearest abstract 3 - 2020 (distance 0.366)
 
 Today’s engineering laboratory education often lacks opportunities for
 students to practice critical thinking through real-world problems. This
@@ -250,39 +279,26 @@ of learning in Bloom’s taxonomy. To further improve our appr…
 
 #### Topic 3 — school / education / children
 
-483 abstracts · 12.6% of the corpus
+477 abstracts · 12.4% of the corpus
 
 **Distinctive terms:** school, education, children, teachers, parents,
 learning, schools, educational
 
-Nearest abstract 1 - 2021 (distance 0.344)
+Nearest abstract 1 - 2021 (distance 0.345)
 
 This study reports the results of a survey conducted with a set of
 “hybrid homeschool”leaders (principals or directors) from around the
-United States who were asked to describe 1. how their families
-categorize themselves (as homeschoolers, or as members of private
-schools), 2. the ways in which their schools operate in terms of
-scheduling, hiring, etc., 3. how their schools are regulated in the
-various states, and how they work within those regulatory frameworks,
-and 4. how they were affected by COVID-19, both in the spring of 2020
-and the fall of 2020. Respondents provided a variety of names to
-describe their schools and a split in how families see themselves. In
-terms of staffing, schedul…
+United States who were asked to describe how their families categorize
+themselves (as homeschoolers, or as members of private schools), the
+ways in which their schools operate in terms of scheduling, hiring,
+etc., how their schools are regulated in the various states, and how
+they work within those regulatory frameworks, and how they were affected
+by COVID-19, both in the spring of 2020 and the fall of 2020.
+Respondents provided a variety of names to describe their schools and a
+split in how families see themselves. In terms of staffing, schedules,
+tuition,…
 
-Nearest abstract 2 - 2021 (distance 0.418)
-
-The aim of the present study is to describe how parents and primary
-school children dealt with the rapid and significant changes to their
-schooling experience during COVID-19 and how this correlated with
-children’s mental health. A cross-sectional study comprising an online
-survey was completed by 797 parents of children from 4–12 years, (M = 9
-years). School variables explored included school expectations for
-schoolwork, how much time per day spent on schoolwork, how able parents
-were to support their child with schoolwork, whether a child had support
-from an adult at school and whether the child had support from a friend.
-Child mental health was measured by the Strengths and Difficulties …
-
-Nearest abstract 3 - 2020 (distance 0.263)
+Nearest abstract 2 - 2020 (distance 0.262)
 
 Parents of children with special educational needs and disabilities
 (SEND) took part in an online survey that explored their experiences of
@@ -296,14 +312,27 @@ parents were dissatisfied with the resources and support they had
 received for their child’s educational and psychological needs. Parents
 felt …
 
+Nearest abstract 3 - 2021 (distance 0.412)
+
+The aim of the present study is to describe how parents and primary
+school children dealt with the rapid and significant changes to their
+schooling experience during COVID-19 and how this correlated with
+children’s mental health. A cross-sectional study comprising an online
+survey was completed by 797 parents of children from 4 - 12 years, (M =
+9 years). School variables explored included school expectations for
+schoolwork, how much time per day spent on schoolwork, how able parents
+were to support their child with schoolwork, whether a child had support
+from an adult at school and whether the child had support from a friend.
+Child mental health was measured by the Strengths and Difficultie…
+
 #### Topic 4 — social / education / work
 
-437 abstracts · 11.4% of the corpus
+444 abstracts · 11.5% of the corpus
 
 **Distinctive terms:** social, education, work, students, teaching,
 article, learning, research
 
-Nearest abstract 1 - 2021 (distance 0.364)
+Nearest abstract 1 - 2021 (distance 0.369)
 
 It took a global pandemic for me to recognize how my social work
 teaching was an act of feminist praxis. I have long identified as a
@@ -317,7 +346,21 @@ white feminism were embedded into the development and delivery of a
 graduate level social work research course that was rapidly adapted to
 being t…
 
-Nearest abstract 2 - 2021 (distance 0.453)
+Nearest abstract 2 - 2021 (distance 0.390)
+
+This article frames three individual perspectives on the experience of
+unsettling disciplinary and institutional subjectivities through
+teaching and learning practices in Creative Writing and Literary
+Studies. At the centre of this experience is a common engagement of
+teaching and learning with sovereign knowledges. More specifically, the
+accounts in the article are drawn from experiences in 2020, when the
+forces of extra-academic life - especially lockdown during COVID-19 in
+Victoria - intensified the objectives and the means of challenging the
+boundaries of settler colonial expertise. The authors find that
+collaborative and iterative sharing of teaching experiences and methods
+not only su…
+
+Nearest abstract 3 - 2021 (distance 0.456)
 
 In this chapter, I trace instances of meaning-making through fragments
 of two interviews. Using restorying and the construction of parallel
@@ -328,23 +371,9 @@ narrative threads of identity, community, and change, the image of Black
 women as literacy educators who co-construct meaning in and out of the
 classroom is rendered. © 2021 by Emerald Publishing Limited.
 
-Nearest abstract 3 - 2021 (distance 0.385)
-
-This article frames three individual perspectives on the experience of
-unsettling disciplinary and institutional subjectivities through
-teaching and learning practices in Creative Writing and Literary
-Studies. At the centre of this experience is a common engagement of
-teaching and learning with sovereign knowledges. More specifically, the
-accounts in the article are drawn from experiences in 2020, when the
-forces of extra-academic life – especially lockdown during COVID-19 in
-Victoria – intensified the objectives and the means of challenging the
-boundaries of settler colonial expertise. The authors find that
-collaborative and iterative sharing of teaching experiences and methods
-not only su…
-
 #### Topic 5 — medical / students / clinical
 
-428 abstracts · 11.1% of the corpus
+431 abstracts · 11.2% of the corpus
 
 **Distinctive terms:** medical, students, clinical, health, education,
 learning, training, care
@@ -362,7 +391,7 @@ Widespread changes were observed in the surgical training environment.
 One hundred percent of programs reduced the number of residents on
 rounds and 95.2% reduced the size of their in-hospital reside…
 
-Nearest abstract 2 - 2021 (distance 0.374)
+Nearest abstract 2 - 2021 (distance 0.375)
 
 Objective: The COVID-19 pandemic has drastically transformed the
 healthcare community and medical education across the United States. The
@@ -375,7 +404,7 @@ all general and integrated plastic surgery residents in their clinical
 years of training at the University of California, San Francisco.
 Statistical analysis of the survey responses was performed using the Kr…
 
-Nearest abstract 3 - 2021 (distance 0.216)
+Nearest abstract 3 - 2021 (distance 0.215)
 
 Problem Value-added medical education (VAME) has been difficult to
 implement due to student and educator constraints. The COVID-19 pandemic
@@ -390,26 +419,12 @@ a student-derived VAME initiative, was implemented from March to May
 
 #### Topic 6 — education / higher / students
 
-386 abstracts · 10.0% of the corpus
+385 abstracts · 10.0% of the corpus
 
 **Distinctive terms:** education, higher, students, universities,
-university, institutions, academic, crisis
+university, institutions, academic, research
 
-Nearest abstract 1 - 2022 (distance 0.211)
-
-Worldwide, COVID-19 affected higher education, including finance, and
-international mobility. But some systems have been more affected than
-others; notably Anglophone systems that have been a preferred
-destination for a high proportion of international students. Australia
-presents a particularly interesting case. Particularly vulnerable to any
-significant downturn in international enrolments, given its high
-proportion of international students, and heavy dependence on their
-fees, the problem was exacerbated by growing US–China tensions, and
-resultant pressures on Australia and its universities. Culture Wars were
-also evident in the steadfast refusal of the national government to
-offer much …
-
-Nearest abstract 2 - 2021 (distance 0.382)
+Nearest abstract 1 - 2021 (distance 0.380)
 
 The market shock that accompanied COVID-19 has the potential to
 significantly transform higher education. At the same time, it presents
@@ -421,27 +436,42 @@ four-phase business cycle model is presented as a strategic corollary
 for industry and higher education to support decision-making and provide
 a mechanism for discussion and policy development. © The Author(s) 2020.
 
-Nearest abstract 3 - 2020 (distance 0.300)
+Nearest abstract 2 - 2022 (distance 0.210)
 
-Universities UK (UUK) has suggested that there may be very significant
-losses to higher education as a consequence of Covid-19. However, losses
-are likely to be substantially lower than the potential losses estimated
-by UUK. But the magnitude of losses is very uncertain. The UUK’s
-proposal to restrict undergraduate enrolment per university to stop
-institutions poaching students is not in the interests of the most
-highly regarded universities, or that of students. Some rationalisation
-of the sector should be the price of further government support. Now is
-also the time to reconsider how university research is funded. © 2020.
-Political Quarterly Publishing Co (PQPC)
+Worldwide, COVID-19 affected higher education, including finance, and
+international mobility. But some systems have been more affected than
+others; notably Anglophone systems that have been a preferred
+destination for a high proportion of international students. Australia
+presents a particularly interesting case. Particularly vulnerable to any
+significant downturn in international enrolments, given its high
+proportion of international students, and heavy dependence on their
+fees, the problem was exacerbated by growing US - China tensions, and
+resultant pressures on Australia and its universities. Culture Wars were
+also evident in the steadfast refusal of the national government to
+offer muc…
+
+Nearest abstract 3 - 2020 (distance 0.247)
+
+COVID-19 has had a major impact on international higher education with
+border closures, cancelled flights, and a shift to online teaching and
+learning. As a result, many international students have decided to
+either abandon or defer their plans to study abroad. If students stay in
+their home countries, many institutions that rely heavily on foreign
+students’ fees will suffer, with potential impacts on national
+economies. Beyond the economic implications, it is also important to
+consider the personal impact of COVID-19 on international students, who
+may face delays or obstacles to program completion, employment and/or
+immigration. Though there are certainly risks and losses in the short
+term…
 
 #### Topic 7 — health / education / public
 
-290 abstracts · 7.5% of the corpus
+294 abstracts · 7.6% of the corpus
 
 **Distinctive terms:** health, education, public, social, global,
-research, also, world
+research, also, educational
 
-Nearest abstract 1 - 2021 (distance 0.329)
+Nearest abstract 1 - 2021 (distance 0.328)
 
 Severe Acute Respiratory Syndrome Coronavirus 2 (SARS-CoV-2) or COVID-19
 has undeniably changed the world forever. Capitalism in the United
@@ -454,7 +484,7 @@ but shows the burgeoning of the impact on its slow-motion decline. This
 is evident from the still-unresolved healthcare crisis in the United
 States, which allows runaway contagion, sickness, and death due to a …
 
-Nearest abstract 2 - 2021 (distance 0.190)
+Nearest abstract 2 - 2021 (distance 0.189)
 
 This editorial to the Special Section on COVID-19 emphasises the
 importance of researching pandemic realities and the value that the
@@ -487,7 +517,7 @@ increasingly affected …
 **Distinctive terms:** shore, penetration, porcine, polymers, ecmo,
 needle, piercing, printable
 
-Nearest abstract 1 - 2021 (distance 0.185)
+Nearest abstract 1 - 2021 (distance 0.187)
 
 Aim: Patients with cardiogenic shock or ARDS, for example, in
 COVID-19/SARS-CoV-2, may require extracorporeal membrane oxygenation
@@ -497,11 +527,11 @@ ability of various 3D-printable materials to mimic the penetration
 properties of human tissue by using porcine aortae. Methods: A test
 bench for needle penetration and piercing in sampled porcine aorta and
 preselected 3D-printable polymers was assembled. The 3D-printable
-materials had Shore A hardness of 10, 20, and 50. 17G Vygon 1.0 × 1.4 mm
-× 70 mm needles were used for penetration tests. Results: For the
-porcine tissue and S…
+materials had Shore A hardness of 10, 20, and 17G Vygon 1.0 × 1.4 mm ×
+70 mm needles were used for penetration tests. Results: For the porcine
+tissue and Shore…
 
-Nearest abstract 2 - 2021 (distance 0.185)
+Nearest abstract 2 - 2021 (distance 0.187)
 
 Methods of anatomical education have, as with many facets of normal
 life, been forced to evolve rapidly due to the Covid-19 pandemic. Whilst
@@ -563,13 +593,13 @@ with the share of its sentences on each:
 
 | Topic                         | Share of sentences |
 |:------------------------------|:-------------------|
-| learning / teaching / online  | 33%                |
+| learning / teaching / online  | 22%                |
+| social / education / work     | 22%                |
 | online / learning / students  | 11%                |
 | school / education / children | 11%                |
-| social / education / work     | 11%                |
 | medical / students / clinical | 11%                |
 | education / higher / students | 11%                |
-| shore / penetration / porcine | 11%                |
+| health / education / public   | 11%                |
 
 Aggregating every sentence gives a second view of prevalence — the share
 of *sentences* on each topic — next to the document-level share. The two

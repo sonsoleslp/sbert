@@ -71,8 +71,7 @@ the raw `text`.</p>
 <span>  cores <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  numbers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"remove"</span><span class="op">)</span>,</span>
 <span>  roman_numerals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"remove"</span><span class="op">)</span>,</span>
-<span>  section_numbers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"remove"</span><span class="op">)</span>,</span>
-<span>  list_markers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"remove"</span><span class="op">)</span></span>
+<span>  section_numbers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"remove"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -155,18 +154,10 @@ groups) and enumeration or list markers (`1.`, `2.`, `figure 12.` — a
 standalone one- or two-digit number followed by a period). Decimals
 (`3.14`), four-digit years (`2020.`), hyphenated numbers (`covid-19.`), and
 larger counts are left untouched, so genuine values survive even when
-`numbers = "keep"`.</p></dd>
-
-
-<dt id="arg-list-markers">list_markers<a class="anchor" aria-label="anchor" href="#arg-list-markers"></a></dt>
-<dd><p>How to treat enumeration and list markers (`1.`, `2.`,
-`(i)`, `(a)`, `(iv)`). Unlike `numbers`, `roman_numerals`, and
-`section_numbers`, which filter the extracted *terms*, these markers barely
-survive tokenization anyway — where they show is the source text. So
-`"remove"` cleans the documents themselves (via [strip_list_markers()])
-before embedding and term extraction, which also keeps them out of the
-embeddings and the [representatives()][representatives]. `"keep"` is the
-default. Real words, years, counts, and decimals are never touched.</p></dd>
+`numbers = "keep"`.
+These filter only the topic terms; the document text and its embedding are
+untouched. To clean the source text itself — list markers, reference noise,
+junk characters — before encoding, see [clean_corpus()].</p></dd>
 
 </dl></div>
     <div class="section level2">

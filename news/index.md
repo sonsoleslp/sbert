@@ -3,21 +3,47 @@
 ## sbert 0.5.2
 
 - Added
+  [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md),
+  one place for the text-level cleaning that should happen before
+  encoding, so the same clean text feeds the encoder, the topic terms,
+  and the representatives. It repairs junk and strips non-content markup
+  — HTML entities and tags, URLs, DOIs, email addresses, bracketed
+  numeric citations (`[12]`), page references (`p. 1`, `pp. 15-30`),
+  curly quotes, dashes, bullets, control, zero-width, BOM and
+  replacement characters, and non-breaking spaces — then strips list
+  markers (`1.`, `(i)`, `(a)`, `(109)`, and bare Roman-numeral section
+  markers such as `IV.` and a leading `V.`) and section/reference
+  numbering (`1.2.3`, and alphanumeric indices such as `II.2` and
+  `AA.2`), applies any custom `remove` patterns (the extension point for
+  domain-specific noise the generic cleaners leave, for example
+  `remove = "OJ No L?\\s*\\d+"`), optionally removes numeric and
+  Roman-numeral tokens, and drops documents below a `min_content`
+  alphabetic-density floor — citation lists, reference footnotes, number
+  tables — carrying a data frame’s other columns along so metadata stays
+  aligned. Supporting helpers
   [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
-  and a matching `list_markers` argument on
-  [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
-  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
   and
-  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md).
-  Enumeration and list markers (“1.”, “2.”, “(i)”, “(a)”, “(iv)”) barely
-  survive tokenization, so the place they actually show is the source
-  text — the embeddings and
-  [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md).
-  Unlike `numbers`/`roman_numerals`/`section_numbers`, which filter the
-  extracted terms, `list_markers = "remove"` cleans the documents
-  themselves, so the markers stay out of the representatives too. Real
-  words, years, counts, and decimals are left untouched. Default
-  `"keep"` is byte-identical.
+  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)
+  are exported too.
+  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)
+  is the fraction of a string’s non-space characters that are letters, a
+  domain-agnostic measure of prose versus reference noise (real
+  sentences score near 1; “OJ No L 297, 24.11.1979, p. 1.” scores about
+  0.25), and `min_content` judges it on the repaired text before the
+  number strips so a stripped reference cannot slip through. Because
+  Sentence-BERT tolerates a little noise, this targets broken text and
+  non-content rows rather than scrubbing every token.
+
+- The `numbers`, `roman_numerals`, and `section_numbers` term filters
+  stay on [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md),
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+  and [`terms()`](https://rdrr.io/r/stats/terms.html): they tidy the
+  topic *labels* without touching the document text or its embedding,
+  which is the point of keeping them separate from
+  [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md).
+  Text-level cleaning that would change the embedding lives in
+  [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md).
 
 - [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
   and a fitted model’s built-in representatives now return distinct

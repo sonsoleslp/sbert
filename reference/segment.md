@@ -17,7 +17,8 @@ segment(
   abbreviations = default_abbreviations(),
   cores = 1L,
   max_tokens = NULL,
-  model = NULL
+  model = NULL,
+  min_content = 0
 )
 ```
 
@@ -76,6 +77,15 @@ segment(
   instead of words, so \`max_tokens\` can be the model's real limit.
   Token-counted segmentation runs serially (the tokenizer is not
   forked), so \`cores\` is ignored in that case.
+
+- min_content:
+
+  Minimum alphabetic-content ratio, in \`\[0, 1\]\`, for a segment to be
+  kept (see \[content_ratio()\]). Segments below the floor — citation
+  fragments, page and reference bits, number lists — are dropped. Prose
+  scores near 1 and reference noise far below, so a value around \`0.5\`
+  removes the noise while keeping real clauses. \`0\` (default) keeps
+  every segment.
 
 ## Value
 

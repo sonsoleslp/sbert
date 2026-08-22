@@ -131,28 +131,33 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>                       <span class="co"># distinctive terms (c-TF-IDF)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">12</span>, sort_by <span class="op">=</span> <span class="st">"beta"</span><span class="op">)</span>     <span class="co"># the words a topic uses most</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">12</span>, weighting <span class="op">=</span> <span class="st">"bm25"</span>, stem <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Token filters keep labels informative: <code>numbers = "remove"</code> drops bare years and counts, <code>roman_numerals = "remove"</code> drops chapter and list markers (<code>ii</code>, <code>iv</code>), and <code>section_numbers = "remove"</code> strips multi-level indices such as <code>1.2.3</code>. Each is available on <code><a href="reference/topics.html">topics()</a></code>, <code><a href="reference/select_topics.html">select_topics()</a></code>, <code><a href="reference/topic_corpus.html">topic_corpus()</a></code>, and <code><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms()</a></code>.</p>
+<p>Cleaning happens at two levels, kept deliberately separate. <strong>Token filters</strong> tidy the <em>labels</em> without touching the text or its embedding: <code>numbers</code>, <code>roman_numerals</code>, and <code>section_numbers</code> (each <code>"keep"</code> or <code>"remove"</code>) drop bare years, chapter numerals, and indices such as <code>1.2.3</code> from the topic terms only, so a number still shapes the embedding while staying out of a cluttered label.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fl">30</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>,</span>
 <span>       numbers <span class="op">=</span> <span class="st">"remove"</span>, roman_numerals <span class="op">=</span> <span class="st">"remove"</span>, section_numbers <span class="op">=</span> <span class="st">"remove"</span><span class="op">)</span></span></code></pre></div>
-<p>Fitted topic models support a full inferential layer — assignment of new documents, soft membership, generative word probabilities, and mixed-topic document distributions:</p>
+<p><strong><code><a href="reference/clean_corpus.html">clean_corpus()</a></code></strong> cleans the <em>source text</em> before encoding — repairing junk characters, stripping list markers and reference numbering, and dropping whole low-content units (citation lists, reference footnotes) by their alphabetic density. Because Sentence-BERT is robust to a little noise, this is about fixing genuinely broken text and removing non-content rows, not scrubbing every token. Clean once, then encode the result:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">docs</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/clean_corpus.html">clean_corpus</a></span><span class="op">(</span><span class="va">raw_text</span>, min_content <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>   <span class="co"># or a data frame + column =</span></span>
+<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">docs</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span><span class="va">docs</span>, n_topics <span class="op">=</span> <span class="fl">30</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></code></pre></div>
+<p>Fitted topic models support a full inferential layer — assignment of new documents, soft membership, generative word probabilities, and mixed-topic document distributions:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">new_sentences</span><span class="op">)</span>   <span class="co"># nearest-centroid topics</span></span>
 <span><span class="fu"><a href="reference/topic_membership.html">topic_membership</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>         <span class="co"># fuzzy topic probabilities</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                    <span class="co"># ranked terms + p(term | topic)</span></span>
 <span><span class="fu"><a href="reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">sentences</span><span class="op">)</span>   <span class="co"># per-document topic mixture</span></span></code></pre></div>
 <p>Beyond the curated registry, <code><a href="reference/load_custom.html">load_custom()</a></code> loads any public Hugging Face repository with an ONNX encoder export, auto-detecting its configuration and pinning it locally on first use (“trust on first use”):</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gte</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_custom.html">load_custom</a></span><span class="op">(</span><span class="st">"thenlper/gte-small"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">sentences</span>, <span class="va">gte</span><span class="op">)</span></span></code></pre></div>
 <p>Multilingual corpora use the same API with a multilingual model:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/model_download.html">model_download</a></span><span class="op">(</span><span class="st">"paraphrase-multilingual-MiniLM-L12-v2"</span><span class="op">)</span></span>
 <span><span class="va">multilingual</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"paraphrase-multilingual-MiniLM-L12-v2"</span><span class="op">)</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">$</span><span class="va">feedback</span>, <span class="fl">100</span><span class="op">)</span>, <span class="va">multilingual</span><span class="op">)</span></span></code></pre></div>
 <p><code>n_topics</code> is deliberately explicit: the package does not silently guess a topic count. You may also pass a precomputed embedding matrix through the <code>embeddings</code> argument for reproducible offline analysis.</p>
 <p>Every topic solution can be evaluated and visualized without any further model call:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/coherence.html">coherence</a></span><span class="op">(</span><span class="va">topic_model</span>, measure <span class="op">=</span> <span class="st">"npmi"</span><span class="op">)</span>  <span class="co"># per-topic UMass / NPMI coherence</span></span>
 <span><span class="fu"><a href="reference/topic_diversity.html">topic_diversity</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>              <span class="co"># distinct-vocabulary proportion</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                      <span class="co"># scientific report + quality table</span></span>
@@ -162,12 +167,12 @@
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"map"</span><span class="op">)</span>           <span class="co"># classical-MDS document map</span></span></code></pre></div>
 <p>Term weighting supports the class-based TF-IDF, BM25 (<code>weighting = "bm25"</code>), and square-root (<code>reduce_frequent_words = TRUE</code>) schemes of Mendonca and Figueira (2025).</p>
 <p>For very large corpora there is an instant-speed tier: <code>potion-base-8M</code> is a static (Model2Vec) model whose encoding is a token lookup and mean in pure base R — around 10,000 sentences per second, no ONNX involved, with the same pinning, verification, and verbs as every other model:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/model_download.html">model_download</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span>   <span class="co"># 30 MB</span></span>
 <span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">text</span>, model <span class="op">=</span> <span class="va">fast</span><span class="op">)</span></span></code></pre></div>
 <p>Topic models can be guided: name your topics and seed them with words or descriptions, and the seeds become the first centroids — initialization only by default, frozen with <code>fixed_seeds = TRUE</code> (zero-shot assignment):</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span></span>
 <span>  <span class="va">text</span>,</span>
 <span>  n_topics <span class="op">=</span> <span class="fl">10</span>,</span>
@@ -177,7 +182,7 @@
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Around the topic model, a few utilities cover the everyday analysis moves:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/keywords.html">keywords</a></span><span class="op">(</span><span class="va">text</span>, n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>                                 <span class="co"># embedding-ranked keywords (MMR)</span></span>
 <span><span class="fu"><a href="reference/stop_words.html">stop_words</a></span><span class="op">(</span>add <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"students"</span>, <span class="st">"learning"</span><span class="op">)</span><span class="op">)</span>           <span class="co"># exclude corpus vocabulary</span></span>
 <span><span class="fu"><a href="reference/select_topics.html">select_topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span><span class="op">)</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
@@ -185,7 +190,7 @@
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">tree</span><span class="op">)</span>                                            <span class="co"># labeled dendrogram</span></span>
 <span><span class="va">smaller</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/reduce_topics.html">reduce_topics</a></span><span class="op">(</span><span class="va">topic_model</span>, n_topics <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>  <span class="co"># merge down, keep all verbs</span></span></code></pre></div>
 <p>Documents can be split into sentences, clauses, or phrases before embedding, entirely offline and deterministically:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span></span>
 <span>  <span class="st">"We had two goals: speed and clarity; both were met. See Fig. 3."</span>,</span>
 <span>  level <span class="op">=</span> <span class="st">"clause"</span></span>
@@ -196,14 +201,14 @@
 <span><span class="co">#&gt; 3           1                     3     both were met.</span></span>
 <span><span class="co">#&gt; 4           1                     4        See Fig. 3.</span></span></code></pre></div>
 <p><code><a href="reference/segment.html">segment()</a></code> returns one row per segment with the source document index, guarding abbreviations (<code><a href="reference/abbreviations.html">abbreviations()</a></code>), decimals, and parentheticals so they never end a sentence. The clause level (the default) also splits at subordinating hinges while keeping comma enumerations whole. <code>max_tokens</code> caps segment length so nothing overruns an encoder’s context window — an over-long segment is re-split at the finest punctuation first, and only word-chopped as a last resort; pass <code>model =</code> to count that model’s exact tokens.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span><span class="va">long_documents</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, max_tokens <span class="op">=</span> <span class="fl">256</span>, model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span></code></pre></div>
 <p>Segments can carry their document’s context into the embedding: <code><a href="reference/blend.html">blend()</a></code> keeps <code>alpha</code> of each segment’s context-orthogonal residual and inherits the rest from the parent document vector, so a sentence that is ambiguous in isolation embeds near its document’s subject while keeping what it alone says. The result drops into <code><a href="reference/topics.html">topics()</a></code> and <code><a href="reference/representatives.html">representatives()</a></code> unchanged:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sentences</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span><span class="va">abstracts</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blend.html">blend</a></span><span class="op">(</span><span class="va">sentences</span>, <span class="va">abstracts</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
 <p>The bundled <code>feedback_translations</code> dataset (8,757 multilingual AI-generated mathematics feedback messages from the Levebee educational application, with English translations) provides a realistic corpus for trying the full workflow offline:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                                       feedback</span></span>
 <span><span class="co">#&gt; 1                                Víš, co znamená o jeden více?</span></span>
@@ -225,7 +230,7 @@
 <h2 id="tutorial">Tutorial<a class="anchor" aria-label="anchor" href="#tutorial"></a>
 </h2>
 <p>A full worked tutorial ships with the package and runs offline on the bundled <code>feedback_translations</code> data — building a six-topic model, checking its coherence and diversity, reading each topic through two keyword views, and confirming the labels with representative messages:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"levebee_vignette"</span>, package <span class="op">=</span> <span class="st">"sbert"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -240,6 +245,7 @@
 <li>Static models: <code>potion-base-8M</code>, a pure-R Model2Vec token-lookup embedder with no ONNX Runtime dependency</li>
 <li>Normalization: row-wise L2 normalization by default</li>
 <li>Segmentation: deterministic sentence, clause, and phrase splitting with an abbreviation gazetteer and decimal/parenthetical guards</li>
+<li>Corpus cleaning: <code><a href="reference/clean_corpus.html">clean_corpus()</a></code> repairs junk characters, strips list and reference numbering, and drops low-content units by alphabetic density</li>
 <li>Topic discovery: deterministic k-means with farthest-point initialization</li>
 <li>Topic descriptions: representative documents and BERTopic-style c-TF-IDF</li>
 <li>Topic inference: <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> for new documents, fuzzy soft membership, generative <code>beta</code>, and segment-based document-topic <code>gamma</code>

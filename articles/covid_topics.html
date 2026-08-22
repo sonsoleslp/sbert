@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">A semantic review of the
 pandemic education literature, 2020-2024</h3>
             
-            <h4 data-toc-skip class="date">2026-08-21</h4>
+            <h4 data-toc-skip class="date">2026-08-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/covid_topics.Rmd" class="external-link"><code>vignettes/articles/covid_topics.Rmd</code></a></small>
       <div class="d-none name"><code>covid_topics.Rmd</code></div>
@@ -103,9 +103,60 @@ rerunning reproduces every number and figure.</p>
 <div class="section level2">
 <h2 id="building-the-model">Building the model<a class="anchor" aria-label="anchor" href="#building-the-model"></a>
 </h2>
-<p>Drop the records indexed without an abstract.</p>
+<p>Drop the records indexed without an abstract, then clean the source
+text before encoding. <code><a href="../reference/clean_corpus.html">clean_corpus()</a></code> repairs junk
+characters, strips any list and reference numbering, and — with
+<code>min_content</code> — drops whole low-content rows such as citation
+lists. It carries the other columns along, so <code>Year</code> stays
+aligned. Sentence-BERT tolerates a little noise, so the goal is fixing
+broken text and removing non-content rows, not scrubbing every token. On
+a few messy examples the effect is easiest to see:</p>
+<table class="table">
+<caption>clean_corpus() with defaults: list and reference numbering,
+HTML tags, bracketed citations, URLs and DOIs removed and characters
+repaired, while real words are kept.</caption>
+<colgroup>
+<col width="54%">
+<col width="45%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Before</th>
+<th align="left">After</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">1. The programme raised attainment in 2020, see section
+3.2.1.</td>
+<td align="left">The programme raised attainment in 2020, see
+section.</td>
+</tr>
+<tr class="even">
+<td align="left">(3) OJ No L 297, 24.11.1979, p. 1.</td>
+<td align="left">OJ No L 297.</td>
+</tr>
+<tr class="odd">
+<td align="left">Peer support <b>improved</b> outcomes [12] across
+schools.</td>
+<td align="left">Peer support improved outcomes across schools.</td>
+</tr>
+<tr class="even">
+<td align="left">Full report at <a href="https://example.org/study.pdf" class="external-link uri">https://example.org/study.pdf</a> and <a href="doi:10.1/x" class="uri">doi:10.1/x</a>.</td>
+<td align="left">Full report at and</td>
+</tr>
+</tbody>
+</table>
+<p>The citation-only row above scores far below the prose rows on
+alphabetic density, so <code>min_content = 0.5</code> drops it entirely
+rather than embedding it. The generic cleaners deliberately stop short
+of domain-specific reference forms; for those, <code>remove</code> takes
+custom patterns —
+<code>clean_corpus(text, remove = "OJ No L?\\s*\\d+")</code> strips
+European Union Official Journal identifiers, for example. The same clean
+text then feeds the encoder, the topic terms, and the representative
+abstracts.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="va">covid</span><span class="op">[</span><span class="va">covid</span><span class="op">$</span><span class="va">Abstract</span> <span class="op">!=</span> <span class="st">"[No abstract available]"</span>, <span class="op">]</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="va">covid</span><span class="op">[</span><span class="va">covid</span><span class="op">$</span><span class="va">Abstract</span> <span class="op">!=</span> <span class="st">"[No abstract available]"</span>, <span class="op">]</span></span>
+<span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/clean_corpus.html">clean_corpus</a></span><span class="op">(</span><span class="va">covid_content</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, min_content <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/encode.html">encode()</a></code> turns each abstract into a 384-dimensional
 vector with the pinned default model, <code>all-MiniLM-L6-v2</code>.
 Abstracts longer than the model’s 256-token window are truncated to
@@ -144,12 +195,12 @@ choice:</p>
 <span><span class="op">)</span></span>
 <span><span class="va">sweep</span></span>
 <span><span class="co">#&gt; &lt;sbert_topic_sweep&gt; 5 candidates, coherence measure: npmi</span></span>
-<span><span class="co">#&gt;  n_topics  coherence topic_diversity  explained</span></span>
-<span><span class="co">#&gt;         4 0.05502642       0.5500000 0.09824599</span></span>
-<span><span class="co">#&gt;         6 0.07460328       0.6333333 0.12136775</span></span>
-<span><span class="co">#&gt;         8 0.17229509       0.6500000 0.12979221</span></span>
-<span><span class="co">#&gt;        10 0.15732535       0.5900000 0.14591512</span></span>
-<span><span class="co">#&gt;        12 0.15810223       0.5916667 0.15786363</span></span>
+<span><span class="co">#&gt;  n_topics  coherence topic_diversity explained</span></span>
+<span><span class="co">#&gt;         4 0.05818542       0.6000000 0.0984003</span></span>
+<span><span class="co">#&gt;         6 0.07303481       0.6166667 0.1213267</span></span>
+<span><span class="co">#&gt;         8 0.17293698       0.6375000 0.1297750</span></span>
+<span><span class="co">#&gt;        10 0.15692884       0.5900000 0.1457480</span></span>
+<span><span class="co">#&gt;        12 0.15765139       0.6000000 0.1577964</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Fitted models retained: fitted(x, n_topics = 8)</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -234,44 +285,44 @@ education topics.</p>
 <tr class="odd">
 <td align="right">1</td>
 <td align="left">online / learning / students</td>
-<td align="right">1041</td>
-<td align="left">27.1%</td>
+<td align="right">1033</td>
+<td align="left">26.9%</td>
 </tr>
 <tr class="even">
 <td align="right">2</td>
 <td align="left">learning / teaching / online</td>
-<td align="right">780</td>
+<td align="right">781</td>
 <td align="left">20.3%</td>
 </tr>
 <tr class="odd">
 <td align="right">3</td>
 <td align="left">school / education / children</td>
-<td align="right">483</td>
-<td align="left">12.6%</td>
+<td align="right">477</td>
+<td align="left">12.4%</td>
 </tr>
 <tr class="even">
 <td align="right">4</td>
 <td align="left">social / education / work</td>
-<td align="right">437</td>
-<td align="left">11.4%</td>
+<td align="right">444</td>
+<td align="left">11.5%</td>
 </tr>
 <tr class="odd">
 <td align="right">5</td>
 <td align="left">medical / students / clinical</td>
-<td align="right">428</td>
-<td align="left">11.1%</td>
+<td align="right">431</td>
+<td align="left">11.2%</td>
 </tr>
 <tr class="even">
 <td align="right">6</td>
 <td align="left">education / higher / students</td>
-<td align="right">386</td>
+<td align="right">385</td>
 <td align="left">10.0%</td>
 </tr>
 <tr class="odd">
 <td align="right">7</td>
 <td align="left">health / education / public</td>
-<td align="right">290</td>
-<td align="left">7.5%</td>
+<td align="right">294</td>
+<td align="left">7.6%</td>
 </tr>
 <tr class="even">
 <td align="right">8</td>
@@ -296,14 +347,29 @@ what it claims.</p>
 Topic 1 — online / learning / students
 </h4>
 <div class="topic-meta">
-1,041 abstracts · 27.1% of the corpus
+1,033 abstracts · 26.9% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> online, learning, students,
 education, teaching, teachers, distance, research
 </div>
 <details open><summary>
-Nearest abstract 1 - 2021 (distance 0.255)
+Nearest abstract 1 - 2022 (distance 0.233)
+</summary><p class="abstract">
+The COVID-19 pandemic has disrupted existing educational systems
+worldwide. Due to lockdowns in several countries, the educational
+institutions have been directed by governments to move towards online
+learning. The challenge for educational institutions and faculty members
+is to assess the influence of various factors that would enable adoption
+of online learning by students in higher education. This study
+investigates the influence of awareness of COVID-19 (AOC19), computer
+&amp; internet self-efficacy (CISE), and online communication
+self-efficacy (OCSE) on perceived net benefits (NB) of the students and
+their intention towards the online learning (INT). The study further
+analyzes the mediati…
+</p>
+</details><details><summary>
+Nearest abstract 2 - 2021 (distance 0.254)
 </summary><p class="abstract">
 Covid-19 has forced educators to switch to online teaching as the only
 viable option, whether through video lecturing or using other online
@@ -318,7 +384,7 @@ the context of India. The study has adopted a mixed-method research
 design c…
 </p>
 </details><details><summary>
-Nearest abstract 2 - 2022 (distance 0.266)
+Nearest abstract 3 - 2022 (distance 0.265)
 </summary><p class="abstract">
 This study examines the current state of acceptance of online classes
 using the technology acceptance model. The background of the study is
@@ -331,21 +397,6 @@ results of the study are as follows: First, the perceived ease of use of
 online classes showed a positive effect on perceived usefulness. Second,
 both the perceived ease of use and usefulness of online classes show…
 </p>
-</details><details><summary>
-Nearest abstract 3 - 2022 (distance 0.235)
-</summary><p class="abstract">
-The COVID-19 pandemic has disrupted existing educational systems
-worldwide. Due to lockdowns in several countries, the educational
-institutions have been directed by governments to move towards online
-learning. The challenge for educational institutions and faculty members
-is to assess the influence of various factors that would enable adoption
-of online learning by students in higher education. This study
-investigates the influence of awareness of COVID-19 (AOC19), computer
-&amp; internet self-efficacy (CISE), and online communication
-self-efficacy (OCSE) on perceived net benefits (NB) of the students and
-their intention towards the online learning (INT). The study further
-analyzes the mediati…
-</p>
 </details>
 </div>
 <div class="topic-block" style="border-left:6px solid #C7821C">
@@ -353,14 +404,14 @@ analyzes the mediati…
 Topic 2 — learning / teaching / online
 </h4>
 <div class="topic-meta">
-780 abstracts · 20.3% of the corpus
+781 abstracts · 20.3% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> learning, teaching, online,
-students, education, face, remote, teachers
+students, education, remote, face, teachers
 </div>
 <details open><summary>
-Nearest abstract 1 - 2020 (distance 0.354)
+Nearest abstract 1 - 2020 (distance 0.353)
 </summary><p class="abstract">
 General chemistry, CHE 101, at Hampton University is an undergraduate
 course designed to meet curriculum requirements for nonscience majors.
@@ -389,7 +440,7 @@ students learned some important skills and content. © 2020 American
 Chemical Society and Division of Chemical Education, Inc.
 </p>
 </details><details><summary>
-Nearest abstract 3 - 2020 (distance 0.363)
+Nearest abstract 3 - 2020 (distance 0.366)
 </summary><p class="abstract">
 Today’s engineering laboratory education often lacks opportunities for
 students to practice critical thinking through real-world problems. This
@@ -409,43 +460,29 @@ of learning in Bloom’s taxonomy. To further improve our appr…
 Topic 3 — school / education / children
 </h4>
 <div class="topic-meta">
-483 abstracts · 12.6% of the corpus
+477 abstracts · 12.4% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> school, education, children,
 teachers, parents, learning, schools, educational
 </div>
 <details open><summary>
-Nearest abstract 1 - 2021 (distance 0.344)
+Nearest abstract 1 - 2021 (distance 0.345)
 </summary><p class="abstract">
 This study reports the results of a survey conducted with a set of
 “hybrid homeschool”leaders (principals or directors) from around the
-United States who were asked to describe 1. how their families
-categorize themselves (as homeschoolers, or as members of private
-schools), 2. the ways in which their schools operate in terms of
-scheduling, hiring, etc., 3. how their schools are regulated in the
-various states, and how they work within those regulatory frameworks,
-and 4. how they were affected by COVID-19, both in the spring of 2020
-and the fall of 2020. Respondents provided a variety of names to
-describe their schools and a split in how families see themselves. In
-terms of staffing, schedul…
+United States who were asked to describe how their families categorize
+themselves (as homeschoolers, or as members of private schools), the
+ways in which their schools operate in terms of scheduling, hiring,
+etc., how their schools are regulated in the various states, and how
+they work within those regulatory frameworks, and how they were affected
+by COVID-19, both in the spring of 2020 and the fall of 2020.
+Respondents provided a variety of names to describe their schools and a
+split in how families see themselves. In terms of staffing, schedules,
+tuition,…
 </p>
 </details><details><summary>
-Nearest abstract 2 - 2021 (distance 0.418)
-</summary><p class="abstract">
-The aim of the present study is to describe how parents and primary
-school children dealt with the rapid and significant changes to their
-schooling experience during COVID-19 and how this correlated with
-children’s mental health. A cross-sectional study comprising an online
-survey was completed by 797 parents of children from 4–12 years, (M = 9
-years). School variables explored included school expectations for
-schoolwork, how much time per day spent on schoolwork, how able parents
-were to support their child with schoolwork, whether a child had support
-from an adult at school and whether the child had support from a friend.
-Child mental health was measured by the Strengths and Difficulties …
-</p>
-</details><details><summary>
-Nearest abstract 3 - 2020 (distance 0.263)
+Nearest abstract 2 - 2020 (distance 0.262)
 </summary><p class="abstract">
 Parents of children with special educational needs and disabilities
 (SEND) took part in an online survey that explored their experiences of
@@ -459,6 +496,20 @@ parents were dissatisfied with the resources and support they had
 received for their child’s educational and psychological needs. Parents
 felt …
 </p>
+</details><details><summary>
+Nearest abstract 3 - 2021 (distance 0.412)
+</summary><p class="abstract">
+The aim of the present study is to describe how parents and primary
+school children dealt with the rapid and significant changes to their
+schooling experience during COVID-19 and how this correlated with
+children’s mental health. A cross-sectional study comprising an online
+survey was completed by 797 parents of children from 4 - 12 years, (M =
+9 years). School variables explored included school expectations for
+schoolwork, how much time per day spent on schoolwork, how able parents
+were to support their child with schoolwork, whether a child had support
+from an adult at school and whether the child had support from a friend.
+Child mental health was measured by the Strengths and Difficultie…
+</p>
 </details>
 </div>
 <div class="topic-block" style="border-left:6px solid #00A846">
@@ -466,14 +517,14 @@ felt …
 Topic 4 — social / education / work
 </h4>
 <div class="topic-meta">
-437 abstracts · 11.4% of the corpus
+444 abstracts · 11.5% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> social, education, work, students,
 teaching, article, learning, research
 </div>
 <details open><summary>
-Nearest abstract 1 - 2021 (distance 0.364)
+Nearest abstract 1 - 2021 (distance 0.369)
 </summary><p class="abstract">
 It took a global pandemic for me to recognize how my social work
 teaching was an act of feminist praxis. I have long identified as a
@@ -488,7 +539,22 @@ graduate level social work research course that was rapidly adapted to
 being t…
 </p>
 </details><details><summary>
-Nearest abstract 2 - 2021 (distance 0.453)
+Nearest abstract 2 - 2021 (distance 0.390)
+</summary><p class="abstract">
+This article frames three individual perspectives on the experience of
+unsettling disciplinary and institutional subjectivities through
+teaching and learning practices in Creative Writing and Literary
+Studies. At the centre of this experience is a common engagement of
+teaching and learning with sovereign knowledges. More specifically, the
+accounts in the article are drawn from experiences in 2020, when the
+forces of extra-academic life - especially lockdown during COVID-19 in
+Victoria - intensified the objectives and the means of challenging the
+boundaries of settler colonial expertise. The authors find that
+collaborative and iterative sharing of teaching experiences and methods
+not only su…
+</p>
+</details><details><summary>
+Nearest abstract 3 - 2021 (distance 0.456)
 </summary><p class="abstract">
 In this chapter, I trace instances of meaning-making through fragments
 of two interviews. Using restorying and the construction of parallel
@@ -499,21 +565,6 @@ narrative threads of identity, community, and change, the image of Black
 women as literacy educators who co-construct meaning in and out of the
 classroom is rendered. © 2021 by Emerald Publishing Limited.
 </p>
-</details><details><summary>
-Nearest abstract 3 - 2021 (distance 0.385)
-</summary><p class="abstract">
-This article frames three individual perspectives on the experience of
-unsettling disciplinary and institutional subjectivities through
-teaching and learning practices in Creative Writing and Literary
-Studies. At the centre of this experience is a common engagement of
-teaching and learning with sovereign knowledges. More specifically, the
-accounts in the article are drawn from experiences in 2020, when the
-forces of extra-academic life – especially lockdown during COVID-19 in
-Victoria – intensified the objectives and the means of challenging the
-boundaries of settler colonial expertise. The authors find that
-collaborative and iterative sharing of teaching experiences and methods
-not only su…
-</p>
 </details>
 </div>
 <div class="topic-block" style="border-left:6px solid #00AD9A">
@@ -521,7 +572,7 @@ not only su…
 Topic 5 — medical / students / clinical
 </h4>
 <div class="topic-meta">
-428 abstracts · 11.1% of the corpus
+431 abstracts · 11.2% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> medical, students, clinical, health,
@@ -542,7 +593,7 @@ One hundred percent of programs reduced the number of residents on
 rounds and 95.2% reduced the size of their in-hospital reside…
 </p>
 </details><details><summary>
-Nearest abstract 2 - 2021 (distance 0.374)
+Nearest abstract 2 - 2021 (distance 0.375)
 </summary><p class="abstract">
 Objective: The COVID-19 pandemic has drastically transformed the
 healthcare community and medical education across the United States. The
@@ -556,7 +607,7 @@ years of training at the University of California, San Francisco.
 Statistical analysis of the survey responses was performed using the Kr…
 </p>
 </details><details><summary>
-Nearest abstract 3 - 2021 (distance 0.216)
+Nearest abstract 3 - 2021 (distance 0.215)
 </summary><p class="abstract">
 Problem Value-added medical education (VAME) has been difficult to
 implement due to student and educator constraints. The COVID-19 pandemic
@@ -576,29 +627,14 @@ a student-derived VAME initiative, was implemented from March to May
 Topic 6 — education / higher / students
 </h4>
 <div class="topic-meta">
-386 abstracts · 10.0% of the corpus
+385 abstracts · 10.0% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> education, higher, students,
-universities, university, institutions, academic, crisis
+universities, university, institutions, academic, research
 </div>
 <details open><summary>
-Nearest abstract 1 - 2022 (distance 0.211)
-</summary><p class="abstract">
-Worldwide, COVID-19 affected higher education, including finance, and
-international mobility. But some systems have been more affected than
-others; notably Anglophone systems that have been a preferred
-destination for a high proportion of international students. Australia
-presents a particularly interesting case. Particularly vulnerable to any
-significant downturn in international enrolments, given its high
-proportion of international students, and heavy dependence on their
-fees, the problem was exacerbated by growing US–China tensions, and
-resultant pressures on Australia and its universities. Culture Wars were
-also evident in the steadfast refusal of the national government to
-offer much …
-</p>
-</details><details><summary>
-Nearest abstract 2 - 2021 (distance 0.382)
+Nearest abstract 1 - 2021 (distance 0.380)
 </summary><p class="abstract">
 The market shock that accompanied COVID-19 has the potential to
 significantly transform higher education. At the same time, it presents
@@ -611,18 +647,34 @@ for industry and higher education to support decision-making and provide
 a mechanism for discussion and policy development. © The Author(s) 2020.
 </p>
 </details><details><summary>
-Nearest abstract 3 - 2020 (distance 0.300)
+Nearest abstract 2 - 2022 (distance 0.210)
 </summary><p class="abstract">
-Universities UK (UUK) has suggested that there may be very significant
-losses to higher education as a consequence of Covid-19. However, losses
-are likely to be substantially lower than the potential losses estimated
-by UUK. But the magnitude of losses is very uncertain. The UUK’s
-proposal to restrict undergraduate enrolment per university to stop
-institutions poaching students is not in the interests of the most
-highly regarded universities, or that of students. Some rationalisation
-of the sector should be the price of further government support. Now is
-also the time to reconsider how university research is funded. © 2020.
-Political Quarterly Publishing Co (PQPC)
+Worldwide, COVID-19 affected higher education, including finance, and
+international mobility. But some systems have been more affected than
+others; notably Anglophone systems that have been a preferred
+destination for a high proportion of international students. Australia
+presents a particularly interesting case. Particularly vulnerable to any
+significant downturn in international enrolments, given its high
+proportion of international students, and heavy dependence on their
+fees, the problem was exacerbated by growing US - China tensions, and
+resultant pressures on Australia and its universities. Culture Wars were
+also evident in the steadfast refusal of the national government to
+offer muc…
+</p>
+</details><details><summary>
+Nearest abstract 3 - 2020 (distance 0.247)
+</summary><p class="abstract">
+COVID-19 has had a major impact on international higher education with
+border closures, cancelled flights, and a shift to online teaching and
+learning. As a result, many international students have decided to
+either abandon or defer their plans to study abroad. If students stay in
+their home countries, many institutions that rely heavily on foreign
+students’ fees will suffer, with potential impacts on national
+economies. Beyond the economic implications, it is also important to
+consider the personal impact of COVID-19 on international students, who
+may face delays or obstacles to program completion, employment and/or
+immigration. Though there are certainly risks and losses in the short
+term…
 </p>
 </details>
 </div>
@@ -631,14 +683,14 @@ Political Quarterly Publishing Co (PQPC)
 Topic 7 — health / education / public
 </h4>
 <div class="topic-meta">
-290 abstracts · 7.5% of the corpus
+294 abstracts · 7.6% of the corpus
 </div>
 <div class="term-label">
 <strong>Distinctive terms:</strong> health, education, public, social,
-global, research, also, world
+global, research, also, educational
 </div>
 <details open><summary>
-Nearest abstract 1 - 2021 (distance 0.329)
+Nearest abstract 1 - 2021 (distance 0.328)
 </summary><p class="abstract">
 Severe Acute Respiratory Syndrome Coronavirus 2 (SARS-CoV-2) or COVID-19
 has undeniably changed the world forever. Capitalism in the United
@@ -652,7 +704,7 @@ is evident from the still-unresolved healthcare crisis in the United
 States, which allows runaway contagion, sickness, and death due to a …
 </p>
 </details><details><summary>
-Nearest abstract 2 - 2021 (distance 0.190)
+Nearest abstract 2 - 2021 (distance 0.189)
 </summary><p class="abstract">
 This editorial to the Special Section on COVID-19 emphasises the
 importance of researching pandemic realities and the value that the
@@ -693,7 +745,7 @@ Topic 8 — shore / penetration / porcine
 polymers, ecmo, needle, piercing, printable
 </div>
 <details open><summary>
-Nearest abstract 1 - 2021 (distance 0.185)
+Nearest abstract 1 - 2021 (distance 0.187)
 </summary><p class="abstract">
 Aim: Patients with cardiogenic shock or ARDS, for example, in
 COVID-19/SARS-CoV-2, may require extracorporeal membrane oxygenation
@@ -703,12 +755,12 @@ ability of various 3D-printable materials to mimic the penetration
 properties of human tissue by using porcine aortae. Methods: A test
 bench for needle penetration and piercing in sampled porcine aorta and
 preselected 3D-printable polymers was assembled. The 3D-printable
-materials had Shore A hardness of 10, 20, and 50. 17G Vygon 1.0 × 1.4 mm
-× 70 mm needles were used for penetration tests. Results: For the
-porcine tissue and S…
+materials had Shore A hardness of 10, 20, and 17G Vygon 1.0 × 1.4 mm ×
+70 mm needles were used for penetration tests. Results: For the porcine
+tissue and Shore…
 </p>
 </details><details><summary>
-Nearest abstract 2 - 2021 (distance 0.185)
+Nearest abstract 2 - 2021 (distance 0.187)
 </summary><p class="abstract">
 Methods of anatomical education have, as with many facets of normal
 life, been forced to evolve rapidly due to the Covid-19 pandemic. Whilst
@@ -770,18 +822,18 @@ most, with the share of its sentences on each:</p>
 <tbody>
 <tr class="odd">
 <td align="left">learning / teaching / online</td>
-<td align="left">33%</td>
-</tr>
-<tr class="even">
-<td align="left">online / learning / students</td>
-<td align="left">11%</td>
-</tr>
-<tr class="odd">
-<td align="left">school / education / children</td>
-<td align="left">11%</td>
+<td align="left">22%</td>
 </tr>
 <tr class="even">
 <td align="left">social / education / work</td>
+<td align="left">22%</td>
+</tr>
+<tr class="odd">
+<td align="left">online / learning / students</td>
+<td align="left">11%</td>
+</tr>
+<tr class="even">
+<td align="left">school / education / children</td>
 <td align="left">11%</td>
 </tr>
 <tr class="odd">
@@ -793,7 +845,7 @@ most, with the share of its sentences on each:</p>
 <td align="left">11%</td>
 </tr>
 <tr class="odd">
-<td align="left">shore / penetration / porcine</td>
+<td align="left">health / education / public</td>
 <td align="left">11%</td>
 </tr>
 </tbody>

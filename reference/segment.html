@@ -66,7 +66,8 @@ segmentation works offline and is fully reproducible.</p>
 <span>  abbreviations <span class="op">=</span> <span class="fu">default_abbreviations</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  max_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  model <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  model <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  min_content <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -126,6 +127,15 @@ since a tokenizer emits somewhat more tokens than words.</p></dd>
 of words, so `max_tokens` can be the model's real limit. Token-counted
 segmentation runs serially (the tokenizer is not forked), so `cores` is
 ignored in that case.</p></dd>
+
+
+<dt id="arg-min-content">min_content<a class="anchor" aria-label="anchor" href="#arg-min-content"></a></dt>
+<dd><p>Minimum alphabetic-content ratio, in `[0, 1]`, for a
+segment to be kept (see [content_ratio()]). Segments below the floor —
+citation fragments, page and reference bits, number lists — are dropped.
+Prose scores near 1 and reference noise far below, so a value around `0.5`
+removes the noise while keeping real clauses. `0` (default) keeps every
+segment.</p></dd>
 
 </dl></div>
     <div class="section level2">
