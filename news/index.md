@@ -1,5 +1,17 @@
 # Changelog
 
+## sbert 0.5.3
+
+- Topic term plots no longer fail with “need finite ‘ylim’ values” when
+  a topic has no terms left after the stop-word, token-length, and
+  frequency filters (`plot(type = "terms")`, `plot(type = "fit")`, and
+  the per-topic figures). Such a topic now draws an empty, labelled
+  panel. A device too small to stack one row per topic in
+  `plot(type = "fit")` raises a classed `sbert_plot_too_small` error
+  naming the remedies (`per_topic = TRUE`, a `topics =` subset, or a
+  taller device) instead of the opaque base-graphics “invalid graphics
+  state” message.
+
 ## sbert 0.5.2
 
 - Added

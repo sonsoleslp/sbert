@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,10 @@
       <small>Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.3" id="sbert-053">sbert 0.5.3<a class="anchor" aria-label="anchor" href="#sbert-053"></a></h2>
+<ul><li>Topic term plots no longer fail with “need finite ‘ylim’ values” when a topic has no terms left after the stop-word, token-length, and frequency filters (<code>plot(type = "terms")</code>, <code>plot(type = "fit")</code>, and the per-topic figures). Such a topic now draws an empty, labelled panel. A device too small to stack one row per topic in <code>plot(type = "fit")</code> raises a classed <code>sbert_plot_too_small</code> error naming the remedies (<code>per_topic = TRUE</code>, a <code>topics =</code> subset, or a taller device) instead of the opaque base-graphics “invalid graphics state” message.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.2" id="sbert-052">sbert 0.5.2<a class="anchor" aria-label="anchor" href="#sbert-052"></a></h2>
 <ul><li><p>Added <code><a href="../reference/clean_corpus.html">clean_corpus()</a></code>, one place for the text-level cleaning that should happen before encoding, so the same clean text feeds the encoder, the topic terms, and the representatives. It repairs junk and strips non-content markup — HTML entities and tags, URLs, DOIs, email addresses, bracketed numeric citations (<code>[12]</code>), page references (<code>p. 1</code>, <code>pp. 15-30</code>), curly quotes, dashes, bullets, control, zero-width, BOM and replacement characters, and non-breaking spaces — then strips list markers (<code>1.</code>, <code>(i)</code>, <code>(a)</code>, <code>(109)</code>, and bare Roman-numeral section markers such as <code>IV.</code> and a leading <code>V.</code>) and section/reference numbering (<code>1.2.3</code>, and alphanumeric indices such as <code>II.2</code> and <code>AA.2</code>), applies any custom <code>remove</code> patterns (the extension point for domain-specific noise the generic cleaners leave, for example <code>remove = "OJ No L?\\s*\\d+"</code>), optionally removes numeric and Roman-numeral tokens, and drops documents below a <code>min_content</code> alphabetic-density floor — citation lists, reference footnotes, number tables — carrying a data frame’s other columns along so metadata stays aligned. Supporting helpers <code><a href="../reference/strip_list_markers.html">strip_list_markers()</a></code> and <code><a href="../reference/content_ratio.html">content_ratio()</a></code> are exported too. <code><a href="../reference/content_ratio.html">content_ratio()</a></code> is the fraction of a string’s non-space characters that are letters, a domain-agnostic measure of prose versus reference noise (real sentences score near 1; “OJ No L 297, 24.11.1979, p. 1.” scores about 0.25), and <code>min_content</code> judges it on the repaired text before the number strips so a stripped reference cannot slip through. Because Sentence-BERT tolerates a little noise, this targets broken text and non-content rows rather than scrubbing every token.</p></li>
