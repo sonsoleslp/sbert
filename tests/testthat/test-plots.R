@@ -130,3 +130,70 @@ testthat::test_that("the map requires stored embeddings", {
   testthat::expect_error(plot(model, type = "map"), "keep_embeddings")
   testthat::expect_error(plot(model, type = "orbit"))
 })
+
+testthat::test_that("term panels tolerate a topic with no surviving terms", {
+  # A topic whose documents contain only stop words keeps zero terms after
+  # filtering, so terms() returns no rows for it. The bar panels used to hand
+  # barplot() an empty vector, which fails with "need finite 'ylim' values".
+  text <- c(
+    "Cats chase mice and sleep.",
+    "Dogs chase balls and sleep.",
+    "Neural networks learn representations.",
+    "Machine learning models learn patterns.",
+    "the and of to",
+    "the and of to"
+  )
+  embeddings <- rbind(
+    c(1, 0, 0), c(0.95, 0.05, 0),
+    c(0, 1, 0), c(0.05, 0.95, 0),
+    c(0, 0, 1), c(0.05, 0, 0.95)
+  )
+  model <- topics(text, 3L, embeddings = embeddings, n_terms = 4L)
+  term_table <- terms(model)
+  empty_topic <- setdiff(model$topics$topic, unique(term_table$topic))
+  testthat::expect_length(empty_topic, 1L)
+
+  temporary_device <- tempfile(fileext = ".pdf")
+  grDevices::pdf(temporary_device)
+  on.exit(
+    {
+      grDevices::dev.off()
+      unlink(temporary_device)
+    },
+    add = TRUE
+  )
+  testthat::expect_identical(plot(model, type = "terms"), model)
+  testthat::expect_identical(
+    plot(model, type = "terms", by = c("frequency", "score", "beta")),
+    model
+  )
+  testthat::expect_identical(plot(model, type = "fit"), model)
+  testthat::expect_identical(plot(model, type = "fit", per_topic = TRUE), model)
+  testthat::expect_identical(
+    plot(model, type = "fit", per_topic = TRUE, topics = empty_topic),
+    model
+  )
+  testthat::expect_identical(
+    draw_topic_bar_panel(numeric(0), character(0), "empty", "#000000", "%d"),
+    numeric(0)
+  )
+})
+
+testthat::test_that("a device too small for the stacked fit report errors", {
+  model <- plots_test_model()
+  temporary_device <- tempfile(fileext = ".pdf")
+  # Three topic rows need roughly 0.7 inches each; one inch is not enough.
+  grDevices::pdf(temporary_device, width = 7, height = 1)
+  on.exit(
+    {
+      grDevices::dev.off()
+      unlink(temporary_device)
+    },
+    add = TRUE
+  )
+  testthat::expect_error(
+    plot(model, type = "fit"),
+    class = "sbert_plot_too_small"
+  )
+  testthat::expect_error(plot(model, type = "fit"), "per_topic = TRUE")
+})

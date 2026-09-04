@@ -63,6 +63,28 @@ draw_topic_bar_panel <- function(
   value_format,
   cex_names = 0.75
 ) {
+  # A topic can end up with no terms at all when every token in its documents
+  # is a stop word, is shorter than `min_token_length`, or falls below
+  # `min_term_frequency` -- increasingly likely as the topic count grows and
+  # topics get small. barplot() cannot size its axes from an empty vector
+  # ("need finite 'ylim' values"), so draw an annotated empty panel instead.
+  if (length(values) == 0L) {
+    graphics::plot.new()
+    graphics::text(
+      0.5, 0.5,
+      "no terms pass the term filters",
+      cex = 0.75,
+      col = "grey50"
+    )
+    graphics::title(
+      main = title,
+      adj = 0,
+      cex.main = 0.9,
+      font.main = 2,
+      line = 0.6
+    )
+    return(invisible(numeric(0)))
+  }
   # Leave generous room past the longest bar for its value label, which is
   # drawn to the right of the bar end. Wide decimals like "0.253" need more than
   # a token margin, so headroom scales with the label's character width.
@@ -323,9 +345,12 @@ plot_topic_fit <- function(x, colors, n_terms, n_representatives, topic_ids) {
   # Four cells per topic row; the document column is drawn wider.
   layout_matrix <- matrix(seq_len(n * 4L), nrow = n, ncol = 4L, byrow = TRUE)
   old_par <- graphics::par(oma = c(0, 0, 2.6, 0))
+  # par(mfrow) discards the layout just like layout(1L) would, but it also
+  # works on a device left mid-figure after a failed panel, where layout(1L)
+  # itself errors with "invalid graphics state" and hides the real error.
   on.exit(
     {
-      graphics::layout(1L)
+      graphics::par(mfrow = c(1L, 1L))
       graphics::par(old_par)
     },
     add = TRUE
@@ -338,29 +363,36 @@ plot_topic_fit <- function(x, colors, n_terms, n_representatives, topic_ids) {
   )
   rep_table <- plot_representatives_table(x, n_representatives)
 
-  invisible(lapply(
-    seq_along(topic_ids),
-    function(i) {
-      topic_id <- topic_ids[[i]]
-      color <- colors[color_index[i]]
-      for (metric in metrics) {
-        tbl <- sorted[[metric$sort_by]]
-        rows <- tbl[tbl$topic == topic_id, , drop = FALSE]
-        graphics::par(mar = c(2.6, 6.5, 2.4, 0.8))
-        draw_topic_term_panel(rows, metric, metric$short, color)
+  with_panel_size_guard(
+    lapply(
+      seq_along(topic_ids),
+      function(i) {
+        topic_id <- topic_ids[[i]]
+        color <- colors[color_index[i]]
+        for (metric in metrics) {
+          tbl <- sorted[[metric$sort_by]]
+          rows <- tbl[tbl$topic == topic_id, , drop = FALSE]
+          graphics::par(mar = c(2.6, 6.5, 2.4, 0.8))
+          draw_topic_term_panel(rows, metric, metric$short, color)
+        }
+        reps <- rep_table[rep_table$topic == topic_id, , drop = FALSE]
+        reps <- reps[order(reps$rank), , drop = FALSE]
+        reps <- utils::head(reps, n_representatives)
+        graphics::par(mar = c(2.6, 0.5, 2.4, 0.5))
+        draw_topic_rep_panel(
+          reps,
+          x$topics$label[[color_index[i]]],
+          color,
+          48L
+        )
       }
-      reps <- rep_table[rep_table$topic == topic_id, , drop = FALSE]
-      reps <- reps[order(reps$rank), , drop = FALSE]
-      reps <- utils::head(reps, n_representatives)
-      graphics::par(mar = c(2.6, 0.5, 2.4, 0.5))
-      draw_topic_rep_panel(
-        reps,
-        x$topics$label[[color_index[i]]],
-        color,
-        48L
-      )
-    }
-  ))
+    ),
+    n_panels = n,
+    remedy = paste(
+      "Use plot(x, type = \"fit\", per_topic = TRUE) for one figure per",
+      "topic, select fewer topics with `topics = `, or open a taller device."
+    )
+  )
   graphics::mtext(
     paste(
       "Model fit per topic (rows). Term columns: count, TF-IDF, beta.",
@@ -384,9 +416,12 @@ plot_topic_fit_single <- function(x, colors, n_terms, n_representatives, topic_i
   # Top row: three term panels; bottom row: documents spanning all columns.
   layout_matrix <- rbind(c(1L, 2L, 3L), c(4L, 4L, 4L))
   old_par <- graphics::par(oma = c(0, 0, 2.6, 0))
+  # par(mfrow) discards the layout just like layout(1L) would, but it also
+  # works on a device left mid-figure after a failed panel, where layout(1L)
+  # itself errors with "invalid graphics state" and hides the real error.
   on.exit(
     {
-      graphics::layout(1L)
+      graphics::par(mfrow = c(1L, 1L))
       graphics::par(old_par)
     },
     add = TRUE
@@ -409,6 +444,37 @@ plot_topic_fit_single <- function(x, colors, n_terms, n_representatives, topic_i
 
   graphics::mtext(label, outer = TRUE, cex = 1.1, font = 2, col = color)
   invisible(x)
+}
+
+# Multi-panel layouts fail deep inside base graphics ("figure margins too
+# large" or "invalid graphics state") when the device cannot hold one panel
+# row per topic -- about 0.7 inches per row for the stacked fit report. Those
+# messages say nothing about the cause, so rethrow them as a classed error that
+# names the remedies. Any other error is passed through untouched.
+with_panel_size_guard <- function(expr, n_panels, remedy) {
+  tryCatch(
+    expr,
+    error = function(e) {
+      size_pattern <- "figure margins too large|invalid graphics state"
+      if (!grepl(size_pattern, conditionMessage(e))) {
+        stop(e)
+      }
+      stop(errorCondition(
+        sprintf(
+          paste(
+            "The graphics device (%.1f x %.1f inches) is too small to draw",
+            "%d topic panels. %s"
+          ),
+          graphics::par("din")[[1L]],
+          graphics::par("din")[[2L]],
+          n_panels,
+          remedy
+        ),
+        class = "sbert_plot_too_small",
+        call = NULL
+      ))
+    }
+  )
 }
 
 # Deterministic stratified thinning of document indices so the O(n^2) MDS map
