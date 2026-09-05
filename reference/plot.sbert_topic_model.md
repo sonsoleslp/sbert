@@ -17,6 +17,7 @@ plot(
   n_representatives = 5L,
   colors = topic_palette(nrow(x$topics)),
   max_points = 1500L,
+  main = NULL,
   ...
 )
 ```
@@ -81,6 +82,11 @@ plot(
   Maximum documents drawn when \`type = "map"\`. Larger corpora are
   thinned to a deterministic stratified subsample so the classical-MDS
   projection stays tractable.
+
+- main:
+
+  Optional figure title for \`type = "fit"\`. The default names the
+  layout (term columns and representative documents).
 
 - ...:
 

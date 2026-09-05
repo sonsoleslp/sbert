@@ -13,10 +13,10 @@ express.
 ``` r
 topic_gamma(
   object,
-  text,
+  text = NULL,
   model = NULL,
   embeddings = NULL,
-  level = c("clause", "sentence", "phrase"),
+  level = NULL,
   batch_size = 32L,
   cores = 1L,
   dedupe_segments = FALSE,
@@ -32,13 +32,16 @@ topic_gamma(
 
 - text:
 
-  Either a character vector of documents (segmented here at \`level\`),
-  or the data frame returned by \[segment()\] (used as-is). Passing your
-  own segmentation keeps every segment option — \`level\`,
-  \`max_tokens\`, \`merge_below\` — in \[segment()\], and lets you reuse
-  one set of segment embeddings across this and other verbs. A data
-  frame must have \`document_id\` and \`text\` columns; \`gamma\` is
-  then computed per \`document_id\`.
+  Either \`NULL\`, a character vector of documents (segmented here at
+  \`level\`), or the data frame returned by \[segment()\] (used as-is).
+  \`NULL\` — the default — works for a model fitted with \`segment =
+  "sentence"\`, \`"clause"\`, or \`"phrase"\`: its own segments and
+  their topic assignments are already stored, so the mixture of every
+  fitted document comes back with no encoding at all. Passing your own
+  segmentation keeps every segment option in \[segment()\] and lets you
+  reuse one set of segment embeddings across this and other verbs. A
+  data frame must have \`document_id\` and \`text\` columns; \`gamma\`
+  is then computed per \`document_id\`.
 
 - model:
 
@@ -56,8 +59,13 @@ topic_gamma(
 
 - level:
 
-  Segmentation granularity passed to \[segment()\]. Ignored when
-  \`text\` is already a \[segment()\] data frame.
+  Segmentation granularity passed to \[segment()\] when \`text\` is a
+  character vector: \`"clause"\`, \`"sentence"\`, or \`"phrase"\`.
+  \`NULL\` (the default) uses the fitted segmentation — level,
+  \`max_tokens\`, \`merge_below\`, and \`min_content\` — for a segmented
+  model, so new documents are cut exactly as the fitted ones were, and
+  \`"clause"\` for a document-level model. Ignored when \`text\` is
+  already a \[segment()\] data frame.
 
 - batch_size:
 
@@ -123,4 +131,17 @@ topic_gamma(fitted, segments, embeddings = segment_embeddings)
 #>   document_id topic gamma n_segments
 #> 1           1     1   0.5          2
 #> 2           1     2   0.5          2
+
+# A model fitted on sentences already holds its segments: no text needed.
+sentence_model <- topics(
+  c(mixed, "Dogs chase balls. Markets price shares."), 2,
+  segment = "sentence",
+  embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
+)
+topic_gamma(sentence_model)
+#>   document_id topic gamma n_segments
+#> 1           1     1   0.5          2
+#> 2           1     2   0.5          2
+#> 3           2     1   0.5          2
+#> 4           2     2   0.5          2
 ```

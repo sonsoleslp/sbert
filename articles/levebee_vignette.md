@@ -28,13 +28,13 @@ deliberately different angles:
 
 | Component | Verb | Question it answers |
 |----|----|----|
-| Topic count | [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md) | How many topics does the corpus support? |
+| Topic count | [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md) | How many topics does the corpus support? |
 | Topic model | [`topics()`](https://sonsoles.me/sbert/reference/topics.md), [`fitted()`](https://rdrr.io/r/stats/fitted.values.html) | What groups exist? |
 | Model quality | [`summary()`](https://rdrr.io/r/base/summary.html), [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) | Which topics are trustworthy? |
 | Topic size | [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md) | How big is each topic, by distinct and reused share? |
 | Frequent keywords | `terms(sort_by = "beta")` | What does each topic talk about most? |
-| Distinctive keywords | `topic_model$terms` | What does each topic talk about that others do not? |
-| Evidence | `topic_model$representatives` | Do real messages support the label? |
+| Distinctive keywords | [`terms()`](https://rdrr.io/r/stats/terms.html) | What does each topic talk about that others do not? |
+| Evidence | [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md) | Do real messages support the label? |
 
 Fourteen revision-pinned models are available; this tutorial uses the
 default, `all-MiniLM-L6-v2` (the field’s standard quality-per-megabyte
@@ -105,7 +105,7 @@ different embedder, pass its name —
 `model_download("bge-small-en-v1.5")`, for example — and
 [`models()`](https://sonsoles.me/sbert/reference/models.md) lists the
 other thirteen pinned options. From there
-[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
 and [`topics()`](https://sonsoles.me/sbert/reference/topics.md) do the
 rest: under the hood they encode each distinct message — tokenized, run
 through the network, mean-pooled with padding masked out, and
@@ -122,7 +122,7 @@ model_download()
 There is no universally correct number of topics, and **sbert**
 deliberately refuses to pick one for you — the right granularity depends
 on what the analysis is *for*. Instead of guessing,
-[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
 fits one model per candidate count and reports the numbers that justify
 a choice: coherence (do a topic’s top terms actually co-occur?),
 diversity (do topics own their vocabulary or share it?), and the share
@@ -130,7 +130,7 @@ of embedding variance `explained`.
 
 ``` r
 
-sweep <- select_topics(
+sweep <- compare_topics(
   corpus$text,
   n_topics = c(4, 5, 6, 7, 8, 10, 12),
   measure = "npmi",
@@ -177,7 +177,7 @@ topic_model <- fitted(sweep, n_topics = 6)
 Only
 [`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
 and the encoding inside
-[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
 are skipped here — the 600 messages’ embeddings ship precomputed — so
 the vignette builds with no download. Run these lines yourself and you
 reproduce every number below exactly.
@@ -186,7 +186,7 @@ reproduce every number below exactly.
 
 topic_model
 #> <sbert_topic_model>
-#>   documents: 600
+#>   documents: 600 
 #>   topics: 6
 #>   model: precomputed embeddings
 #>   algorithm: deterministic k-means (Lloyd)
@@ -280,7 +280,8 @@ topic_sizes(topic_model, weights = corpus$n)
 
 `terms(sort_by = "beta")` returns the empirical probability of each word
 given the topic — the *generative* view, dominated by whatever the topic
-says most often. The class-based TF-IDF scores in `topic_model$terms`
+says most often. The class-based TF-IDF scores of
+[`terms()`](https://rdrr.io/r/stats/terms.html) (its default `sort_by`)
 are the *discriminative* view: they promote words this topic uses and
 others do not, and demote words that recur across many topics —
 frequent, but saying little about any single one. Neither list is “the”
@@ -292,8 +293,7 @@ you about the corpus and only the TF-IDF list about the topic.
 
 ``` r
 
-beta <- terms(topic_model, n = NULL, sort_by = "beta")
-head(subset(beta, topic == 1), 8)
+head(terms(topic_model, n = 8, sort_by = "beta"), 8)
 #>   topic                       label     term rank      score frequency
 #> 1     1 picture / pictures / choose pictures    1 0.15734447       130
 #> 2     1 picture / pictures / choose  picture    2 0.15812657        99
@@ -316,7 +316,7 @@ head(subset(beta, topic == 1), 8)
 
 ``` r
 
-head(subset(topic_model$terms, topic == 1), 8)
+head(terms(topic_model, n = 8), 8)
 #>   topic                       label       term rank      score frequency
 #> 1     1 picture / pictures / choose    picture    1 0.15812657        99
 #> 2     1 picture / pictures / choose   pictures    2 0.15734447       130
@@ -326,6 +326,15 @@ head(subset(topic_model$terms, topic == 1), 8)
 #> 6     1 picture / pictures / choose     number    6 0.04088748        13
 #> 7     1 picture / pictures / choose       tree    7 0.03853198        14
 #> 8     1 picture / pictures / choose watermelon    8 0.03834595        12
+#>         beta
+#> 1 0.10174717
+#> 2 0.13360740
+#> 3 0.09146968
+#> 4 0.03597122
+#> 5 0.02672148
+#> 6 0.01336074
+#> 7 0.01438849
+#> 8 0.01233299
 ```
 
 ## The topics at a glance
@@ -367,48 +376,46 @@ behind each topic, ask for the representatives directly:
 
 ``` r
 
-subset(topic_model$representatives, rank <= 2)[
-  , c("topic", "rank", "text", "distance")
-]
-#>    topic rank
-#> 1      1    1
-#> 2      1    2
-#> 6      2    1
-#> 7      2    2
-#> 11     3    1
-#> 12     3    2
-#> 16     4    1
-#> 17     4    2
-#> 21     5    1
-#> 22     5    2
-#> 26     6    1
-#> 27     6    2
-#>                                                                                                              text
-#> 1                                   Where is the cow and the cake? Choose all the pictures that are between them.
-#> 2                          Where is the second and the fourth picture? Choose the pictures that are between them.
-#> 6                                                                All the ones between the cat and the strawberry.
-#> 7                                                                    All the ones between the piglet and the dog.
-#> 11                                                What does “all the ones between the leaf and the unicorn” mean?
-#> 12                                              What does “all the ones between the dog and the strawberry” mean?
-#> 16                                      Are you sure you have fewer pictures in the red box than in the blue one?
-#> 17 It’s not enough to just have more—there must be exactly two more pictures in the red box than in the blue box.
-#> 21                                         In the top middle box, it means something is in the middle at the top.
-#> 22                                                             Do you know what “at the top in the middle” means?
-#> 26                                                       It is not a person, does not have a hat, and is sitting.
-#> 27                                                             It’s not a person, it has a hat, and it’s sitting.
-#>     distance
-#> 1  0.2023061
-#> 2  0.2197193
-#> 6  0.1748744
-#> 7  0.1755226
-#> 11 0.1835523
-#> 12 0.1931901
-#> 16 0.1413591
-#> 17 0.1472757
-#> 21 0.2878022
-#> 22 0.3234709
-#> 26 0.1564578
-#> 27 0.1602140
+representatives(topic_model, n = 2)
+#>    topic rank document_id
+#> 1      1    1         169
+#> 2      1    2         559
+#> 3      2    1         246
+#> 4      2    2         202
+#> 5      3    1         482
+#> 6      3    2         227
+#> 7      4    1          10
+#> 8      4    2         475
+#> 9      5    1          72
+#> 10     5    2         325
+#> 11     6    1         380
+#> 12     6    2         166
+#>                                                                                         text
+#> 1          Where is the cat and the princess? Choose all the pictures that are between them.
+#> 2           Where is the cup and the balloon? Select all the pictures that are between them.
+#> 3                                               All the ones between the grape and the tram.
+#> 4                                                  All the ones between the fly and the cat.
+#> 5                                   What does “all between the plant and the princess” mean?
+#> 6                            What does “all the ones between the leaf and the unicorn” mean?
+#> 7                             There should be two fewer in the red one than in the blue one.
+#> 8                             There should be two fewer in the blue one than in the red one.
+#> 9                                “Sitting” means your bottom is on the ground or on a chair.
+#> 10 To be on the grass means to stand or lie down on the soft green ground where grass grows.
+#> 11                          This is not a person, it doesn’t have a hat, and it is standing.
+#> 12                                                If it’s an animal, then it’s not a person.
+#>     distance    margin
+#> 1  0.2342085 0.3007396
+#> 2  0.2850857 0.2922610
+#> 3  0.2641428 0.3146493
+#> 4  0.2080425 0.3134329
+#> 5  0.2518425 0.3209479
+#> 6  0.1835523 0.2937963
+#> 7  0.1805440 0.5532961
+#> 8  0.1838668 0.5515990
+#> 9  0.4359726 0.2885570
+#> 10 0.4951715 0.2777950
+#> 11 0.1748397 0.5275012
+#> 12 0.2196640 0.5096887
 ```
 
 ## Where to go from here
@@ -418,17 +425,38 @@ The model built here is reusable, not just describable.
 feedback message to these six topics without refitting;
 [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
 replaces the hard assignment with graded probabilities when a message
-sits between topics; and
+sits between topics. Multi-sentence messages can be modelled sentence by
+sentence instead of whole: `segment = "sentence"` on the fitting verbs
+splits every message first and fits the topics on the sentences, and
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+takes several levels at once so the unit is chosen from a table and a
+plot, exactly like the count. The fitted sentence model stores each
+sentence with its parent message, so
 [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-combined with
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md) shows when
-a single multi-sentence message spans several feedback types. When you
-explore many models on the same corpus — the sweep above, or several
-term settings —
+returns every message’s topic mixture with no further encoding and
+`topic_sizes(by = "document")` counts messages rather than sentences:
+
+``` r
+
+comparison <- compare_topics(
+  corpus$text,
+  n_topics = c(4, 6, 8),
+  segment = c("document", "sentence")
+)
+plot(comparison)
+plot(comparison, type = "fit", n_topics = 6, n_terms = 8, n_representatives = 3)
+
+sentence_model <- fitted(comparison, n_topics = 6, segment = "sentence")
+topic_gamma(sentence_model)
+topic_sizes(sentence_model, by = "document", weights = corpus$n)
+```
+
+When you explore many models on the same corpus — the sweep above, or
+several term settings —
 [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
-embeds and tokenizes the messages once and every fit reuses that work,
-so the exploration costs one corpus pass rather than one per model. For
-multilingual work on the *source* messages (the `feedback` column spans
-ten languages), swap one argument —
+segments, embeds, and tokenizes the messages once and every fit reuses
+that work, so the exploration costs one corpus pass rather than one per
+model. For multilingual work on the *source* messages (the `feedback`
+column spans ten languages), swap one argument —
 `topics(corpus$text, n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")`
 — and the rest of this document runs unchanged.

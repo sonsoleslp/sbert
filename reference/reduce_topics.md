@@ -57,7 +57,7 @@ topics <- topics(
 )
 reduce_topics(topics, 2)
 #> <sbert_topic_model>
-#>   documents: 6
+#>   documents: 6 
 #>   topics: 2
 #>   model: precomputed embeddings
 #>   algorithm: hierarchical merge of deterministic k-means topics

@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">Running sbert at full
 speed without changing a single result</h3>
             
-            <h4 data-toc-skip class="date">2026-09-04</h4>
+            <h4 data-toc-skip class="date">2026-09-05</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/parallel.Rmd" class="external-link"><code>vignettes/articles/parallel.Rmd</code></a></small>
       <div class="d-none name"><code>parallel.Rmd</code></div>
@@ -126,7 +126,7 @@ the matrix to every fit:</p>
 <code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"all-MiniLM-L6-v2"</span>, threads <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, <span class="va">model</span>, batch_size <span class="op">=</span> <span class="fl">64</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># topics()/select_topics() now skip encoding entirely</span></span>
+<span><span class="co"># topics()/compare_topics() now skip encoding entirely</span></span>
 <span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fl">8</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Prepare a corpus once, fit many.</strong>
 <code><a href="../reference/topic_corpus.html">topic_corpus()</a></code> goes further: it caches <em>both</em> the
@@ -134,11 +134,11 @@ embeddings and the tokenization, so a sweep or loop repeats neither.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_topics.html">select_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span>, <span class="fl">15</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span>, <span class="fl">15</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">model8</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">8</span><span class="op">)</span>   <span class="co"># chosen without refitting</span></span></code></pre></div>
-<p><code><a href="../reference/select_topics.html">select_topics()</a></code> already shares one prepared corpus
+<p><code><a href="../reference/compare_topics.html">compare_topics()</a></code> already shares one prepared corpus
 across all candidates internally, so even
-<code>select_topics(corpus$text, ...)</code> no longer re-tokenizes per
+<code>compare_topics(corpus$text, ...)</code> no longer re-tokenizes per
 candidate. Passing a prepared <code>topic_corpus</code> on top lets you
 reuse it across <em>several</em> sweeps or manual loops.</p>
 </div>
@@ -290,24 +290,26 @@ single-threaded. A single timing run is not evidence.</p>
 sweeps<a class="anchor" aria-label="anchor" href="#cores-parallel-tokenization-segmentation-and-sweeps"></a>
 </h3>
 <p><code>cores</code> is available on <code><a href="../reference/topics.html">topics()</a></code>,
-<code><a href="../reference/select_topics.html">select_topics()</a></code>, <code><a href="../reference/topic_corpus.html">topic_corpus()</a></code>,
+<code><a href="../reference/compare_topics.html">compare_topics()</a></code>, <code><a href="../reference/topic_corpus.html">topic_corpus()</a></code>,
 <code><a href="../reference/coherence.html">coherence()</a></code>, <code><a href="../reference/segment.html">segment()</a></code>, and
 <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>. Above one it forks worker processes to:</p>
 <ul>
 <li>
 <strong>tokenize</strong> the corpus in parallel (documents split
 across workers),</li>
-<li>in <code><a href="../reference/select_topics.html">select_topics()</a></code>, <strong>fit the independent
+<li>in <code><a href="../reference/compare_topics.html">compare_topics()</a></code>, <strong>fit the independent
 candidates</strong> in parallel, and</li>
-<li>in <code><a href="../reference/segment.html">segment()</a></code> / <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>,
-<strong>split documents</strong> in parallel.</li>
+<li>in <code><a href="../reference/segment.html">segment()</a></code> / <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code>, and inside
+<code>topics(segment = )</code> and
+<code>compare_topics(segment = )</code>, <strong>split
+documents</strong> in parallel.</li>
 </ul>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># tokenization runs in parallel; the corpus is prepared once</span></span>
 <span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># candidates are fitted across cores, tokenization already cached</span></span>
-<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_topics.html">select_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span>, <span class="fl">15</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span>, <span class="fl">15</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 <div class="warn">
 <p><strong>Platform notes.</strong> <code>cores</code> uses
 <code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply</a></code>, which forks — available on Linux and
@@ -426,6 +428,33 @@ for example capping segment length so nothing is truncated:</p>
 document context into each sentence.</p>
 </div>
 <div class="section level3">
+<h3 id="fit-on-segments-once">Fit on segments once<a class="anchor" aria-label="anchor" href="#fit-on-segments-once"></a>
+</h3>
+<p>The fitting verbs take the segmentation directly, which is the
+cheapest route of all. <code>topics(segment = "sentence")</code> splits
+the documents (across <code>cores</code>), encodes and tokenizes the
+sentences once, and stores every sentence with its parent document.
+Every later verb reads from that store: <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> is a
+count rather than an encode, <code>topic_sizes(by = "document")</code>
+aggregates back to documents, and <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> cuts new text
+the same way.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sentence_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span></span>
+<span>  <span class="va">documents</span>,</span>
+<span>  n_topics <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  segment <span class="op">=</span> <span class="st">"sentence"</span>,</span>
+<span>  max_tokens <span class="op">=</span> <span class="fl">256</span>,           <span class="co"># counted with the model's own tokenizer</span></span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  cores <span class="op">=</span> <span class="fl">8</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">sentence_model</span><span class="op">)</span>                    <span class="co"># stored segments: nothing encoded</span></span>
+<span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">sentence_model</span>, by <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span></span></code></pre></div>
+<p><code>compare_topics(segment = c("document", "sentence", "clause"))</code>
+prepares one corpus per level and fits every candidate on each, so
+comparing units costs one encode per level rather than one per
+model.</p>
+</div>
+<div class="section level3">
 <h3 id="deduplicating-repeated-segments">Deduplicating repeated segments<a class="anchor" aria-label="anchor" href="#deduplicating-repeated-segments"></a>
 </h3>
 <p>A long corpus repeats segments — boilerplate sentences, short stock
@@ -433,14 +462,14 @@ clauses — and <code>dedupe_segments = TRUE</code> encodes each
 <em>distinct</em> segment once, expanding the result by position. How
 much this saves depends entirely on how repetitive your corpus is, so
 measure before reaching for it:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">documents</span>, level <span class="op">=</span> <span class="st">"clause"</span><span class="op">)</span></span>
 <span><span class="fl">1</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">segments</span><span class="op">$</span><span class="va">text</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">segments</span><span class="op">)</span>   <span class="co"># duplicate fraction</span></span></code></pre></div>
 <p>The bundled <code>covid</code> abstracts are only 15% duplicated at
 clause level and 8% at sentence level, so deduplication adds about 3%
 there on top of <code>sort_by_length</code>. A corpus of templated or
 boilerplate-heavy text will do far better.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span></span>
 <span>  <span class="va">topic_model</span>, <span class="va">documents</span>,</span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
@@ -464,7 +493,7 @@ the result is identical either way.</p>
 </h2>
 <p>Putting it together for the common case — one corpus, several
 models:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/sbert">sbert</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -476,7 +505,7 @@ models:</p>
 <span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Sweep across cores, then pick a model with no refit</span></span>
-<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_topics.html">select_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span>, <span class="fl">15</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span>, <span class="fl">15</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="va">model8</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 <p>Re-run that script tomorrow, or after editing a handful of records,
 and step 1 costs almost nothing.</p>
@@ -487,7 +516,7 @@ and step 1 costs almost nothing.</p>
 <code>potion-base-8M</code> model embeds with no transformer and no ONNX
 Runtime at all — measured <strong>45× faster</strong> than
 <code>all-MiniLM-L6-v2</code>:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span>   <span class="co"># 31 MB, Model2Vec token lookup</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">corpus</span><span class="op">$</span><span class="va">text</span>, <span class="va">fast</span><span class="op">)</span></span></code></pre></div>
 <div class="warn">
@@ -498,8 +527,8 @@ topic diversity at 4 of 5 topic counts. On the bundled
 <code>feedback_translations</code> it lost on 2 of 5, 1 of 5 and 0 of 5
 respectively. The advantage is corpus-specific and does not generalize,
 which is exactly why it is not the default. Sweep both with
-<code><a href="../reference/select_topics.html">select_topics()</a></code> and compare <code><a href="../reference/coherence.html">coherence()</a></code> before
-committing.</p>
+<code><a href="../reference/compare_topics.html">compare_topics()</a></code> and compare <code><a href="../reference/coherence.html">coherence()</a></code>
+before committing.</p>
 </div>
 </div>
 </div>
@@ -571,7 +600,7 @@ seed anywhere in the topic pipeline.</p>
 </div>
 <p>The proof runs offline — the same model, fitted single-threaded and
 across four cores, is byte-identical:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">2500L</span></span>
 <span><span class="va">text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
@@ -632,7 +661,7 @@ scaling. For a much larger jump, evaluate the
 <li>
 <strong>On Linux or macOS with a big corpus (≥ 2,000 docs)?</strong>
 Add <code>cores = detectCores() - 1</code> to
-<code><a href="../reference/topic_corpus.html">topic_corpus()</a></code> / <code><a href="../reference/select_topics.html">select_topics()</a></code>.</li>
+<code><a href="../reference/topic_corpus.html">topic_corpus()</a></code> / <code><a href="../reference/compare_topics.html">compare_topics()</a></code>.</li>
 <li>
 <strong>On Windows, or a small corpus?</strong> <code>cores</code>
 safely no-ops to serial; rely on <code>cache</code>, reuse and

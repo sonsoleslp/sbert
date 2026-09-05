@@ -23,8 +23,5 @@ Useful links:
 
 Authors:
 
-- Sonsoles López-Pernas <sonsoles.lopez@uef.fi>
-  ([ORCID](https://orcid.org/0000-0002-9621-1392)) \[copyright holder\]
-
 - Mohammed Saqr <mohammed.saqr@uef.fi>
   ([ORCID](https://orcid.org/0000-0001-5881-3109)) \[copyright holder\]

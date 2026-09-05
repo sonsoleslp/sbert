@@ -62,10 +62,10 @@ Fit topic models, sweep the topic count, and merge topics down.
   : Prepare a Corpus Once to Fit Many Topic Models
 - [`topics()`](https://sonsoles.me/sbert/reference/topics.md) : Discover
   Semantic Topics in Documents
-- [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+- [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
   : Compare Topic Counts Before Committing to One
 - [`fitted(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
-  : Extract One Fitted Model from a Topic-Count Sweep
+  : Extract One Fitted Model from a Topic-Count Comparison
 - [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
   : Reduce a Fitted Topic Model to Fewer Topics
 
@@ -112,7 +112,7 @@ Deterministic base-graphics plots, hierarchies, and reports.
 - [`plot(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
   : Plot a Semantic Topic Model
 - [`plot(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
-  : Plot a Topic-Count Sweep
+  : Plot a Topic-Count Comparison
 - [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
   : Build the Topic Hierarchy of a Fitted Model
 - [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)

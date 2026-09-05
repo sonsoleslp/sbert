@@ -32,7 +32,11 @@ topics(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  segment = c("document", "sentence", "clause", "phrase"),
+  max_tokens = NULL,
+  merge_below = 0L,
+  min_content = 0
 )
 ```
 
@@ -183,11 +187,43 @@ topics(
   untouched. To clean the source text itself — list markers, reference
   noise, junk characters — before encoding, see \[clean_corpus()\].
 
+- segment:
+
+  The unit the model is fitted on. \`"document"\` (default) embeds each
+  document whole. \`"sentence"\`, \`"clause"\`, or \`"phrase"\` first
+  splits every document with \[segment()\] at that level and fits the
+  topics on the segments, so long documents are modelled in full instead
+  of being truncated to the encoder's context window, and a document can
+  span several topics. The fitted \`\$documents\` then has one row per
+  segment with its parent \`document_id\` and \`segment\` position;
+  \[topic_sizes()\] counts by segment or by document, \[topic_gamma()\]
+  recovers each document's topic mixture from the stored segments, and
+  \[predict()\] segments new text the same way. A precomputed
+  \`embeddings\` matrix must then have one row per segment, aligned with
+  \`segment(text, level = segment, ...)\`.
+
+- max_tokens:
+
+  Optional cap on segment length, passed to \[segment()\]. When a
+  \`model\` is used, the budget counts that model's exact tokens; with
+  precomputed \`embeddings\` it counts words. Only with a segmented fit.
+
+- merge_below:
+
+  Re-join segments shorter than this many words into their neighbour,
+  passed to \[segment()\]. Only with a segmented fit.
+
+- min_content:
+
+  Minimum alphabetic-content ratio for a segment to be kept, passed to
+  \[segment()\]. Only with a segmented fit.
+
 ## Value
 
-An object of class \`sbert_topic_model\` containing document
-assignments, topic summaries, ranked terms, representatives, centers,
-and clustering diagnostics.
+An object of class \`sbert_topic_model\` containing unit assignments
+(\`\$documents\`, one row per document or per segment), topic summaries,
+ranked terms, representatives, centers, clustering diagnostics, and the
+\`\$settings\` the fit was made with.
 
 ## Details
 
@@ -215,4 +251,32 @@ topics$topics
 #>   topic                   label n_documents proportion    withinss
 #> 1     1    chase / balls / cats           2        0.5 0.006116265
 #> 2     2 bonds / markets / price           2        0.5 0.006116265
+
+# Fit on sentences: each document is split first, and the segments are
+# what the topics are made of (the embeddings here are one row per
+# sentence, so no model download is needed).
+documents <- c(
+  "Cats chase mice. Stocks and bonds trade.",
+  "Dogs chase balls. Markets price shares."
+)
+sentence_model <- topics(
+  documents, 2,
+  segment = "sentence",
+  embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
+)
+sentence_model$documents
+#>   document_id document_name segment                    text topic
+#> 1           1                     1        Cats chase mice.     1
+#> 2           1                     2 Stocks and bonds trade.     2
+#> 3           2                     1       Dogs chase balls.     1
+#> 4           2                     2   Markets price shares.     2
+#>                     label    distance
+#> 1    chase / balls / cats 0.001530237
+#> 2 bonds / markets / price 0.001530237
+#> 3    chase / balls / cats 0.001530237
+#> 4 bonds / markets / price 0.001530237
+topic_sizes(sentence_model, by = "document")
+#>   topic                   label n_documents proportion
+#> 1     1    chase / balls / cats           2          1
+#> 2     2 bonds / markets / price           2          1
 ```

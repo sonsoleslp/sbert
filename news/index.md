@@ -1,5 +1,79 @@
 # Changelog
 
+## sbert 0.5.4
+
+- [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+  is renamed
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
+  The verb compares candidate topic counts and hands the choice to
+  [`fitted()`](https://rdrr.io/r/stats/fitted.values.html); it never
+  selected one, so the old name overpromised.
+  [`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+  remains as a deprecated alias that forwards every argument and warns
+  once per session.
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md),
+  and
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
+  gain a `segment` argument (`"document"`, the default, or `"sentence"`,
+  `"clause"`, `"phrase"`) that splits every document with
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) before
+  encoding and fits the topics on the segments, so long documents are
+  modelled in full instead of being truncated to the encoder’s context
+  window. The segment options travel with it under their
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) names:
+  `max_tokens` (counted with the fitting model’s own tokenizer when a
+  model is used), `merge_below`, and `min_content`. A precomputed
+  `embeddings` matrix must then have one row per segment; a mismatch
+  reports the segment count it expected. The fitted `$documents` has one
+  row per segment with its `document_id`, `segment` position, and any
+  data-frame metadata expanded to match, and `$settings` records the
+  segmentation so every later verb can reuse it.
+- Downstream verbs understand a segmented fit:
+  [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
+  gains `by = "document"` to count source documents rather than
+  segments;
+  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  needs no `text` for a segmented model (the stored segments already
+  carry each document’s mixture) and, given new text, segments it
+  exactly as the fit was;
+  [`predict()`](https://rdrr.io/r/stats/predict.html) does the same and
+  returns one row per segment;
+  [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
+  on the fitted units now carries `document_id` (and `segment`) so every
+  example can be traced;
+  [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
+  keeps the segment columns and carried metadata, refreshes the `label`
+  columns, and applies the fitted `numbers`, `roman_numerals`, and
+  `section_numbers` filters.
+  [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) report documents
+  and segments separately.
+- [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+  accepts a data frame with `column`, like
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
+- [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+  compares segmentations as well as counts: pass several levels,
+  `segment = c("document", "sentence", "clause", "phrase")`, and every
+  level is fitted across every candidate. The table gains a leading
+  `segment` column,
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) draws one
+  line per level (colour, point shape, and line type, with a legend),
+  the print hint names both, and
+  [`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes
+  `segment =` alongside `n_topics`. Precomputed embeddings are then a
+  list of matrices named by level. The segment-only options apply to the
+  segmented levels and are dropped for `"document"`.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a
+  comparison labels its middle panel “Topic diversity” (was “Topic
+  topic_diversity”).
+- `plot(comparison, type = "fit", n_topics = k)` draws the per-topic fit
+  report for the retained `k`-topic model of every segment level, one
+  figure per level with the level in its title, so the same count can be
+  read across segmentations.
+  [`plot.sbert_topic_model()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
+  gains `main` for `type = "fit"`.
+
 ## sbert 0.5.3
 
 - Topic term plots no longer fail with “need finite ‘ylim’ values” when

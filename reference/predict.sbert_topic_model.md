@@ -21,7 +21,10 @@ predict(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 
 - text:
 
-  Character vector of new documents.
+  Character vector of new documents. A model fitted with \`segment =
+  "sentence"\`, \`"clause"\`, or \`"phrase"\` splits them the same way
+  first (with the fitted \`max_tokens\`, \`merge_below\`, and
+  \`min_content\`) and assigns every segment.
 
 - model:
 
@@ -31,7 +34,8 @@ predict(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 
 - embeddings:
 
-  Optional numeric matrix with one row per document.
+  Optional numeric matrix with one row per document, or one row per
+  segment for a segmented model.
 
 - batch_size:
 
@@ -45,7 +49,9 @@ predict(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 
 A base data frame with one row per document and columns \`document_id\`,
 \`document_name\`, \`text\`, \`topic\`, \`label\` (the fitted topic
-label), and \`distance\` (cosine distance to the assigned centroid).
+label), and \`distance\` (cosine distance to the assigned centroid). For
+a segmented model, one row per segment, with \`document_id\` naming the
+source document and \`segment\` its position within it.
 
 ## Examples
 

@@ -113,18 +113,61 @@ topic_model <- topics(articles, column = "abstract", n_topics = 40)
 
 There is no correct topic count, so choose it from a table rather than
 by habit.
-[`select_topics()`](https://sonsoles.me/sbert/reference/select_topics.md)
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
 keeps every model it fits, and
 [`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes the one
 you want without refitting:
 
 ``` r
 
-sweep <- select_topics(text, n_topics = c(10, 20, 30, 40), embeddings = embeddings)
+sweep <- compare_topics(text, n_topics = c(10, 20, 30, 40), embeddings = embeddings)
 sweep                                    # coherence, diversity, explained
 plot(sweep)
 
 topic_model <- fitted(sweep, n_topics = 30)
+```
+
+Long documents do not have to be truncated to the encoder’s context
+window. `segment = "sentence"` (or `"clause"`, `"phrase"`) splits every
+document with
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) first and
+fits the topics on the segments, so a 5,000-word report is modelled in
+full and can span several topics. The segment options ride along under
+their [`segment()`](https://sonsoles.me/sbert/reference/segment.md)
+names, and every downstream verb knows which document each segment came
+from:
+
+``` r
+
+topic_model <- topics(
+  reports,
+  n_topics = 10,
+  segment = "sentence",
+  max_tokens = 200,          # cap by the model's own tokenizer
+  min_content = 0.5          # drop numeral-only and citation fragments
+)
+
+topic_sizes(topic_model, by = "document")   # documents per topic, not segments
+topic_gamma(topic_model)                    # each document's topic mixture, no re-encoding
+representatives(topic_model)                # segments, with document_id and segment
+predict(topic_model, new_reports)           # new text is segmented the same way
+```
+
+Not sure which unit suits the corpus? Compare them the same way you
+compare counts: several levels in one call give one table with a
+`segment` column and one plot with a line per level, and
+[`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes both
+choices.
+
+``` r
+
+comparison <- compare_topics(
+  reports,
+  n_topics = c(6, 8, 10, 12),
+  segment = c("document", "sentence", "clause")
+)
+plot(comparison)
+topic_model <- fitted(comparison, n_topics = 8, segment = "sentence")
 ```
 
 Topic terms depend only on the fitted assignments and the text, so every
@@ -257,7 +300,7 @@ moves:
 
 keywords(text, n = 5)                                 # embedding-ranked keywords (MMR)
 stop_words(add = c("students", "learning"))           # exclude corpus vocabulary
-select_topics(text, n_topics = c(10, 20, 30), embeddings = embeddings)
+compare_topics(text, n_topics = c(10, 20, 30), embeddings = embeddings)
 tree <- topic_hierarchy(topic_model)                  # which topics are neighbours?
 plot(tree)                                            # labeled dendrogram
 smaller <- reduce_topics(topic_model, n_topics = 12)  # merge down, keep all verbs

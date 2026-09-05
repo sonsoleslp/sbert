@@ -31,8 +31,8 @@ model_status(tempdir())
 #> 1     model.onnx
 #> 2 tokenizer.json
 #>                                                                                       path
-#> 1     /tmp/RtmpzO7EIj/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/model.onnx
-#> 2 /tmp/RtmpzO7EIj/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/tokenizer.json
+#> 1     /tmp/Rtmpy7OYnR/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/model.onnx
+#> 2 /tmp/Rtmpy7OYnR/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/tokenizer.json
 #>   exists valid expected_bytes actual_bytes
 #> 1  FALSE FALSE       90405214           NA
 #> 2  FALSE FALSE         466247           NA

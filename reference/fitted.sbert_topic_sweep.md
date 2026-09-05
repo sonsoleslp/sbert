@@ -1,6 +1,6 @@
-# Extract One Fitted Model from a Topic-Count Sweep
+# Extract One Fitted Model from a Topic-Count Comparison
 
-Returns the model \[select_topics()\] already fitted for a given topic
+Returns the model \[compare_topics()\] already fitted for a given topic
 count, so choosing a granularity from the comparison table costs no
 refitting.
 
@@ -8,20 +8,26 @@ refitting.
 
 ``` r
 # S3 method for class 'sbert_topic_sweep'
-fitted(object, n_topics, ...)
+fitted(object, n_topics, segment = NULL, ...)
 ```
 
 ## Arguments
 
 - object:
 
-  A sweep returned by \[select_topics()\] with \`keep_models = TRUE\`
-  (the default).
+  A comparison returned by \[compare_topics()\] with \`keep_models =
+  TRUE\` (the default).
 
 - n_topics:
 
   The topic count to extract. Must be one of the candidates in the
-  sweep.
+  comparison.
+
+- segment:
+
+  The segment level to extract when the comparison spans several
+  (\`compare_topics(segment = c(...))\`); one of its levels. Leave
+  \`NULL\` for a single-level comparison.
 
 - ...:
 
@@ -42,12 +48,12 @@ embeddings <- rbind(
   c(1, 0, 0), c(0.98, 0.02, 0), c(0.96, 0, 0.04),
   c(0, 1, 0), c(0.02, 0.98, 0), c(0, 0.96, 0.04)
 )
-sweep <- select_topics(
+comparison <- compare_topics(
   text, n_topics = 2:3, embeddings = embeddings, n_terms = 3
 )
-fitted(sweep, n_topics = 2)
+fitted(comparison, n_topics = 2)
 #> <sbert_topic_model>
-#>   documents: 6
+#>   documents: 6 
 #>   topics: 2
 #>   model: precomputed embeddings
 #>   algorithm: deterministic k-means (Lloyd)

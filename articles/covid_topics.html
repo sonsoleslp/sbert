@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">A semantic review of the
 pandemic education literature, 2020-2024</h3>
             
-            <h4 data-toc-skip class="date">2026-09-04</h4>
+            <h4 data-toc-skip class="date">2026-09-05</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/covid_topics.Rmd" class="external-link"><code>vignettes/articles/covid_topics.Rmd</code></a></small>
       <div class="d-none name"><code>covid_topics.Rmd</code></div>
@@ -157,17 +157,15 @@ abstracts.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="va">covid</span><span class="op">[</span><span class="va">covid</span><span class="op">$</span><span class="va">Abstract</span> <span class="op">!=</span> <span class="st">"[No abstract available]"</span>, <span class="op">]</span></span>
 <span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/clean_corpus.html">clean_corpus</a></span><span class="op">(</span><span class="va">covid_content</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, min_content <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/encode.html">encode()</a></code> turns each abstract into a 384-dimensional
-vector with the pinned default model, <code>all-MiniLM-L6-v2</code>.
-Abstracts longer than the model’s 256-token window are truncated to
-their opening; for full-length documents a long-context model such as
-<code>nomic-embed-text-v1.5</code> (8,192 tokens) is a drop-in
-replacement.</p>
+<p>The pinned default model, <code>all-MiniLM-L6-v2</code>, turns each
+abstract into a 384-dimensional vector. Abstracts longer than its
+256-token window are truncated to their opening, so the comparison below
+fits every candidate count twice: on whole abstracts, and on their
+sentences, which are never truncated. Both downloads are explicit and
+happen once:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/model_download.html">model_download</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span>, batch_size <span class="op">=</span> <span class="fl">32</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/model_download.html">model_download</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Every abstract shares a scientific boilerplate — <em>covid</em>,
 <em>pandemic</em>, <em>study</em>, <em>results</em> — and the label of
 <em>every</em> topic would otherwise repeat it. Those words carry no
@@ -181,39 +179,53 @@ the standard way to keep topic labels informative.</p>
 <span>  <span class="st">"study"</span>, <span class="st">"studies"</span>, <span class="st">"result"</span>, <span class="st">"results"</span>, <span class="st">"conclusion"</span>, <span class="st">"conclusions"</span>,</span>
 <span>  <span class="st">"background"</span>, <span class="st">"method"</span>, <span class="st">"methods"</span>, <span class="st">"objective"</span>, <span class="st">"aim"</span></span>
 <span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>There is no correct topic count. <code><a href="../reference/select_topics.html">select_topics()</a></code> fits
-one model per candidate and reports the numbers that justify a
-choice:</p>
+<p>There is no correct topic count, and no self-evident unit either.
+<code><a href="../reference/compare_topics.html">compare_topics()</a></code> fits one model per candidate count on each
+requested <code>segment</code> level — here whole abstracts and
+sentences, with sentences over 200 words re-split at punctuation — and
+reports the numbers that justify both choices. Passing the data frame
+with <code>column</code> carries <code>Year</code> into every fitted
+model.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_topics.html">select_topics</a></span><span class="op">(</span></span>
-<span>  <span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span>,</span>
+<code class="sourceCode R"><span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span></span>
+<span>  <span class="va">covid_content</span>,</span>
+<span>  column <span class="op">=</span> <span class="st">"Abstract"</span>,</span>
 <span>  n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span><span class="op">)</span>,</span>
-<span>  embeddings <span class="op">=</span> <span class="va">embeddings</span>,</span>
+<span>  segment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"document"</span>, <span class="st">"sentence"</span><span class="op">)</span>,</span>
+<span>  max_tokens <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>  measure <span class="op">=</span> <span class="st">"npmi"</span>,</span>
 <span>  stop_words <span class="op">=</span> <span class="va">covid_stops</span>,</span>
 <span>  numbers <span class="op">=</span> <span class="st">"remove"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">sweep</span></span>
-<span><span class="co">#&gt; &lt;sbert_topic_sweep&gt; 5 candidates, coherence measure: npmi</span></span>
-<span><span class="co">#&gt;  n_topics  coherence topic_diversity explained</span></span>
-<span><span class="co">#&gt;         4 0.05818542       0.6000000 0.0984003</span></span>
-<span><span class="co">#&gt;         6 0.07303481       0.6166667 0.1213267</span></span>
-<span><span class="co">#&gt;         8 0.17293698       0.6375000 0.1297750</span></span>
-<span><span class="co">#&gt;        10 0.15692884       0.5900000 0.1457480</span></span>
-<span><span class="co">#&gt;        12 0.15765139       0.6000000 0.1577964</span></span>
+<span><span class="co">#&gt; &lt;sbert_topic_sweep&gt; 10 candidates, coherence measure: npmi</span></span>
+<span><span class="co">#&gt;   segment n_topics   coherence topic_diversity explained</span></span>
+<span><span class="co">#&gt;  document        4  0.05818542       0.6000000 0.0984003</span></span>
+<span><span class="co">#&gt;  document        6  0.07303481       0.6166667 0.1213267</span></span>
+<span><span class="co">#&gt;  document        8  0.17293698       0.6375000 0.1297750</span></span>
+<span><span class="co">#&gt;  document       10  0.15692884       0.5900000 0.1457480</span></span>
+<span><span class="co">#&gt;  document       12  0.15765139       0.6000000 0.1577964</span></span>
+<span><span class="co">#&gt;  sentence        4 -0.15736079       0.8285714 0.1257798</span></span>
+<span><span class="co">#&gt;  sentence        6 -0.11942630       0.7818182 0.1655877</span></span>
+<span><span class="co">#&gt;  sentence        8 -0.10159541       0.7848101 0.1828057</span></span>
+<span><span class="co">#&gt;  sentence       10 -0.00485953       0.7300000 0.1939574</span></span>
+<span><span class="co">#&gt;  sentence       12  0.04974678       0.7641509 0.2137696</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Fitted models retained: fitted(x, n_topics = 8)</span></span></code></pre></div>
+<span><span class="co">#&gt; Fitted models retained: fitted(x, n_topics = 8, segment = "document")</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">)</span></span></code></pre></div>
 <p><img src="covid_topics_files/figure-html/sweep-plot-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Read the count from the table rather than by habit: coherence rises,
 peaks, and falls as topics multiply, while <code>explained</code> keeps
-climbing regardless. The count with the highest coherence is the
-granularity this corpus best supports — the point after which splitting
-topics stops buying coherence — so the model is fitted there.</p>
+climbing regardless. The count with the highest coherence on whole
+abstracts is the granularity this corpus best supports — the point after
+which splitting topics stops buying coherence — so the document model is
+fitted there. <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code> takes it straight out of the
+comparison, naming both the count and the level.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">best_n</span> <span class="op">&lt;-</span> <span class="va">sweep</span><span class="op">$</span><span class="va">n_topics</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">$</span><span class="va">coherence</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="va">best_n</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">by_document</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">sweep</span>, <span class="va">segment</span> <span class="op">==</span> <span class="st">"document"</span><span class="op">)</span></span>
+<span><span class="va">best_n</span> <span class="op">&lt;-</span> <span class="va">by_document</span><span class="op">$</span><span class="va">n_topics</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">by_document</span><span class="op">$</span><span class="va">coherence</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="va">best_n</span>, segment <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="corpus-at-a-glance">Corpus at a glance<a class="anchor" aria-label="anchor" href="#corpus-at-a-glance"></a>
@@ -339,6 +351,47 @@ one row per topic:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 <p><img src="covid_topics_files/figure-html/plot-fit-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
+<div class="section level2">
+<h2 id="whole-abstracts-against-sentences">Whole abstracts against sentences<a class="anchor" aria-label="anchor" href="#whole-abstracts-against-sentences"></a>
+</h2>
+<p>The comparison fitted the same counts on sentences too.
+<code>type = "fit"</code> on the comparison draws the per-topic report
+for both levels at the chosen count, one figure per level, so the two
+segmentations can be read against each other:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_topics <span class="op">=</span> <span class="va">best_n</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span></code></pre></div>
+<p><img src="covid_topics_files/figure-html/compare-fit-1.png" class="r-plt" alt="" width="100%"><img src="covid_topics_files/figure-html/compare-fit-2.png" class="r-plt" alt="" width="100%"></p>
+<p>The sentence model stores every sentence with the abstract it came
+from, so <code>topic_sizes(by = "document")</code> counts the abstracts
+each topic reaches and <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> returns each
+abstract’s topic mixture with no further encoding:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sentence_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="va">best_n</span>, segment <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">sentence_model</span>, by <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                           label n_documents proportion</span></span>
+<span><span class="co">#&gt; 1     1 education / students / learning        3412  0.8869249</span></span>
+<span><span class="co">#&gt; 2     2 education / students / learning        2960  0.7694307</span></span>
+<span><span class="co">#&gt; 3     3    online / learning / teaching        2380  0.6186639</span></span>
+<span><span class="co">#&gt; 4     4      research / social / health        2058  0.5349623</span></span>
+<span><span class="co">#&gt; 5     5        data / students / survey        1722  0.4476215</span></span>
+<span><span class="co">#&gt; 6     6      limited / taylor / francis        2152  0.5593969</span></span>
+<span><span class="co">#&gt; 7     7     author / authors / elsevier        1371  0.3563816</span></span>
+<span><span class="co">#&gt; 8     8       reserved / rights / basel        1107  0.2877567</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">sentence_model</span><span class="op">)</span>, <span class="fl">12</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    document_id topic     gamma n_segments</span></span>
+<span><span class="co">#&gt; 1            1     1 0.3000000         10</span></span>
+<span><span class="co">#&gt; 2            1     2 0.6000000         10</span></span>
+<span><span class="co">#&gt; 3            1     3 0.0000000         10</span></span>
+<span><span class="co">#&gt; 4            1     4 0.0000000         10</span></span>
+<span><span class="co">#&gt; 5            1     5 0.0000000         10</span></span>
+<span><span class="co">#&gt; 6            1     6 0.1000000         10</span></span>
+<span><span class="co">#&gt; 7            1     7 0.0000000         10</span></span>
+<span><span class="co">#&gt; 8            1     8 0.0000000         10</span></span>
+<span><span class="co">#&gt; 9            2     1 0.2857143          7</span></span>
+<span><span class="co">#&gt; 10           2     2 0.0000000          7</span></span>
+<span><span class="co">#&gt; 11           2     3 0.2857143          7</span></span>
+<span><span class="co">#&gt; 12           2     4 0.2857143          7</span></span></code></pre></div>
 <p>The cards below give the same evidence topic by topic, with the full
 abstracts in collapsible panels — the auditable proof that a label means
 what it claims.</p>
@@ -785,7 +838,7 @@ re-splitting it at punctuation first. The cap counts words here, a
 deterministic offline proxy; 200 words sits comfortably under the
 256-token limit (pass <code>model =</code> to count that model’s exact
 tokens instead):</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, max_tokens <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">segments</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   document_id document_name segment</span></span>
@@ -802,7 +855,7 @@ abstract’s topic <em>mixture</em> (<code>gamma</code> sums to 1 within a
 document). Passing the <code><a href="../reference/segment.html">segment()</a></code> frame keeps the cap and
 lets a single encode be reused rather than segmenting again inside the
 call:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">segments</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">gamma</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   document_id topic gamma n_segments</span></span>
@@ -873,10 +926,10 @@ that year. Reading left to right shows which strands of the education
 literature grew and which faded as the pandemic wore on.</p>
 <div class="method-note">
 <p><strong>Reusing the model.</strong> <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> assigns
-new abstracts to these topics without refitting, and
+new abstracts to these topics without refitting — sentence by sentence,
+with the same segmentation, for the sentence model — and
 <code><a href="../reference/topic_membership.html">topic_membership()</a></code> gives graded probabilities when an
-abstract sits between topics. For long abstracts, <code><a href="../reference/segment.html">segment()</a></code>
-splits each into sentences and <code><a href="../reference/blend.html">blend()</a></code> carries the paper’s
+abstract sits between topics. <code><a href="../reference/blend.html">blend()</a></code> carries a paper’s
 context into every sentence’s embedding, so a sentence that is ambiguous
 alone still embeds near its subject.</p>
 </div>

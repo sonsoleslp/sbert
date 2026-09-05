@@ -9,7 +9,7 @@ model."><meta property="og:image" content="https://sonsoles.me/sbert/logo.png"><
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,6 +58,7 @@ model.</p>
 <span>  n_representatives <span class="op">=</span> <span class="fl">5L</span>,</span>
 <span>  colors <span class="op">=</span> <span class="fu"><a href="topic_palette.html">topic_palette</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">x</span><span class="op">$</span><span class="va">topics</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  max_points <span class="op">=</span> <span class="fl">1500L</span>,</span>
+<span>  main <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -122,6 +123,11 @@ stored set is used and a warning is issued.</p></dd>
 <dd><p>Maximum documents drawn when `type = "map"`. Larger corpora
 are thinned to a deterministic stratified subsample so the classical-MDS
 projection stays tractable.</p></dd>
+
+
+<dt id="arg-main">main<a class="anchor" aria-label="anchor" href="#arg-main"></a></dt>
+<dd><p>Optional figure title for `type = "fit"`. The default names the
+layout (term columns and representative documents).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

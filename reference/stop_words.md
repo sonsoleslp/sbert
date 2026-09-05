@@ -34,7 +34,7 @@ A sorted character vector of lowercase stop words.
 ## Details
 
 For a fully custom list, pass any character vector straight to the
-\`stop_words\` argument of \[topics()\], \[select_topics()\],
+\`stop_words\` argument of \[topics()\], \[compare_topics()\],
 \[topic_corpus()\], or \[keywords()\] — for example \`stop_words(add =
 c("covid", "patient"))\` to keep the defaults plus domain terms, a bare
 \`c("covid", "patient")\` to replace the list entirely, or
@@ -53,7 +53,7 @@ text <- c("students learning math", "markets and trading stocks")
 embeddings <- rbind(c(1, 0), c(0, 1))
 topics(text, n_topics = 2, embeddings = embeddings, stop_words = custom)
 #> <sbert_topic_model>
-#>   documents: 2
+#>   documents: 2 
 #>   topics: 2
 #>   model: precomputed embeddings
 #>   algorithm: deterministic k-means (Lloyd)

@@ -34,7 +34,9 @@ representatives(
 - text:
 
   Character vector of candidate units, for example the \`text\` column
-  of \[segment()\].
+  of \[segment()\]. \`NULL\` (the default) ranks the units the model was
+  fitted on — its documents, or its segments for a model fitted with
+  \`segment =\` — from their stored embeddings, with no encoding.
 
 - model:
 
@@ -63,7 +65,10 @@ representatives(
 
 A base data frame with columns \`topic\`, \`rank\`, \`text\`,
 \`distance\` (to the unit's own centroid), and \`margin\`, ordered by
-topic and rank. Topics to which no unit is assigned contribute no rows.
+topic and rank. When the fitted units are ranked (\`text = NULL\`),
+\`document_id\` — and \`segment\`, for a segmented model — sit between
+\`rank\` and \`text\` so every example can be traced to its source.
+Topics to which no unit is assigned contribute no rows.
 
 ## Examples
 
