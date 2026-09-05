@@ -65,7 +65,7 @@ loop over `n_topics`.
 model <- load_model("all-MiniLM-L6-v2", threads = 8)
 embeddings <- encode(corpus$text, model, batch_size = 64)
 
-# topics()/select_topics() now skip encoding entirely
+# topics()/compare_topics() now skip encoding entirely
 m <- topics(corpus$text, n_topics = 8, embeddings = embeddings)
 ```
 
@@ -75,12 +75,12 @@ m <- topics(corpus$text, n_topics = 8, embeddings = embeddings)
 ```{r corpus-once}
 prepared <- topic_corpus(corpus$text, embeddings = embeddings)
 
-sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15))
+sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12, 15))
 model8 <- fitted(sweep, n_topics = 8)   # chosen without refitting
 ```
 
-`select_topics()` already shares one prepared corpus across all candidates
-internally, so even `select_topics(corpus$text, ...)` no longer re-tokenizes per
+`compare_topics()` already shares one prepared corpus across all candidates
+internally, so even `compare_topics(corpus$text, ...)` no longer re-tokenizes per
 candidate. Passing a prepared `topic_corpus` on top lets you reuse it across
 *several* sweeps or manual loops.
 
@@ -183,20 +183,21 @@ not evidence.
 
 ## `cores` — parallel tokenization, segmentation, and sweeps
 
-`cores` is available on `topics()`, `select_topics()`, `topic_corpus()`,
+`cores` is available on `topics()`, `compare_topics()`, `topic_corpus()`,
 `coherence()`, `segment()`, and `topic_gamma()`. Above one it forks worker
 processes to:
 
 - **tokenize** the corpus in parallel (documents split across workers),
-- in `select_topics()`, **fit the independent candidates** in parallel, and
-- in `segment()` / `topic_gamma()`, **split documents** in parallel.
+- in `compare_topics()`, **fit the independent candidates** in parallel, and
+- in `segment()` / `topic_gamma()`, and inside `topics(segment = )` and
+  `compare_topics(segment = )`, **split documents** in parallel.
 
 ```{r cores}
 # tokenization runs in parallel; the corpus is prepared once
 prepared <- topic_corpus(corpus$text, embeddings = embeddings, cores = 8)
 
 # candidates are fitted across cores, tokenization already cached
-sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
+sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
 ```
 
 <div class="warn">
@@ -297,6 +298,32 @@ One segmentation, one encode, reused across every sentence-level step — this
 `topic_gamma()`, sentence-level `representatives()`, or a `blend()` that carries
 document context into each sentence.
 
+## Fit on segments once
+
+The fitting verbs take the segmentation directly, which is the cheapest route
+of all. `topics(segment = "sentence")` splits the documents (across `cores`),
+encodes and tokenizes the sentences once, and stores every sentence with its
+parent document. Every later verb reads from that store: `topic_gamma()` is a
+count rather than an encode, `topic_sizes(by = "document")` aggregates back to
+documents, and `predict()` cuts new text the same way.
+
+```{r fit-segments}
+sentence_model <- topics(
+  documents,
+  n_topics = 8,
+  segment = "sentence",
+  max_tokens = 256,           # counted with the model's own tokenizer
+  model = model,
+  cores = 8
+)
+topic_gamma(sentence_model)                    # stored segments: nothing encoded
+topic_sizes(sentence_model, by = "document")
+```
+
+`compare_topics(segment = c("document", "sentence", "clause"))` prepares one
+corpus per level and fits every candidate on each, so comparing units costs one
+encode per level rather than one per model.
+
 ## Deduplicating repeated segments
 
 A long corpus repeats segments — boilerplate sentences, short stock clauses —
@@ -347,7 +374,7 @@ embeddings <- encode(corpus$text, model, cache = "embeddings/corpus.rds")
 prepared <- topic_corpus(corpus$text, embeddings = embeddings, cores = 8)
 
 # 3. Sweep across cores, then pick a model with no refit
-sweep <- select_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
+sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
 model8 <- fitted(sweep, n_topics = 8)
 ```
 
@@ -371,7 +398,7 @@ abstracts it scored *better* than `all-MiniLM-L6-v2` on NPMI, UMass and topic
 diversity at 4 of 5 topic counts. On the bundled `feedback_translations` it lost
 on 2 of 5, 1 of 5 and 0 of 5 respectively. The advantage is corpus-specific and
 does not generalize, which is exactly why it is not the default. Sweep both with
-`select_topics()` and compare `coherence()` before committing.
+`compare_topics()` and compare `coherence()` before committing.
 </div>
 
 # What to expect
@@ -456,7 +483,7 @@ gain at one corpus size did not survive at another.
   `sort_by_length = TRUE`. Nearly 2× at clause level, because 60% of the token
   work is otherwise padding.
 - **On Linux or macOS with a big corpus (≥ 2,000 docs)?** Add
-  `cores = detectCores() - 1` to `topic_corpus()` / `select_topics()`.
+  `cores = detectCores() - 1` to `topic_corpus()` / `compare_topics()`.
 - **On Windows, or a small corpus?** `cores` safely no-ops to serial; rely on
   `cache`, reuse and `threads` instead.
 - **Need exact reproducibility?** `cores`, `threads` and `cache` are safe at any

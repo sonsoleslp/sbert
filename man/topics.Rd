@@ -27,7 +27,11 @@ topics(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  segment = c("document", "sentence", "clause", "phrase"),
+  max_tokens = NULL,
+  merge_below = 0L,
+  min_content = 0
 )
 }
 \arguments{
@@ -127,11 +131,34 @@ larger counts are left untouched, so genuine values survive even when
 These filter only the topic terms; the document text and its embedding are
 untouched. To clean the source text itself — list markers, reference noise,
 junk characters — before encoding, see [clean_corpus()].}
+
+\item{segment}{The unit the model is fitted on. `"document"` (default)
+embeds each document whole. `"sentence"`, `"clause"`, or `"phrase"` first
+splits every document with [segment()] at that level and fits the topics
+on the segments, so long documents are modelled in full instead of being
+truncated to the encoder's context window, and a document can span several
+topics. The fitted `$documents` then has one row per segment with its
+parent `document_id` and `segment` position; [topic_sizes()] counts by
+segment or by document, [topic_gamma()] recovers each document's topic
+mixture from the stored segments, and [predict()] segments new text the
+same way. A precomputed `embeddings` matrix must then have one row per
+segment, aligned with `segment(text, level = segment, ...)`.}
+
+\item{max_tokens}{Optional cap on segment length, passed to [segment()].
+When a `model` is used, the budget counts that model's exact tokens; with
+precomputed `embeddings` it counts words. Only with a segmented fit.}
+
+\item{merge_below}{Re-join segments shorter than this many words into their
+neighbour, passed to [segment()]. Only with a segmented fit.}
+
+\item{min_content}{Minimum alphabetic-content ratio for a segment to be
+kept, passed to [segment()]. Only with a segmented fit.}
 }
 \value{
-An object of class `sbert_topic_model` containing document
-  assignments, topic summaries, ranked terms, representatives, centers, and
-  clustering diagnostics.
+An object of class `sbert_topic_model` containing unit
+  assignments (`$documents`, one row per document or per segment),
+  topic summaries, ranked terms, representatives, centers, clustering
+  diagnostics, and the `$settings` the fit was made with.
 }
 \description{
 Performs deterministic document-level topic clustering with Sentence-BERT
@@ -159,4 +186,19 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 topics <- topics(text, 2, embeddings = embeddings)
 topics$topics
+
+# Fit on sentences: each document is split first, and the segments are
+# what the topics are made of (the embeddings here are one row per
+# sentence, so no model download is needed).
+documents <- c(
+  "Cats chase mice. Stocks and bonds trade.",
+  "Dogs chase balls. Markets price shares."
+)
+sentence_model <- topics(
+  documents, 2,
+  segment = "sentence",
+  embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
+)
+sentence_model$documents
+topic_sizes(sentence_model, by = "document")
 }

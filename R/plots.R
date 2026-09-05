@@ -338,7 +338,14 @@ plot_topic_representatives <- function(x, colors, n_representatives, topic_ids) 
 
 # A per-topic fit report: one row per topic with the three term views
 # (within-topic count, TF-IDF, beta) followed by the representative documents.
-plot_topic_fit <- function(x, colors, n_terms, n_representatives, topic_ids) {
+plot_topic_fit <- function(
+  x,
+  colors,
+  n_terms,
+  n_representatives,
+  topic_ids,
+  main = NULL
+) {
   color_index <- match(topic_ids, x$topics$topic)
   metrics <- .sbert_term_metrics[c("frequency", "score", "beta")]
   n <- length(topic_ids)
@@ -394,10 +401,14 @@ plot_topic_fit <- function(x, colors, n_terms, n_representatives, topic_ids) {
     )
   )
   graphics::mtext(
-    paste(
-      "Model fit per topic (rows). Term columns: count, TF-IDF, beta.",
-      "Last column: representative documents."
-    ),
+    if (is.null(main)) {
+      paste(
+        "Model fit per topic (rows). Term columns: count, TF-IDF, beta.",
+        "Last column: representative documents."
+      )
+    } else {
+      main
+    },
     outer = TRUE,
     cex = 1.0,
     font = 2
@@ -609,6 +620,8 @@ plot_topic_map <- function(x, colors, max_points) {
 #' @param max_points Maximum documents drawn when `type = "map"`. Larger corpora
 #'   are thinned to a deterministic stratified subsample so the classical-MDS
 #'   projection stays tractable.
+#' @param main Optional figure title for `type = "fit"`. The default names the
+#'   layout (term columns and representative documents).
 #' @param ... Unused; present for S3 compatibility.
 #' @return Invisibly, `x`.
 #' @export
@@ -642,9 +655,13 @@ plot.sbert_topic_model <- function(
   n_representatives = 5L,
   colors = topic_palette(nrow(x$topics)),
   max_points = 1500L,
+  main = NULL,
   ...
 ) {
   type <- match.arg(type)
+  stopifnot(
+    is.null(main) || (is.character(main) && length(main) == 1L && !is.na(main))
+  )
   by <- match.arg(by, c("score", "beta", "frequency"), several.ok = TRUE)
   by <- unique(by)
   stopifnot(
@@ -689,7 +706,8 @@ plot.sbert_topic_model <- function(
         x, colors, as.integer(n_representatives), ids
       ),
       fit = plot_topic_fit(
-        x, colors, as.integer(n_terms), as.integer(n_representatives), ids
+        x, colors, as.integer(n_terms), as.integer(n_representatives), ids,
+        main = main
       ),
       map = plot_topic_map(x, colors, as.integer(max_points))
     )

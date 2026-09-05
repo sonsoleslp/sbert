@@ -43,7 +43,7 @@ reference:
   contents:
   - topic_corpus
   - topics
-  - select_topics
+  - compare_topics
   - fitted.sbert_topic_sweep
   - reduce_topics
 

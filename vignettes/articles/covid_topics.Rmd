@@ -89,16 +89,15 @@ covid_content <- covid[covid$Abstract != "[No abstract available]", ]
 covid_content <- clean_corpus(covid_content, column = "Abstract", min_content = 0.5)
 ```
 
-`encode()` turns each abstract into a 384-dimensional vector with the pinned
-default model, `all-MiniLM-L6-v2`. Abstracts longer than the model's 256-token
-window are truncated to their opening; for full-length documents a long-context
-model such as `nomic-embed-text-v1.5` (8,192 tokens) is a drop-in replacement.
+The pinned default model, `all-MiniLM-L6-v2`, turns each abstract into a
+384-dimensional vector. Abstracts longer than its 256-token window are
+truncated to their opening, so the comparison below fits every candidate count
+twice: on whole abstracts, and on their sentences, which are never truncated.
+Both downloads are explicit and happen once:
 
-```{r embed}
+```{r runtime}
 install_runtime()
 model_download()
-
-embeddings <- encode(covid_content$Abstract, batch_size = 32)
 ```
 
 Every abstract shares a scientific boilerplate — *covid*, *pandemic*, *study*,
@@ -116,14 +115,20 @@ covid_stops <- stop_words(add = c(
 ))
 ```
 
-There is no correct topic count. `select_topics()` fits one model per candidate
-and reports the numbers that justify a choice:
+There is no correct topic count, and no self-evident unit either.
+`compare_topics()` fits one model per candidate count on each requested
+`segment` level — here whole abstracts and sentences, with sentences over 200
+words re-split at punctuation — and reports the numbers that justify both
+choices. Passing the data frame with `column` carries `Year` into every fitted
+model.
 
 ```{r sweep}
-sweep <- select_topics(
-  covid_content$Abstract,
+sweep <- compare_topics(
+  covid_content,
+  column = "Abstract",
   n_topics = c(4, 6, 8, 10, 12),
-  embeddings = embeddings,
+  segment = c("document", "sentence"),
+  max_tokens = 200,
   measure = "npmi",
   stop_words = covid_stops,
   numbers = "remove"
@@ -137,13 +142,15 @@ plot(sweep)
 
 Read the count from the table rather than by habit: coherence rises, peaks, and
 falls as topics multiply, while `explained` keeps climbing regardless. The
-count with the highest coherence is the granularity this corpus best supports —
-the point after which splitting topics stops buying coherence — so the model is
-fitted there.
+count with the highest coherence on whole abstracts is the granularity this
+corpus best supports — the point after which splitting topics stops buying
+coherence — so the document model is fitted there. `fitted()` takes it straight
+out of the comparison, naming both the count and the level.
 
 ```{r model}
-best_n <- sweep$n_topics[which.max(sweep$coherence)]
-topic_model <- fitted(sweep, n_topics = best_n)
+by_document <- subset(sweep, segment == "document")
+best_n <- by_document$n_topics[which.max(by_document$coherence)]
+topic_model <- fitted(sweep, n_topics = best_n, segment = "document")
 ```
 
 # Corpus at a glance
@@ -191,6 +198,26 @@ each topic's representative abstracts, one row per topic:
 
 ```{r plot-fit, fig.width = 11, fig.height = 15}
 plot(topic_model, type = "fit", n_terms = 8, n_representatives = 8)
+```
+
+# Whole abstracts against sentences
+
+The comparison fitted the same counts on sentences too. `type = "fit"` on the
+comparison draws the per-topic report for both levels at the chosen count, one
+figure per level, so the two segmentations can be read against each other:
+
+```{r compare-fit, fig.width = 11, fig.height = 15}
+plot(sweep, type = "fit", n_topics = best_n, n_terms = 8, n_representatives = 6)
+```
+
+The sentence model stores every sentence with the abstract it came from, so
+`topic_sizes(by = "document")` counts the abstracts each topic reaches and
+`topic_gamma()` returns each abstract's topic mixture with no further encoding:
+
+```{r sentence-model}
+sentence_model <- fitted(sweep, n_topics = best_n, segment = "sentence")
+topic_sizes(sentence_model, by = "document")
+head(topic_gamma(sentence_model), 12)
 ```
 
 The cards below give the same evidence topic by topic, with the full abstracts
@@ -363,9 +390,9 @@ which faded as the pandemic wore on.
 
 <div class="method-note">
 <strong>Reusing the model.</strong> `predict()` assigns new abstracts to these
-topics without refitting, and `topic_membership()` gives graded probabilities
-when an abstract sits between topics. For long abstracts, `segment()` splits
-each into sentences and `blend()` carries the paper's context into every
-sentence's embedding, so a sentence that is ambiguous alone still embeds near
-its subject.
+topics without refitting — sentence by sentence, with the same segmentation,
+for the sentence model — and `topic_membership()` gives graded probabilities
+when an abstract sits between topics. `blend()` carries a paper's context into
+every sentence's embedding, so a sentence that is ambiguous alone still embeds
+near its subject.
 </div>

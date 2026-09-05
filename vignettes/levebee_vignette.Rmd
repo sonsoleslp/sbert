@@ -48,13 +48,13 @@ different angles:
 
 | Component | Verb | Question it answers |
 |---|---|---|
-| Topic count | `select_topics()` | How many topics does the corpus support? |
+| Topic count | `compare_topics()` | How many topics does the corpus support? |
 | Topic model | `topics()`, `fitted()` | What groups exist? |
 | Model quality | `summary()`, `coherence()` | Which topics are trustworthy? |
 | Topic size | `topic_sizes()` | How big is each topic, by distinct and reused share? |
 | Frequent keywords | `terms(sort_by = "beta")` | What does each topic talk about most? |
-| Distinctive keywords | `topic_model$terms` | What does each topic talk about that others do not? |
-| Evidence | `topic_model$representatives` | Do real messages support the label? |
+| Distinctive keywords | `terms()` | What does each topic talk about that others do not? |
+| Evidence | `representatives()` | Do real messages support the label? |
 
 Fourteen revision-pinned models are available; this tutorial uses the
 default, `all-MiniLM-L6-v2` (the field's standard quality-per-megabyte
@@ -88,7 +88,7 @@ every byte matches the SHA-256 hashes pinned inside the package, so the model
 you run today is provably the model you run next year. To use a different
 embedder, pass its name — `model_download("bge-small-en-v1.5")`, for example —
 and `models()` lists the other thirteen pinned options. From there
-`select_topics()` and `topics()` do the rest: under the hood they encode each
+`compare_topics()` and `topics()` do the rest: under the hood they encode each
 distinct message — tokenized, run through the network, mean-pooled with padding
 masked out, and L2-normalized — into a 600 × 384 matrix, numerically identical
 to Python `SentenceTransformers` output and bit-identical on every rerun.
@@ -101,13 +101,13 @@ model_download()
 
 There is no universally correct number of topics, and **sbert** deliberately
 refuses to pick one for you — the right granularity depends on what the analysis
-is *for*. Instead of guessing, `select_topics()` fits one model per candidate
+is *for*. Instead of guessing, `compare_topics()` fits one model per candidate
 count and reports the numbers that justify a choice: coherence (do a topic's top
 terms actually co-occur?), diversity (do topics own their vocabulary or share
 it?), and the share of embedding variance `explained`.
 
 ```{r sweep-show, eval=FALSE}
-sweep <- select_topics(
+sweep <- compare_topics(
   corpus$text,
   n_topics = c(4, 5, 6, 7, 8, 10, 12),
   measure = "npmi",
@@ -124,7 +124,7 @@ sweep
   system.file("extdata", "feedback_embeddings.rds", package = "sbert")
 )
 stopifnot(identical(corpus$text, .sample$text))
-sweep <- select_topics(
+sweep <- compare_topics(
   corpus$text,
   n_topics = c(4, 5, 6, 7, 8, 10, 12),
   embeddings = .sample$embeddings,
@@ -154,7 +154,7 @@ straight out of the sweep — no re-encoding, no second clustering:
 topic_model <- fitted(sweep, n_topics = 6)
 ```
 
-Only `model_download()` and the encoding inside `select_topics()` are skipped
+Only `model_download()` and the encoding inside `compare_topics()` are skipped
 here — the 600 messages' embeddings ship precomputed — so the vignette builds
 with no download. Run these lines yourself and you reproduce every number below
 exactly.
@@ -204,8 +204,8 @@ topic_sizes(topic_model, weights = corpus$n)
 
 `terms(sort_by = "beta")` returns the empirical probability of each word given
 the topic — the *generative* view, dominated by whatever the topic says most
-often. The class-based TF-IDF scores in `topic_model$terms` are the
-*discriminative* view: they promote words this topic uses and others do not,
+often. The class-based TF-IDF scores of `terms()` (its default `sort_by`) are
+the *discriminative* view: they promote words this topic uses and others do not,
 and demote words that recur across many topics — frequent, but saying little
 about any single one. Neither list is "the" keywords; a topic is characterized
 by the pair. When the two lists agree — as they do for topic 1 below, whose most
@@ -214,12 +214,11 @@ frequent and most distinctive words are the same ("picture", "pictures",
 list is telling you about the corpus and only the TF-IDF list about the topic.
 
 ```{r beta}
-beta <- terms(topic_model, n = NULL, sort_by = "beta")
-head(subset(beta, topic == 1), 8)
+head(terms(topic_model, n = 8, sort_by = "beta"), 8)
 ```
 
 ```{r terms}
-head(subset(topic_model$terms, topic == 1), 8)
+head(terms(topic_model, n = 8), 8)
 ```
 
 # The topics at a glance
@@ -250,9 +249,7 @@ The plot text is clipped to fit; for the full, untruncated evidence behind each
 topic, ask for the representatives directly:
 
 ```{r representatives}
-subset(topic_model$representatives, rank <= 2)[
-  , c("topic", "rank", "text", "distance")
-]
+representatives(topic_model, n = 2)
 ```
 
 # Where to go from here
@@ -260,12 +257,33 @@ subset(topic_model$representatives, rank <= 2)[
 The model built here is reusable, not just describable. `predict()` assigns
 any new feedback message to these six topics without refitting;
 `topic_membership()` replaces the hard assignment with graded probabilities
-when a message sits between topics; and `topic_gamma()` combined with
-`segment()` shows when a single multi-sentence message spans several feedback
-types. When you explore many models on the same corpus — the sweep above, or
-several term settings — `topic_corpus()` embeds and tokenizes the messages once
-and every fit reuses that work, so the exploration costs one corpus pass rather
-than one per model. For multilingual work on the *source* messages (the `feedback` column
+when a message sits between topics. Multi-sentence messages can be modelled
+sentence by sentence instead of whole: `segment = "sentence"` on the fitting
+verbs splits every message first and fits the topics on the sentences, and
+`compare_topics()` takes several levels at once so the unit is chosen from a
+table and a plot, exactly like the count. The fitted sentence model stores each
+sentence with its parent message, so `topic_gamma()` returns every message's
+topic mixture with no further encoding and `topic_sizes(by = "document")`
+counts messages rather than sentences:
+
+```{r segments, eval=FALSE}
+comparison <- compare_topics(
+  corpus$text,
+  n_topics = c(4, 6, 8),
+  segment = c("document", "sentence")
+)
+plot(comparison)
+plot(comparison, type = "fit", n_topics = 6, n_terms = 8, n_representatives = 3)
+
+sentence_model <- fitted(comparison, n_topics = 6, segment = "sentence")
+topic_gamma(sentence_model)
+topic_sizes(sentence_model, by = "document", weights = corpus$n)
+```
+
+When you explore many models on the same corpus — the sweep above, or several
+term settings — `topic_corpus()` segments, embeds, and tokenizes the messages
+once and every fit reuses that work, so the exploration costs one corpus pass
+rather than one per model. For multilingual work on the *source* messages (the `feedback` column
 spans ten languages), swap one argument —
 `topics(corpus$text, n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")` —
 and the rest of this document runs unchanged.

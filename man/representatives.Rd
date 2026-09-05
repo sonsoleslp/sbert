@@ -18,7 +18,9 @@ representatives(
 \item{object}{A fitted [topics()] model.}
 
 \item{text}{Character vector of candidate units, for example the `text`
-column of [segment()].}
+column of [segment()]. `NULL` (the default) ranks the units the model
+was fitted on — its documents, or its segments for a model fitted with
+`segment =` — from their stored embeddings, with no encoding.}
 
 \item{model}{A loaded [sbert_model][load_model()], a pinned model
 name, or `NULL` for the default model; ignored when `embeddings` are
@@ -37,7 +39,10 @@ used.}
 \value{
 A base data frame with columns `topic`, `rank`, `text`,
   `distance` (to the unit's own centroid), and `margin`, ordered by topic
-  and rank. Topics to which no unit is assigned contribute no rows.
+  and rank. When the fitted units are ranked (`text = NULL`), `document_id`
+  — and `segment`, for a segmented model — sit between `rank` and `text`
+  so every example can be traced to its source. Topics to which no unit is
+  assigned contribute no rows.
 }
 \description{
 Selects, for each fitted topic, the text units (documents, sentences, or

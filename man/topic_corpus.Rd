@@ -16,7 +16,11 @@ topic_corpus(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  segment = c("document", "sentence", "clause", "phrase"),
+  max_tokens = NULL,
+  merge_below = 0L,
+  min_content = 0
 )
 }
 \arguments{
@@ -76,28 +80,54 @@ larger counts are left untouched, so genuine values survive even when
 These filter only the topic terms; the document text and its embedding are
 untouched. To clean the source text itself — list markers, reference noise,
 junk characters — before encoding, see [clean_corpus()].}
+
+\item{segment}{The unit the model is fitted on. `"document"` (default)
+embeds each document whole. `"sentence"`, `"clause"`, or `"phrase"` first
+splits every document with [segment()] at that level and fits the topics
+on the segments, so long documents are modelled in full instead of being
+truncated to the encoder's context window, and a document can span several
+topics. The fitted `$documents` then has one row per segment with its
+parent `document_id` and `segment` position; [topic_sizes()] counts by
+segment or by document, [topic_gamma()] recovers each document's topic
+mixture from the stored segments, and [predict()] segments new text the
+same way. A precomputed `embeddings` matrix must then have one row per
+segment, aligned with `segment(text, level = segment, ...)`.}
+
+\item{max_tokens}{Optional cap on segment length, passed to [segment()].
+When a `model` is used, the budget counts that model's exact tokens; with
+precomputed `embeddings` it counts words. Only with a segmented fit.}
+
+\item{merge_below}{Re-join segments shorter than this many words into their
+neighbour, passed to [segment()]. Only with a segmented fit.}
+
+\item{min_content}{Minimum alphabetic-content ratio for a segment to be
+kept, passed to [segment()]. Only with a segmented fit.}
 }
 \value{
 An object of class `sbert_topic_corpus`: a list with the prepared
-  `text`, carried `metadata`, document `embeddings`, cached `token_lists`,
-  `model` information, and the fixed tokenization `settings`.
+  `text` (one element per modelled unit), carried `metadata`, `units` (the
+  `document_id`, `document_name`, and `segment` of every unit when the corpus
+  is segmented, otherwise `NULL`), unit `embeddings`, cached `token_lists`,
+  `model` information, and the fixed segmentation and tokenization
+  `settings`.
 }
 \description{
 Runs the corpus-level work that does not depend on the number of topics —
-embedding every document and tokenizing it for term scoring — a single time,
-so that fitting many models (a [select_topics()] sweep, a manual loop over
-topic counts, or repeated [topics()] calls) reuses it instead of repeating
-it. Pass the returned object to [topics()] or [select_topics()] in place of
-the raw `text`.
+segmenting (when `segment` asks for it), embedding every unit, and
+tokenizing it for term scoring — a single time, so that fitting many models
+(a [compare_topics()] sweep, a manual loop over topic counts, or repeated
+[topics()] calls) reuses it instead of repeating it. Pass the returned
+object to [topics()] or [compare_topics()] in place of the raw `text`.
 }
 \details{
 The results are byte-identical to calling [topics()] on the raw
-  text: the corpus only *caches* the embedding and tokenization steps, it
-  does not change them. The corpus fixes the embedding source (`model` or
-  `embeddings`) and the tokenization settings (`stop_words`,
-  `min_token_length`, `stem`, `numbers`, `roman_numerals`, `section_numbers`);
-  [topics()] then refuses conflicting overrides
-  for those, while per-model settings (`n_topics`, `n_terms`,
+  text: the corpus only *caches* the segmentation, embedding, and
+  tokenization steps, it does not change them. The corpus fixes the
+  embedding source (`model` or `embeddings`), the segmentation (`segment`,
+  `max_tokens`, `merge_below`, `min_content`), and the tokenization settings
+  (`stop_words`, `min_token_length`, `stem`, `numbers`, `roman_numerals`,
+  `section_numbers`); [topics()] then refuses conflicting overrides for
+  those, while per-model settings (`n_topics`, `n_terms`,
   `min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`, ...)
   are still chosen per call.
 }
@@ -109,8 +139,8 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 corpus <- topic_corpus(text, embeddings = embeddings)
 topics(corpus, n_topics = 2)$topics
-select_topics(corpus, n_topics = 2:3)
+compare_topics(corpus, n_topics = 2:3)
 }
 \seealso{
-[topics()], [select_topics()]
+[topics()], [compare_topics()]
 }

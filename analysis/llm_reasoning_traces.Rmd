@@ -1,0 +1,123 @@
+---
+title: "Semantic Topics in LLM Reasoning Traces"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(sbert)
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+options(sbert.download = TRUE)
+```
+
+The corpus is the `thinking` column of the LLM results: one reasoning trace
+per student profile. `dedupe()` drops blanks, keeps one row per distinct trace,
+and records each trace's original frequency in `n`.
+
+```{r data}
+traces <- rio::import("For_LLM-results.csv")
+corpus <- dedupe(traces$thinking)
+nrow(corpus)
+```
+
+## Four ways to cut a trace, one comparison
+
+A trace runs to a few thousand words, far past what a sentence encoder reads
+before truncating. `compare_topics()` fits every candidate topic count on four
+units at once: the whole document, and its sentences, clauses, and phrases.
+Segments longer than the model's window are re-split, tiny shards are merged
+into a neighbour, and numeral-only fragments are dropped. One table, one plot.
+
+```{r compare, fig.width=11, fig.height=4.5}
+comparison <- compare_topics(
+  corpus$text,
+  n_topics = c(4, 6, 8, 10, 12),
+  segment = c("document", "sentence", "clause", "phrase"),
+  max_tokens = 200,
+  merge_below = 4,
+  min_content = 0.5,
+  n_representatives = 5,
+  cores = 4
+)
+comparison
+plot(comparison)
+```
+
+Read the coherence panel first: it asks whether a topic's top terms actually
+co-occur in its units. Diversity asks whether the topics share their vocabulary
+or own it, and explained variance always rises with more topics, so it is a
+sanity check rather than a criterion. The document line is the truncated view;
+the three segment lines model the traces in full.
+
+## The same six topics, four ways
+
+`type = "fit"` on the comparison draws the per-topic report for every level's
+six-topic model: count, class-based TF-IDF, and beta term bars beside the
+units nearest each centroid. One figure per level, same layout, so the
+segmentations can be read against each other.
+
+```{r compare-fit, fig.width=10.5, fig.height=14}
+plot(comparison, type = "fit", n_topics = 6, n_terms = 6, n_representatives = 4)
+```
+
+## The model
+
+`fitted()` takes the chosen count and level straight out of the comparison,
+with no refitting.
+
+```{r model}
+topic_model <- fitted(comparison, n_topics = 6, segment = "sentence")
+topic_model
+summary(topic_model)
+```
+
+## Size on three scales
+
+Segments per topic, source traces per topic, and traces weighted by how often
+each was repeated in the raw file. A trace counts in every topic one of its
+sentences lands in, so document proportions need not sum to one.
+
+```{r sizes, fig.height=5}
+plot(topic_model, type = "sizes")
+topic_sizes(topic_model, by = "document", weights = corpus$n)
+```
+
+Because the model was fitted on sentences, each trace's mixture over the topics
+is already stored. `topic_gamma()` returns it with no re-encoding.
+
+```{r gamma}
+head(topic_gamma(topic_model), 12)
+```
+
+## Two keyword views, one topic
+
+`sort_by = "beta"` orders each topic's words by how often the topic uses them,
+the generative view. The default class-based TF-IDF score promotes words this
+topic uses and the others do not, the discriminative view. A topic is
+characterised by the pair.
+
+```{r beta}
+terms(topic_model, n = 8, sort_by = "beta")
+```
+
+```{r terms}
+terms(topic_model, n = 5)
+```
+
+## The topics at a glance
+
+```{r plot-terms, fig.height=7}
+plot(topic_model, type = "terms")
+```
+
+The fit report clips its text. `representatives()` ranks the fitted sentences by
+distinctiveness margin and names the trace and position each one came from.
+
+```{r representatives}
+representatives(topic_model, n = 2)
+```
+
+## Where to go from here
+
+`predict()` assigns new traces sentence by sentence with the same
+segmentation, `topic_membership()` grades each sentence across topics, and
+`reduce_topics()` merges the six down to fewer while keeping every verb above.

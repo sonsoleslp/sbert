@@ -88,17 +88,23 @@ resolve_new_embeddings <- function(
 #' a precomputed embedding matrix whose rows align with `text`.
 #'
 #' @param object A fitted [topics()] model.
-#' @param text Character vector of new documents.
+#' @param text Character vector of new documents. A model fitted with
+#'   `segment = "sentence"`, `"clause"`, or `"phrase"` splits them the same
+#'   way first (with the fitted `max_tokens`, `merge_below`, and
+#'   `min_content`) and assigns every segment.
 #' @param model A loaded [sbert_model][load_model()], a pinned model
 #'   name, or `NULL` for the default model; ignored when `embeddings` are
 #'   supplied. The embedding dimension must match the fitted model.
-#' @param embeddings Optional numeric matrix with one row per document.
+#' @param embeddings Optional numeric matrix with one row per document, or
+#'   one row per segment for a segmented model.
 #' @param batch_size Batch size passed to [encode()] when `model` is
 #'   used.
 #' @param ... Unused; included for S3 compatibility.
 #' @return A base data frame with one row per document and columns
 #'   `document_id`, `document_name`, `text`, `topic`, `label` (the fitted
 #'   topic label), and `distance` (cosine distance to the assigned centroid).
+#'   For a segmented model, one row per segment, with `document_id` naming
+#'   the source document and `segment` its position within it.
 #' @export
 #' @examples
 #' text <- c(
@@ -128,23 +134,53 @@ predict.sbert_topic_model <- function(
     batch_size == as.integer(batch_size)
   )
 
+  # New text takes the fitted unit: whole documents, or segments cut with the
+  # same options the model was fitted with.
+  segmentation <- topic_segmentation(object)
+  units <- NULL
+  unit_text <- text
+  if (segmentation$segment != "document") {
+    units <- segment_topic_documents(
+      text,
+      segmentation,
+      model = if (!is.null(segmentation$max_tokens) && is.null(embeddings)) {
+        resolve_sbert_model(model)
+      } else {
+        NULL
+      },
+      minimum = 1L
+    )
+    unit_text <- units$text
+  }
   embedding_matrix <- resolve_new_embeddings(
-    text,
+    unit_text,
     model,
     embeddings,
     batch_size,
-    n_expected = length(text)
+    n_expected = length(unit_text)
   )
   assignment <- assign_topic_embeddings(embedding_matrix, object$centers)
-  document_names <- names(text)
-  if (is.null(document_names)) {
-    document_names <- rep.int("", length(text))
-  }
 
+  if (is.null(units)) {
+    document_names <- names(text)
+    if (is.null(document_names)) {
+      document_names <- rep.int("", length(text))
+    }
+    return(data.frame(
+      document_id = seq_along(text),
+      document_name = unname(document_names),
+      text = unname(text),
+      topic = assignment$topic,
+      label = object$topics$label[assignment$topic],
+      distance = assignment$distance,
+      stringsAsFactors = FALSE
+    ))
+  }
   data.frame(
-    document_id = seq_along(text),
-    document_name = unname(document_names),
-    text = unname(text),
+    document_id = units$document_id,
+    document_name = units$document_name,
+    segment = units$segment,
+    text = units$text,
     topic = assignment$topic,
     label = object$topics$label[assignment$topic],
     distance = assignment$distance,
@@ -237,10 +273,13 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' which the single-embedding hard assignment cannot express.
 #'
 #' @param object A fitted [topics()] model.
-#' @param text Either a character vector of documents (segmented here at
-#'   `level`), or the data frame returned by [segment()] (used as-is). Passing
-#'   your own segmentation keeps every segment option — `level`, `max_tokens`,
-#'   `merge_below` — in [segment()], and lets you reuse one set of segment
+#' @param text Either `NULL`, a character vector of documents (segmented here
+#'   at `level`), or the data frame returned by [segment()] (used as-is).
+#'   `NULL` — the default — works for a model fitted with `segment =
+#'   "sentence"`, `"clause"`, or `"phrase"`: its own segments and their topic
+#'   assignments are already stored, so the mixture of every fitted document
+#'   comes back with no encoding at all. Passing your own segmentation keeps
+#'   every segment option in [segment()] and lets you reuse one set of segment
 #'   embeddings across this and other verbs. A data frame must have
 #'   `document_id` and `text` columns; `gamma` is then computed per
 #'   `document_id`.
@@ -252,8 +291,13 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #'   align with `segment(text, level = level)`; when `text` is a [segment()]
 #'   data frame they must align with its rows — which is automatic, since no
 #'   re-segmentation happens.
-#' @param level Segmentation granularity passed to [segment()]. Ignored when
-#'   `text` is already a [segment()] data frame.
+#' @param level Segmentation granularity passed to [segment()] when `text` is
+#'   a character vector: `"clause"`, `"sentence"`, or `"phrase"`. `NULL` (the
+#'   default) uses the fitted segmentation — level, `max_tokens`,
+#'   `merge_below`, and `min_content` — for a segmented model, so new
+#'   documents are cut exactly as the fitted ones were, and `"clause"` for a
+#'   document-level model. Ignored when `text` is already a [segment()] data
+#'   frame.
 #' @param batch_size Batch size passed to [encode()] when `model` is
 #'   used.
 #' @param cores Number of forked worker processes used to split documents into
@@ -295,18 +339,25 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' # Segment once (with any options), reuse the segments and their embeddings:
 #' segments <- segment(mixed, level = "sentence")
 #' topic_gamma(fitted, segments, embeddings = segment_embeddings)
+#'
+#' # A model fitted on sentences already holds its segments: no text needed.
+#' sentence_model <- topics(
+#'   c(mixed, "Dogs chase balls. Markets price shares."), 2,
+#'   segment = "sentence",
+#'   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
+#' )
+#' topic_gamma(sentence_model)
 topic_gamma <- function(
   object,
-  text,
+  text = NULL,
   model = NULL,
   embeddings = NULL,
-  level = c("clause", "sentence", "phrase"),
+  level = NULL,
   batch_size = 32L,
   cores = 1L,
   dedupe_segments = FALSE,
   sort_by_length = FALSE
 ) {
-  level <- match.arg(level)
   stopifnot(
     inherits(object, "sbert_topic_model"),
     is.numeric(batch_size),
@@ -324,11 +375,40 @@ topic_gamma <- function(
     length(sort_by_length) == 1L,
     !is.na(sort_by_length)
   )
+  if (!is.null(level)) {
+    level <- match.arg(level, c("clause", "sentence", "phrase"))
+  }
+  segmented <- is_segmented_topic_model(object)
 
-  # Accept either raw documents (segmented here at `level`) or the data frame
-  # returned by segment() (used as-is). Passing your own segmentation keeps all
-  # its options — `level`, `max_tokens`, `merge_below` — in one place and means a
-  # supplied `embeddings` matrix always lines up with the segments.
+  # No text: a segmented model already stores every fitted segment with its
+  # topic, so the mixture is a count, not an encoding.
+  if (is.null(text)) {
+    if (!segmented) {
+      stop(
+        "topic_gamma: supply `text` to segment and assign, or fit the model ",
+        "with segment = \"sentence\", \"clause\", or \"phrase\" so its own ",
+        "segments carry each document's topic mixture.",
+        call. = FALSE
+      )
+    }
+    if (!is.null(model) || !is.null(embeddings) || !is.null(level)) {
+      stop(
+        "topic_gamma: model, embeddings, and level apply only when `text` ",
+        "is supplied.",
+        call. = FALSE
+      )
+    }
+    return(gamma_from_assignments(
+      object$documents$document_id,
+      object$documents$topic,
+      nrow(object$topics)
+    ))
+  }
+
+  # Accept either raw documents (segmented here) or the data frame returned by
+  # segment() (used as-is). Passing your own segmentation keeps all its
+  # options in one place and means a supplied `embeddings` matrix always lines
+  # up with the segments.
   if (is.data.frame(text)) {
     if (!all(c("document_id", "text") %in% names(text))) {
       stop(
@@ -349,7 +429,28 @@ topic_gamma <- function(
     )
   } else {
     stopifnot(is.character(text), length(text) >= 1L, !anyNA(text))
-    segments <- segment(text, level = level, cores = cores)
+    segments <- if (is.null(level) && segmented) {
+      # New documents are cut exactly as the fitted ones were, so their
+      # mixtures are comparable with the fit.
+      segmentation <- topic_segmentation(object)
+      segment_topic_documents(
+        text,
+        segmentation,
+        cores = cores,
+        model = if (!is.null(segmentation$max_tokens) && is.null(embeddings)) {
+          resolve_sbert_model(model)
+        } else {
+          NULL
+        },
+        minimum = 1L
+      )
+    } else {
+      segment(
+        text,
+        level = if (is.null(level)) "clause" else level,
+        cores = cores
+      )
+    }
   }
   if (nrow(segments) == 0L) {
     stop("No document produced any segment.", call. = FALSE)
@@ -384,11 +485,19 @@ topic_gamma <- function(
     )
   }
   assignment <- assign_topic_embeddings(embedding_matrix, object$centers)
+  gamma_from_assignments(
+    segments$document_id,
+    assignment$topic,
+    nrow(object$topics)
+  )
+}
 
-  n_topics <- nrow(object$topics)
+# Per-document topic mixture from segment assignments: the share of each
+# document's segments falling in each topic, one row per document-topic pair.
+gamma_from_assignments <- function(document_id, topic, n_topics) {
   segment_counts <- table(
-    factor(segments$document_id, levels = sort(unique(segments$document_id))),
-    factor(assignment$topic, levels = seq_len(n_topics))
+    factor(document_id, levels = sort(unique(document_id))),
+    factor(topic, levels = seq_len(n_topics))
   )
   count_matrix <- matrix(
     as.numeric(segment_counts),
@@ -422,7 +531,9 @@ topic_gamma <- function(
 #'
 #' @param object A fitted [topics()] model.
 #' @param text Character vector of candidate units, for example the `text`
-#'   column of [segment()].
+#'   column of [segment()]. `NULL` (the default) ranks the units the model
+#'   was fitted on — its documents, or its segments for a model fitted with
+#'   `segment =` — from their stored embeddings, with no encoding.
 #' @param model A loaded [sbert_model][load_model()], a pinned model
 #'   name, or `NULL` for the default model; ignored when `embeddings` are
 #'   supplied.
@@ -434,7 +545,10 @@ topic_gamma <- function(
 #'   used.
 #' @return A base data frame with columns `topic`, `rank`, `text`,
 #'   `distance` (to the unit's own centroid), and `margin`, ordered by topic
-#'   and rank. Topics to which no unit is assigned contribute no rows.
+#'   and rank. When the fitted units are ranked (`text = NULL`), `document_id`
+#'   — and `segment`, for a segmented model — sit between `rank` and `text`
+#'   so every example can be traced to its source. Topics to which no unit is
+#'   assigned contribute no rows.
 #' @export
 #' @examples
 #' text <- c(
@@ -460,9 +574,16 @@ representatives <- function(
 ) {
   rank <- match.arg(rank)
   stopifnot(inherits(object, "sbert_topic_model"))
-  # With no text supplied, rank the documents the model was fitted on. Their
-  # embeddings are already stored, so nothing is re-encoded.
+  # With no text supplied, rank the units the model was fitted on. Their
+  # embeddings are already stored, so nothing is re-encoded, and each example
+  # keeps the source it came from.
+  stored_units <- NULL
   if (is.null(text)) {
+    stored_units <- object$documents[
+      ,
+      intersect(c("document_id", "segment"), names(object$documents)),
+      drop = FALSE
+    ]
     text <- object$documents$text
     if (is.null(embeddings)) {
       embeddings <- object$embeddings
@@ -520,6 +641,9 @@ representatives <- function(
     margin = margin,
     stringsAsFactors = FALSE
   )
+  if (!is.null(stored_units)) {
+    candidates <- cbind(stored_units, candidates)
+  }
   selected <- lapply(
     sort(unique(candidates$topic)),
     function(topic_id) {
@@ -543,5 +667,12 @@ representatives <- function(
   )
   result <- do.call(rbind, selected)
   rownames(result) <- NULL
-  result[, c("topic", "rank", "text", "distance", "margin")]
+  result[
+    ,
+    c(
+      "topic", "rank",
+      intersect(c("document_id", "segment"), names(result)),
+      "text", "distance", "margin"
+    )
+  ]
 }

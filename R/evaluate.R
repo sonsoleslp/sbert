@@ -321,17 +321,25 @@ summary.sbert_topic_model <- function(
     0
   }
 
+  cat("Semantic topic model summary\n")
+  if (is_segmented_topic_model(object)) {
+    cat(sprintf(
+      "  documents:            %d\n  segments:             %d (%s level)\n",
+      length(unique(object$documents$document_id)),
+      nrow(object$documents),
+      topic_segmentation(object)$segment
+    ))
+  } else {
+    cat(sprintf("  documents:            %d\n", nrow(object$documents)))
+  }
   cat(sprintf(
     paste0(
-      "Semantic topic model summary\n",
-      "  documents:            %d\n",
       "  topics:               %d\n",
       "  model:                %s\n",
       "  between/total SS:      %.1f%%\n",
       "  mean %-5s coherence:  %.4f\n",
       "  topic topic_diversity:      %.3f (top %d terms)\n\n"
     ),
-    nrow(object$documents),
     nrow(object$topics),
     object$model$id,
     100 * explained,

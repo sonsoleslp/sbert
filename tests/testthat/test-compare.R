@@ -1,11 +1,11 @@
-select_test_corpus <- function() {
+compare_test_corpus <- function() {
   c(
     "Cats chase mice", "Kittens chase mice too", "Cats nap daily",
     "Stocks and bonds trade", "Markets price shares", "Banks report profit"
   )
 }
 
-select_test_embeddings <- function() {
+compare_test_embeddings <- function() {
   rbind(
     c(1, 0, 0), c(0.98, 0.02, 0), c(0.96, 0, 0.04),
     c(0, 1, 0), c(0.02, 0.98, 0), c(0, 0.96, 0.04)
@@ -13,10 +13,10 @@ select_test_embeddings <- function() {
 }
 
 testthat::test_that("topic-count comparison returns one tidy row per candidate", {
-  result <- select_topics(
-    select_test_corpus(),
+  result <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -33,17 +33,17 @@ testthat::test_that("topic-count comparison returns one tidy row per candidate",
 })
 
 testthat::test_that("candidates are sorted and deterministic", {
-  shuffled <- select_topics(
-    select_test_corpus(),
+  shuffled <- compare_topics(
+    compare_test_corpus(),
     n_topics = c(3L, 2L),
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
-  ordered <- select_topics(
-    select_test_corpus(),
+  ordered <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -51,10 +51,10 @@ testthat::test_that("candidates are sorted and deterministic", {
 })
 
 testthat::test_that("umass measure is recorded", {
-  result <- select_topics(
-    select_test_corpus(),
+  result <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2L,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     measure = "umass",
     n_terms = 3,
     min_term_frequency = 1L
@@ -63,27 +63,27 @@ testthat::test_that("umass measure is recorded", {
 })
 
 testthat::test_that("invalid candidate sets are rejected", {
-  corpus <- select_test_corpus()
-  embeddings <- select_test_embeddings()
+  corpus <- compare_test_corpus()
+  embeddings <- compare_test_embeddings()
   testthat::expect_error(
-    select_topics(corpus, n_topics = 1:2, embeddings = embeddings)
+    compare_topics(corpus, n_topics = 1:2, embeddings = embeddings)
   )
   testthat::expect_error(
-    select_topics(corpus, n_topics = c(2L, 6L), embeddings = embeddings)
+    compare_topics(corpus, n_topics = c(2L, 6L), embeddings = embeddings)
   )
   testthat::expect_error(
-    select_topics(corpus, n_topics = c(2L, 2L), embeddings = embeddings)
+    compare_topics(corpus, n_topics = c(2L, 2L), embeddings = embeddings)
   )
   testthat::expect_error(
-    select_topics(corpus, n_topics = 2.5, embeddings = embeddings)
+    compare_topics(corpus, n_topics = 2.5, embeddings = embeddings)
   )
 })
 
 testthat::test_that("the sweep retains one fitted model per candidate", {
-  sweep <- select_topics(
-    select_test_corpus(),
+  sweep <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -98,17 +98,17 @@ testthat::test_that("the sweep retains one fitted model per candidate", {
 })
 
 testthat::test_that("retained models equal a direct refit", {
-  sweep <- select_topics(
-    select_test_corpus(),
+  sweep <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2L,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
   direct <- topics(
-    select_test_corpus(),
+    compare_test_corpus(),
     n_topics = 2L,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     n_representatives = 1L,
     min_term_frequency = 1L
@@ -117,10 +117,10 @@ testthat::test_that("retained models equal a direct refit", {
 })
 
 testthat::test_that("the comparison table matches the retained models", {
-  sweep <- select_topics(
-    select_test_corpus(),
+  sweep <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -135,10 +135,10 @@ testthat::test_that("the comparison table matches the retained models", {
 })
 
 testthat::test_that("keep_models = FALSE returns the plain tidy table", {
-  result <- select_topics(
-    select_test_corpus(),
+  result <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     keep_models = FALSE,
     min_term_frequency = 1L
@@ -152,10 +152,10 @@ testthat::test_that("keep_models = FALSE returns the plain tidy table", {
 })
 
 testthat::test_that("unknown or malformed candidates are rejected", {
-  sweep <- select_topics(
-    select_test_corpus(),
+  sweep <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -165,10 +165,10 @@ testthat::test_that("unknown or malformed candidates are rejected", {
 })
 
 testthat::test_that("as.data.frame drops the models and keeps the columns", {
-  sweep <- select_topics(
-    select_test_corpus(),
+  sweep <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -182,10 +182,10 @@ testthat::test_that("as.data.frame drops the models and keeps the columns", {
 })
 
 testthat::test_that("the sweep plots without error", {
-  sweep <- select_topics(
-    select_test_corpus(),
+  sweep <- compare_topics(
+    compare_test_corpus(),
     n_topics = 2:3,
-    embeddings = select_test_embeddings(),
+    embeddings = compare_test_embeddings(),
     n_terms = 3,
     min_term_frequency = 1L
   )
@@ -194,4 +194,29 @@ testthat::test_that("the sweep plots without error", {
   testthat::expect_silent(plot(sweep))
   grDevices::dev.off()
   testthat::expect_true(file.exists(path))
+})
+
+testthat::test_that("compare_topics accepts a data frame with column", {
+  frame <- data.frame(
+    body = compare_test_corpus(),
+    source = letters[1:6],
+    stringsAsFactors = FALSE
+  )
+  from_frame <- compare_topics(
+    frame,
+    column = "body",
+    n_topics = 2:3,
+    embeddings = compare_test_embeddings(),
+    n_terms = 3,
+    min_term_frequency = 1L
+  )
+  from_vector <- compare_topics(
+    compare_test_corpus(),
+    n_topics = 2:3,
+    embeddings = compare_test_embeddings(),
+    n_terms = 3,
+    min_term_frequency = 1L
+  )
+  testthat::expect_identical(as.data.frame(from_frame), as.data.frame(from_vector))
+  testthat::expect_identical(fitted(from_frame, 2)$documents$source, letters[1:6])
 })

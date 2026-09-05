@@ -48,7 +48,7 @@
 #' whose surface form is meaningful in a specific corpus.
 #'
 #' For a fully custom list, pass any character vector straight to the
-#' `stop_words` argument of [topics()], [select_topics()], [topic_corpus()], or
+#' `stop_words` argument of [topics()], [compare_topics()], [topic_corpus()], or
 #' [keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
 #' the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
 #' list entirely, or `character()` to disable stop-word filtering.
@@ -650,14 +650,18 @@ topic_representatives <- function(documents, n_topics, n_representatives) {
           grepl("(*UTF)\\p{L}{2}", ordered_text, perl = TRUE)
       ]
       selected <- utils::head(ranking, n_representatives)
-      data.frame(
-        topic = rep.int(as.integer(topic_id), length(selected)),
-        rank = seq_along(selected),
-        document_id = topic_documents$document_id[selected],
-        document_name = topic_documents$document_name[selected],
-        text = topic_documents$text[selected],
-        distance = topic_documents$distance[selected],
-        stringsAsFactors = FALSE
+      # A segmented fit also names the segment's position in its document.
+      unit_columns <- intersect(
+        c("document_id", "document_name", "segment", "text", "distance"),
+        names(topic_documents)
+      )
+      cbind(
+        data.frame(
+          topic = rep.int(as.integer(topic_id), length(selected)),
+          rank = seq_along(selected),
+          stringsAsFactors = FALSE
+        ),
+        topic_documents[selected, unit_columns, drop = FALSE]
       )
     }
   )
@@ -684,30 +688,135 @@ encode_topic_documents <- function(text, model, batch_size) {
   )
 }
 
+# The segmentation options shared by every fitting verb, validated once. A
+# document-level fit has nothing to segment, so the segment-only options are
+# refused there rather than ignored.
+validate_topic_segmentation <- function(
+  segment,
+  max_tokens,
+  merge_below,
+  min_content
+) {
+  stopifnot(
+    is.null(max_tokens) ||
+      (
+        is.numeric(max_tokens) && length(max_tokens) == 1L &&
+          is.finite(max_tokens) && max_tokens >= 1 &&
+          max_tokens == as.integer(max_tokens)
+      ),
+    is.numeric(merge_below),
+    length(merge_below) == 1L,
+    is.finite(merge_below),
+    merge_below >= 0,
+    merge_below == as.integer(merge_below),
+    is.numeric(min_content),
+    length(min_content) == 1L,
+    is.finite(min_content),
+    min_content >= 0,
+    min_content <= 1
+  )
+  if (
+    segment == "document" &&
+      (!is.null(max_tokens) || merge_below > 0 || min_content > 0)
+  ) {
+    stop(
+      "max_tokens, merge_below, and min_content apply only when segment is ",
+      "\"sentence\", \"clause\", or \"phrase\".",
+      call. = FALSE
+    )
+  }
+  list(
+    segment = segment,
+    max_tokens = if (is.null(max_tokens)) NULL else as.integer(max_tokens),
+    merge_below = as.integer(merge_below),
+    min_content = as.numeric(min_content)
+  )
+}
+
+# Split documents into the units a topic model is fitted on (or predicts for).
+# `model` is only forwarded when `max_tokens` counts that model's own tokens;
+# segment() refuses a model otherwise.
+segment_topic_documents <- function(
+  text,
+  segmentation,
+  cores = 1L,
+  model = NULL,
+  minimum = 2L
+) {
+  units <- segment(
+    text,
+    level = segmentation$segment,
+    merge_below = segmentation$merge_below,
+    cores = cores,
+    max_tokens = segmentation$max_tokens,
+    model = if (is.null(segmentation$max_tokens)) NULL else model,
+    min_content = segmentation$min_content
+  )
+  if (nrow(units) < minimum) {
+    stop(
+      sprintf(
+        paste0(
+          "segment = \"%s\" produced %d segment(s) from %d document(s); ",
+          "at least %d are needed."
+        ),
+        segmentation$segment,
+        nrow(units),
+        length(text),
+        minimum
+      ),
+      call. = FALSE
+    )
+  }
+  units
+}
+
+# The segmentation a fitted model or prepared corpus was built with. Models
+# fitted before the `segment` argument existed carry no record and are
+# document-level.
+topic_segmentation <- function(object) {
+  settings <- object$settings
+  merge_below <- settings$merge_below
+  min_content <- settings$min_content
+  list(
+    segment = if (is.null(settings$segment)) "document" else settings$segment,
+    max_tokens = settings$max_tokens,
+    merge_below = if (is.null(merge_below)) 0L else merge_below,
+    min_content = if (is.null(min_content)) 0 else min_content
+  )
+}
+
+is_segmented_topic_model <- function(object) {
+  !identical(topic_segmentation(object)$segment, "document")
+}
+
 #' Prepare a Corpus Once to Fit Many Topic Models
 #'
 #' Runs the corpus-level work that does not depend on the number of topics —
-#' embedding every document and tokenizing it for term scoring — a single time,
-#' so that fitting many models (a [select_topics()] sweep, a manual loop over
-#' topic counts, or repeated [topics()] calls) reuses it instead of repeating
-#' it. Pass the returned object to [topics()] or [select_topics()] in place of
-#' the raw `text`.
+#' segmenting (when `segment` asks for it), embedding every unit, and
+#' tokenizing it for term scoring — a single time, so that fitting many models
+#' (a [compare_topics()] sweep, a manual loop over topic counts, or repeated
+#' [topics()] calls) reuses it instead of repeating it. Pass the returned
+#' object to [topics()] or [compare_topics()] in place of the raw `text`.
 #'
 #' @details The results are byte-identical to calling [topics()] on the raw
-#'   text: the corpus only *caches* the embedding and tokenization steps, it
-#'   does not change them. The corpus fixes the embedding source (`model` or
-#'   `embeddings`) and the tokenization settings (`stop_words`,
-#'   `min_token_length`, `stem`, `numbers`, `roman_numerals`, `section_numbers`);
-#'   [topics()] then refuses conflicting overrides
-#'   for those, while per-model settings (`n_topics`, `n_terms`,
+#'   text: the corpus only *caches* the segmentation, embedding, and
+#'   tokenization steps, it does not change them. The corpus fixes the
+#'   embedding source (`model` or `embeddings`), the segmentation (`segment`,
+#'   `max_tokens`, `merge_below`, `min_content`), and the tokenization settings
+#'   (`stop_words`, `min_token_length`, `stem`, `numbers`, `roman_numerals`,
+#'   `section_numbers`); [topics()] then refuses conflicting overrides for
+#'   those, while per-model settings (`n_topics`, `n_terms`,
 #'   `min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`, ...)
 #'   are still chosen per call.
 #'
 #' @inheritParams topics
 #' @return An object of class `sbert_topic_corpus`: a list with the prepared
-#'   `text`, carried `metadata`, document `embeddings`, cached `token_lists`,
-#'   `model` information, and the fixed tokenization `settings`.
-#' @seealso [topics()], [select_topics()]
+#'   `text` (one element per modelled unit), carried `metadata`, `units` (the
+#'   `document_id`, `document_name`, and `segment` of every unit when the corpus
+#'   is segmented, otherwise `NULL`), unit `embeddings`, cached `token_lists`,
+#'   `model` information, and the fixed segmentation and tokenization
+#'   `settings`.
+#' @seealso [topics()], [compare_topics()]
 #' @export
 #' @examples
 #' text <- c(
@@ -717,7 +826,7 @@ encode_topic_documents <- function(text, model, batch_size) {
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 #' corpus <- topic_corpus(text, embeddings = embeddings)
 #' topics(corpus, n_topics = 2)$topics
-#' select_topics(corpus, n_topics = 2:3)
+#' compare_topics(corpus, n_topics = 2:3)
 topic_corpus <- function(
   text,
   column = NULL,
@@ -730,12 +839,27 @@ topic_corpus <- function(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  segment = c("document", "sentence", "clause", "phrase"),
+  max_tokens = NULL,
+  merge_below = 0L,
+  min_content = 0
 ) {
   numbers <- match.arg(numbers)
   roman_numerals <- match.arg(roman_numerals)
   section_numbers <- match.arg(section_numbers)
+  segment <- match.arg(segment)
+  segmentation <- validate_topic_segmentation(
+    segment, max_tokens, merge_below, min_content
+  )
   if (inherits(text, "sbert_topic_corpus")) {
+    if (segment != "document") {
+      stop(
+        "Segmentation is fixed by a prepared topic_corpus; pass segment = ",
+        "to topic_corpus() when building it.",
+        call. = FALSE
+      )
+    }
     return(text)
   }
   if (!is.null(model) && !is.null(embeddings)) {
@@ -744,13 +868,20 @@ topic_corpus <- function(
   prepared <- prepare_topic_input(text, column)
   text <- prepared$text
   metadata <- prepared$metadata
-  if (!is.null(embeddings) && length(prepared$kept) < prepared$n_supplied) {
+  # Supplied embeddings follow the modelled units: one row per document at
+  # document level (so dropped rows are dropped here too), one row per segment
+  # otherwise (checked once the segments exist).
+  if (
+    segment == "document" &&
+      !is.null(embeddings) &&
+      length(prepared$kept) < prepared$n_supplied
+  ) {
     embeddings <- embeddings[prepared$kept, , drop = FALSE]
   }
   stopifnot(
     is.character(text),
     !anyNA(text),
-    length(text) >= 2L,
+    length(text) >= if (segment == "document") 2L else 1L,
     is.numeric(batch_size),
     length(batch_size) == 1L,
     is.finite(batch_size),
@@ -779,6 +910,45 @@ topic_corpus <- function(
 
   if (is.null(embeddings)) {
     model <- resolve_sbert_model(model)
+  }
+  # Segment before encoding so the model sees whole units, not the truncated
+  # opening of a long document. Metadata is expanded to one row per unit so it
+  # still rides along into $documents.
+  units <- NULL
+  if (segment != "document") {
+    units <- segment_topic_documents(
+      text,
+      segmentation,
+      cores = cores,
+      model = if (is.null(embeddings)) model else NULL
+    )
+    if (!is.null(metadata)) {
+      metadata <- metadata[units$document_id, , drop = FALSE]
+      rownames(metadata) <- NULL
+    }
+    misaligned <- !is.null(embeddings) &&
+      is.matrix(embeddings) &&
+      nrow(embeddings) != nrow(units)
+    if (misaligned) {
+      stop(
+        sprintf(
+          paste0(
+            "With segment = \"%s\", embeddings must have one row per segment: ",
+            "%d segments were produced but %d rows were supplied. Encode the ",
+            "`text` column of segment(text, level = \"%s\") to align them."
+          ),
+          segment,
+          nrow(units),
+          nrow(embeddings),
+          segment
+        ),
+        call. = FALSE
+      )
+    }
+    text <- units$text
+  }
+
+  if (is.null(embeddings)) {
     embedding_matrix <- encode_topic_documents(
       text,
       model,
@@ -826,6 +996,11 @@ topic_corpus <- function(
     list(
       text = text,
       metadata = metadata,
+      units = if (is.null(units)) {
+        NULL
+      } else {
+        units[, c("document_id", "document_name", "segment")]
+      },
       embeddings = embedding_matrix,
       token_lists = token_lists,
       model = model_information,
@@ -835,7 +1010,11 @@ topic_corpus <- function(
         stem = stem,
         numbers = numbers,
         roman_numerals = roman_numerals,
-        section_numbers = section_numbers
+        section_numbers = section_numbers,
+        segment = segmentation$segment,
+        max_tokens = segmentation$max_tokens,
+        merge_below = segmentation$merge_below,
+        min_content = segmentation$min_content
       )
     ),
     class = "sbert_topic_corpus"
@@ -845,7 +1024,15 @@ topic_corpus <- function(
 #' @export
 print.sbert_topic_corpus <- function(x, ...) {
   cat("<sbert_topic_corpus>\n")
-  cat("  documents:", length(x$text), "\n")
+  if (is.null(x$units)) {
+    cat("  documents:", length(x$text), "\n")
+  } else {
+    cat("  documents:", length(unique(x$units$document_id)), "\n")
+    cat(
+      "  segments:", length(x$text),
+      sprintf("(%s level)", x$settings$segment), "\n"
+    )
+  }
   cat("  embedding dimension:", ncol(x$embeddings), "\n")
   cat("  model:", x$model$id, "\n")
   cat(
@@ -947,9 +1134,28 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   for small corpora; the tokenization — and therefore every result — is
 #'   identical regardless of the count. Ignored when a prepared [topic_corpus()]
 #'   is supplied (its tokens are already computed).
-#' @return An object of class `sbert_topic_model` containing document
-#'   assignments, topic summaries, ranked terms, representatives, centers, and
-#'   clustering diagnostics.
+#' @param segment The unit the model is fitted on. `"document"` (default)
+#'   embeds each document whole. `"sentence"`, `"clause"`, or `"phrase"` first
+#'   splits every document with [segment()] at that level and fits the topics
+#'   on the segments, so long documents are modelled in full instead of being
+#'   truncated to the encoder's context window, and a document can span several
+#'   topics. The fitted `$documents` then has one row per segment with its
+#'   parent `document_id` and `segment` position; [topic_sizes()] counts by
+#'   segment or by document, [topic_gamma()] recovers each document's topic
+#'   mixture from the stored segments, and [predict()] segments new text the
+#'   same way. A precomputed `embeddings` matrix must then have one row per
+#'   segment, aligned with `segment(text, level = segment, ...)`.
+#' @param max_tokens Optional cap on segment length, passed to [segment()].
+#'   When a `model` is used, the budget counts that model's exact tokens; with
+#'   precomputed `embeddings` it counts words. Only with a segmented fit.
+#' @param merge_below Re-join segments shorter than this many words into their
+#'   neighbour, passed to [segment()]. Only with a segmented fit.
+#' @param min_content Minimum alphabetic-content ratio for a segment to be
+#'   kept, passed to [segment()]. Only with a segmented fit.
+#' @return An object of class `sbert_topic_model` containing unit
+#'   assignments (`$documents`, one row per document or per segment),
+#'   topic summaries, ranked terms, representatives, centers, clustering
+#'   diagnostics, and the `$settings` the fit was made with.
 #' @export
 #' @examples
 #' text <- c(
@@ -959,6 +1165,21 @@ print.sbert_topic_corpus <- function(x, ...) {
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 #' topics <- topics(text, 2, embeddings = embeddings)
 #' topics$topics
+#'
+#' # Fit on sentences: each document is split first, and the segments are
+#' # what the topics are made of (the embeddings here are one row per
+#' # sentence, so no model download is needed).
+#' documents <- c(
+#'   "Cats chase mice. Stocks and bonds trade.",
+#'   "Dogs chase balls. Markets price shares."
+#' )
+#' sentence_model <- topics(
+#'   documents, 2,
+#'   segment = "sentence",
+#'   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
+#' )
+#' sentence_model$documents
+#' topic_sizes(sentence_model, by = "document")
 topics <- function(
   text,
   n_topics,
@@ -982,20 +1203,62 @@ topics <- function(
   cores = 1L,
   numbers = c("keep", "remove"),
   roman_numerals = c("keep", "remove"),
-  section_numbers = c("keep", "remove")
+  section_numbers = c("keep", "remove"),
+  segment = c("document", "sentence", "clause", "phrase"),
+  max_tokens = NULL,
+  merge_below = 0L,
+  min_content = 0
 ) {
   weighting <- match.arg(weighting)
   numbers <- match.arg(numbers)
   roman_numerals <- match.arg(roman_numerals)
   section_numbers <- match.arg(section_numbers)
+  segment <- match.arg(segment)
+  segmentation <- validate_topic_segmentation(
+    segment, max_tokens, merge_below, min_content
+  )
+
+  # Seeds are embedded with the same model as the documents. The segmented
+  # path hands the model to topic_corpus() and continues with the corpus, so
+  # the model is remembered here for the seeds alone.
+  seed_model <- model
+
+  # A segmented fit is a corpus fit: topic_corpus() owns the segmentation,
+  # encoding, and tokenization, so the two routes cannot drift apart.
+  if (!inherits(text, "sbert_topic_corpus") && segment != "document") {
+    text <- topic_corpus(
+      text,
+      column = column,
+      model = model,
+      embeddings = embeddings,
+      batch_size = batch_size,
+      stop_words = stop_words,
+      min_token_length = min_token_length,
+      stem = stem,
+      cores = cores,
+      numbers = numbers,
+      roman_numerals = roman_numerals,
+      section_numbers = section_numbers,
+      segment = segment,
+      max_tokens = max_tokens,
+      merge_below = merge_below,
+      min_content = min_content
+    )
+    if (!is.null(seeds) && is.null(embeddings)) {
+      seed_model <- resolve_sbert_model(model)
+    }
+    model <- NULL
+    embeddings <- NULL
+  }
 
   # A prepared topic_corpus carries the corpus-level work already done once:
-  # the embeddings, the tokenization, and the token settings. Reusing it across
-  # many models skips both encoding and tokenization, with byte-identical
-  # results. The corpus fixes those settings, so conflicting overrides are
-  # refused rather than silently ignored.
+  # the segmentation, the embeddings, the tokenization, and their settings.
+  # Reusing it across many models skips both encoding and tokenization, with
+  # byte-identical results. The corpus fixes those settings, so conflicting
+  # overrides are refused rather than silently ignored.
   precomputed_tokens <- NULL
   corpus_model_information <- NULL
+  units <- NULL
   if (inherits(text, "sbert_topic_corpus")) {
     corpus <- text
     if (!is.null(model)) {
@@ -1004,8 +1267,16 @@ topics <- function(
     if (!is.null(embeddings)) {
       stop("embeddings cannot be combined with a prepared topic_corpus.", call. = FALSE)
     }
+    if (segment != "document" && !identical(corpus$settings$segment, segment)) {
+      stop(
+        "Segmentation is fixed by a prepared topic_corpus; pass segment = ",
+        "to topic_corpus() when building it.",
+        call. = FALSE
+      )
+    }
     text <- corpus$text
     metadata <- corpus$metadata
+    units <- corpus$units
     embeddings <- corpus$embeddings
     precomputed_tokens <- corpus$token_lists
     stop_words <- corpus$settings$stop_words
@@ -1014,6 +1285,7 @@ topics <- function(
     numbers <- if (is.null(corpus$settings$numbers)) "keep" else corpus$settings$numbers
     roman_numerals <- if (is.null(corpus$settings$roman_numerals)) "keep" else corpus$settings$roman_numerals
     section_numbers <- if (is.null(corpus$settings$section_numbers)) "keep" else corpus$settings$section_numbers
+    segmentation <- topic_segmentation(corpus)
     corpus_model_information <- corpus$model
   } else {
     # A data frame goes in whole: `column` names the text to model, every other
@@ -1093,6 +1365,7 @@ topics <- function(
 
   if (is.null(embeddings)) {
     model <- resolve_sbert_model(model)
+    seed_model <- model
     embedding_matrix <- encode_topic_documents(
       text,
       model,
@@ -1157,7 +1430,7 @@ topics <- function(
       stop("More seeds than topics; raise n_topics.", call. = FALSE)
     }
     if (is.null(seed_embeddings)) {
-      if (is.null(model)) {
+      if (is.null(seed_model)) {
         stop(
           "Seeds need the encoding model; with precomputed embeddings, ",
           "supply seed_embeddings as well.",
@@ -1166,7 +1439,7 @@ topics <- function(
       }
       seed_embeddings <- encode_topic_documents(
         unname(seed_texts),
-        model,
+        resolve_sbert_model(seed_model),
         batch_size = as.integer(batch_size)
       )
     }
@@ -1202,18 +1475,32 @@ topics <- function(
     reorder = is.null(seeds),
     fixed = !is.null(seeds) && isTRUE(fixed_seeds)
   )
-  document_names <- names(text)
-  if (is.null(document_names)) {
-    document_names <- rep.int("", length(text))
+  # One row per modelled unit. A segmented fit keeps the parent document and
+  # the segment's position so every downstream verb can aggregate back.
+  documents <- if (is.null(units)) {
+    document_names <- names(text)
+    if (is.null(document_names)) {
+      document_names <- rep.int("", length(text))
+    }
+    data.frame(
+      document_id = seq_along(text),
+      document_name = unname(document_names),
+      text = unname(text),
+      topic = clustering$topic,
+      distance = clustering$distance,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      document_id = units$document_id,
+      document_name = units$document_name,
+      segment = units$segment,
+      text = unname(text),
+      topic = clustering$topic,
+      distance = clustering$distance,
+      stringsAsFactors = FALSE
+    )
   }
-  documents <- data.frame(
-    document_id = seq_along(text),
-    document_name = unname(document_names),
-    text = unname(text),
-    topic = clustering$topic,
-    distance = clustering$distance,
-    stringsAsFactors = FALSE
-  )
   if (!is.null(metadata) && ncol(metadata) > 0L) {
     documents <- cbind(documents, metadata)
   }
@@ -1299,6 +1586,10 @@ topics <- function(
         numbers = numbers,
         roman_numerals = roman_numerals,
         section_numbers = section_numbers,
+        segment = segmentation$segment,
+        max_tokens = segmentation$max_tokens,
+        merge_below = segmentation$merge_below,
+        min_content = segmentation$min_content,
         seeds = if (is.null(seeds)) NULL else unname(
           if (is.list(seeds)) {
             vapply(seeds, function(seed) paste(seed, collapse = " "), character(1))
@@ -1321,17 +1612,24 @@ print.sbert_topic_model <- function(x, ...) {
   } else {
     0
   }
+  cat("<sbert_topic_model>\n")
+  if (is_segmented_topic_model(x)) {
+    cat("  documents:", length(unique(x$documents$document_id)), "\n")
+    cat(
+      "  segments:", nrow(x$documents),
+      sprintf("(%s level)", topic_segmentation(x)$segment), "\n"
+    )
+  } else {
+    cat("  documents:", nrow(x$documents), "\n")
+  }
   cat(sprintf(
     paste0(
-      "<sbert_topic_model>\n",
-      "  documents: %d\n",
       "  topics: %d\n",
       "  model: %s\n",
       "  algorithm: %s\n",
       "  topic sizes: %s\n",
       "  between/total SS: %.1f%%\n"
     ),
-    nrow(x$documents),
     nrow(x$topics),
     x$model$id,
     x$diagnostics$algorithm,

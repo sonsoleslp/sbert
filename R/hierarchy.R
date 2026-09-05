@@ -211,14 +211,13 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
   distance <- 1 - rowSums(normalized * assigned_centers)
   distance[distance < 0] <- 0
 
-  documents <- data.frame(
-    document_id = object$documents$document_id,
-    document_name = object$documents$document_name,
-    text = object$documents$text,
-    topic = merged_topic,
-    distance = distance,
-    stringsAsFactors = FALSE
-  )
+  # The units, their parents, segment positions, and carried metadata are all
+  # kept; only the assignment and its distance change, and the stale label is
+  # replaced below.
+  documents <- object$documents
+  documents$topic <- merged_topic
+  documents$distance <- distance
+  documents$label <- NULL
 
   settings <- object$settings
   term_results <- topic_term_scores(
@@ -231,7 +230,10 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
     min_token_length = settings$min_token_length,
     weighting = settings$weighting,
     reduce_frequent_words = settings$reduce_frequent_words,
-    stem = settings$stem
+    stem = settings$stem,
+    numbers = if (is.null(settings$numbers)) "keep" else settings$numbers,
+    roman_numerals = if (is.null(settings$roman_numerals)) "keep" else settings$roman_numerals,
+    section_numbers = if (is.null(settings$section_numbers)) "keep" else settings$section_numbers
   )
   labels <- topic_labels_from_terms(term_results$terms, n_topics)
 
@@ -268,16 +270,17 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
   )
 
   settings$n_topics <- n_topics
+  representatives <- topic_representatives(
+    documents,
+    n_topics,
+    settings$n_representatives
+  )
   structure(
     list(
-      documents = documents,
+      documents = insert_topic_label(documents, labels),
       topics = topics,
-      terms = term_results$terms,
-      representatives = topic_representatives(
-        documents,
-        n_topics,
-        settings$n_representatives
-      ),
+      terms = insert_topic_label(term_results$terms, labels),
+      representatives = insert_topic_label(representatives, labels),
       centers = centers,
       embeddings = if (is.null(object$embeddings)) NULL else normalized,
       diagnostics = list(

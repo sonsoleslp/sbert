@@ -15,11 +15,11 @@ testthat::test_that("topics(corpus) is byte-identical to topics(text, embeddings
   }
 })
 
-testthat::test_that("select_topics on a corpus matches select_topics on raw text", {
+testthat::test_that("compare_topics on a corpus matches compare_topics on raw text", {
   fx <- local_fixture()
   corpus <- topic_corpus(fx$text, embeddings = fx$embeddings)
-  raw <- select_topics(fx$text, n_topics = c(4, 6, 8), embeddings = fx$embeddings, measure = "npmi")
-  via <- select_topics(corpus, n_topics = c(4, 6, 8), measure = "npmi")
+  raw <- compare_topics(fx$text, n_topics = c(4, 6, 8), embeddings = fx$embeddings, measure = "npmi")
+  via <- compare_topics(corpus, n_topics = c(4, 6, 8), measure = "npmi")
   testthat::expect_identical(as.data.frame(raw), as.data.frame(via))
   testthat::expect_identical(
     lapply(attr(raw, "models"), model_surfaces),

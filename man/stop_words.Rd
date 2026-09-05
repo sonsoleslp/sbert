@@ -26,7 +26,7 @@ whose surface form is meaningful in a specific corpus.
 }
 \details{
 For a fully custom list, pass any character vector straight to the
-`stop_words` argument of [topics()], [select_topics()], [topic_corpus()], or
+`stop_words` argument of [topics()], [compare_topics()], [topic_corpus()], or
 [keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
 the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
 list entirely, or `character()` to disable stop-word filtering.

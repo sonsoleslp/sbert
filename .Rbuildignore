@@ -3,6 +3,7 @@
 ^\.git$
 ^\.gitignore$
 ^AGENTS\.md$
+^CLAUDE\.md$
 ^CHANGES\.md$
 ^HANDOFF\.md$
 ^LEARNINGS\.md$

@@ -368,7 +368,17 @@ testthat::test_that("representatives default to the fitted corpus", {
     embeddings = fitted$embeddings,
     n = 2L
   )
-  testthat::expect_equal(from_fit, explicit)
+  # The fitted units are ranked identically; they additionally name their
+  # source document so every example can be traced.
+  testthat::expect_identical(
+    names(from_fit),
+    c("topic", "rank", "document_id", "text", "distance", "margin")
+  )
+  testthat::expect_equal(from_fit[names(explicit)], explicit)
+  testthat::expect_identical(
+    fitted$documents$text[from_fit$document_id],
+    from_fit$text
+  )
 })
 
 testthat::test_that("representatives explain a model that kept no embeddings", {
