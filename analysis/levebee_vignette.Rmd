@@ -1,5 +1,5 @@
 ---
-title: "Semantic Topics in Levebee AI Mathematics Feedback — an sbert Tutorial"
+title: "Semantic Topics in AI Mathematics Feedback — an sbert Tutorial"
 author: "sbert 0.4.0"
 date: "`r format(Sys.Date())`"
 output:
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
   fig.width = 7, fig.height = 4.2, dpi = 150, out.width = "100%"
 )
 suppressMessages(devtools::load_all("..", quiet = TRUE))
-fig_dir <- file.path("..", "tmp", "levebee_vignette_figs")
+fig_dir <- file.path("..", "tmp", "math_vignette_figs")
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 ```
 

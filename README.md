@@ -357,7 +357,7 @@ checking its coherence and diversity, reading each topic through two
 keyword views, and confirming the labels with representative messages:
 
 ``` r
-vignette("levebee_vignette", package = "sbert")
+vignette("math_vignette", package = "sbert")
 ```
 
 ## Supported scope

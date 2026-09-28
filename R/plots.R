@@ -53,7 +53,7 @@ plot_topic_sizes <- function(x, colors) {
 }
 
 # One horizontal bar panel in the shared topic-plot style, drawn after the
-# package's Levebee tutorial: axis-free bars that grow rightward, each annotated
+# package's tutorial: axis-free bars that grow rightward, each annotated
 # with its own value, under a left-aligned bold topic label.
 draw_topic_bar_panel <- function(
   values,

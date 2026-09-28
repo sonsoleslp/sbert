@@ -18,7 +18,7 @@ Authors@R: c(
       comment = c(ORCID = "0000-0002-9621-1392")
     )
   )
-Description: Computes sentence embeddings in R without requiring
+Description: Computes sentence embeddings in 'R' without requiring
     'Python' by running revision-pinned 'Sentence-BERT' models through
     'ONNX Runtime'. Implements model-specific tokenization,
     attention-mask-aware mean pooling, L2 normalization, cosine

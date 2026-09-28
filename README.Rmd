@@ -316,7 +316,7 @@ embeddings <- blend(sentences, abstracts, alpha = 0.5)
 ```
 
 The bundled `feedback_translations` dataset (8,757 multilingual AI-generated
-mathematics feedback messages from the Levebee educational application, with
+mathematics feedback messages, with
 English translations) provides a realistic corpus for trying the full
 workflow offline:
 
@@ -342,7 +342,7 @@ its coherence and diversity, reading each topic through two keyword views, and
 confirming the labels with representative messages:
 
 ```{r}
-vignette("levebee_vignette", package = "sbert")
+vignette("math_vignette", package = "sbert")
 ```
 
 ## Supported scope

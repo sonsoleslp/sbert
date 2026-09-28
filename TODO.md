@@ -94,7 +94,7 @@ base-R, Python-free, pinned models, tidy one-verb APIs. Newest assessment
 
 - [x] R CMD check --as-cran clean (kept clean through the 0.5.2 work)
 - [x] Fold the analysis tutorials into the package vignette
-      (`levebee_vignette` ships; covid and parallel articles are pkgdown-only)
+      (`meth_vignette` ships; covid and parallel articles are pkgdown-only)
 - [ ] Decide whether `topics()`'s built-in representatives should use
       margin ranking (currently raw distance; `representatives()` is
       the margin path)

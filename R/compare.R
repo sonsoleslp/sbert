@@ -458,6 +458,17 @@ validate_candidate_counts <- function(n_topics, n_units) {
 #'
 #' @param ... Passed to [compare_topics()].
 #' @return See [compare_topics()].
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' # Deprecated: prefer compare_topics(). This warns once, then forwards.
+#' suppressWarnings(select_topics(text, n_topics = 2:3, embeddings = embeddings))
 #' @keywords internal
 #' @export
 select_topics <- function(...) {
@@ -609,6 +620,17 @@ as.data.frame.sbert_topic_sweep <- function(x, ...) {
 #'   [plot.sbert_topic_model()].
 #' @param ... Passed to the underlying plotting calls.
 #' @return `x`, invisibly.
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+#' plot(comparison)
 #' @export
 plot.sbert_topic_sweep <- function(
   x,

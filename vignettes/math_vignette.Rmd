@@ -1,8 +1,8 @@
 ---
-title: "Semantic Topics in Levebee AI Mathematics Feedback"
+title: "Semantic Topics in AI-powereed Mathematics Feedback"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Semantic Topics in Levebee AI Mathematics Feedback}
+  %\VignetteIndexEntry{Semantic Topics in an AI-powereed Mathematics Feedback}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -24,7 +24,7 @@ library(sbert)
 # Why this tutorial
 
 The `feedback_translations` dataset bundled with **sbert** contains 8,757
-AI-generated feedback messages from the Levebee mathematics application,
+AI-generated feedback messages from a mathematics application,
 translated into English from ten source languages. Nobody can read nearly nine
 thousand messages, and many repeat verbatim — "Try again." is the most common,
 appearing 11 times — so simple frequency lists tell you about templates,
