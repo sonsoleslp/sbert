@@ -398,7 +398,7 @@ keyword views, and confirming the labels with representative messages:
 
 ``` r
 
-vignette("levebee_vignette", package = "sbert")
+vignette("math_vignette", package = "sbert")
 ```
 
 ## Supported scope
@@ -569,7 +569,7 @@ Deterministic base-graphics plots, hierarchies, and reports.
 Bundled corpora for offline examples and topic modeling.
 
 - [`feedback_translations`](https://sonsoles.me/sbert/reference/feedback_translations.md)
-  : Levebee AI Mathematics Feedback with English Translations
+  : AI-generated Mathematics Feedback with English Translations
 - [`covid`](https://sonsoles.me/sbert/reference/covid.md) : COVID-19
   Research Abstracts
 
@@ -579,7 +579,7 @@ Bundled corpora for offline examples and topic modeling.
 
 - [Topic Modeling COVID-19 Research
   Abstracts](https://sonsoles.me/sbert/articles/covid_topics.md):
-- [Semantic Topics in Levebee AI Mathematics
-  Feedback](https://sonsoles.me/sbert/articles/levebee_vignette.md):
+- [Semantic Topics in AI-powereed Mathematics
+  Feedback](https://sonsoles.me/sbert/articles/math_vignette.md):
 - [Parallel and High-Throughput Topic
   Modeling](https://sonsoles.me/sbert/articles/parallel.md):

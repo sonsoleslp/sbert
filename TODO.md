@@ -145,8 +145,8 @@ pooling mode. EmbeddingGemma stays excluded while gated.
 
 R CMD check –as-cran clean (kept clean through the 0.5.2 work)
 
-Fold the analysis tutorials into the package vignette
-(`levebee_vignette` ships; covid and parallel articles are pkgdown-only)
+Fold the analysis tutorials into the package vignette (`meth_vignette`
+ships; covid and parallel articles are pkgdown-only)
 
 Decide whether
 [`topics()`](https://sonsoles.me/sbert/reference/topics.md)’s built-in

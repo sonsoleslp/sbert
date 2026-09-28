@@ -125,6 +125,6 @@ Deterministic base-graphics plots, hierarchies, and reports.
 Bundled corpora for offline examples and topic modeling.
 
 - [`feedback_translations`](https://sonsoles.me/sbert/reference/feedback_translations.md)
-  : Levebee AI Mathematics Feedback with English Translations
+  : AI-generated Mathematics Feedback with English Translations
 - [`covid`](https://sonsoles.me/sbert/reference/covid.md) : COVID-19
   Research Abstracts

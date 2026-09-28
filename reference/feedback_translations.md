@@ -1,9 +1,9 @@
-# Levebee AI Mathematics Feedback with English Translations
+# AI-generated Mathematics Feedback with English Translations
 
 AI-generated feedback messages shown to young learners solving
-mathematics exercises in the Levebee educational application, paired
-with their English translations. The messages are short instructional
-hints and encouragements ("Choose the picture...", "Try listening to the
+mathematics exercises in an educational application, paired with their
+English translations. The messages are short instructional hints and
+encouragements ("Choose the picture...", "Try listening to the
 instruction again.") whose source languages include Czech, Slovak,
 Polish, German, Hungarian, Romanian, Ukrainian, Russian, Mongolian, and
 Vietnamese. The corpus is a realistic, quirk-preserving benchmark for
