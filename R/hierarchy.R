@@ -86,6 +86,11 @@ topic_hierarchy <- function(object, method = "average") {
   )
 }
 
+#' Print a Topic Hierarchy
+#'
+#' @param x An `sbert_topic_hierarchy` object.
+#' @param ... Ignored.
+#' @return The hierarchy object, invisibly.
 #' @export
 print.sbert_topic_hierarchy <- function(x, ...) {
   cat(sprintf(
@@ -97,6 +102,13 @@ print.sbert_topic_hierarchy <- function(x, ...) {
   invisible(x)
 }
 
+#' Plot a Topic Hierarchy Dendrogram
+#'
+#' @param x An `sbert_topic_hierarchy` object.
+#' @param main Plot title.
+#' @param cex Character expansion factor for labels.
+#' @param ... Passed to [plot.dendrogram()].
+#' @return The hierarchy object, invisibly.
 #' @export
 plot.sbert_topic_hierarchy <- function(
   x,

@@ -202,6 +202,11 @@ load_sbert_onnx_model <- function(path, backend, threads) {
   )
 }
 
+#' Print a Loaded Model
+#'
+#' @param x An `sbert_model` object.
+#' @param ... Ignored.
+#' @return The model object, invisibly.
 #' @export
 print.sbert_model <- function(x, ...) {
   stopifnot(inherits(x, "sbert_model"))

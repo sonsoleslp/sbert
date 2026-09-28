@@ -1040,6 +1040,11 @@ topic_corpus <- function(
   )
 }
 
+#' Print a Prepared Topic Corpus
+#'
+#' @param x An `sbert_topic_corpus` object.
+#' @param ... Ignored.
+#' @return The corpus object, invisibly.
 #' @export
 print.sbert_topic_corpus <- function(x, ...) {
   cat("<sbert_topic_corpus>\n")
@@ -1623,6 +1628,11 @@ topics <- function(
   )
 }
 
+#' Print a Semantic Topic Model
+#'
+#' @param x An `sbert_topic_model` object.
+#' @param ... Ignored.
+#' @return The topic model object, invisibly.
 #' @export
 print.sbert_topic_model <- function(x, ...) {
   stopifnot(inherits(x, "sbert_topic_model"))

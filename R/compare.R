@@ -560,6 +560,11 @@ fitted.sbert_topic_sweep <- function(object, n_topics, segment = NULL, ...) {
   models[[key]]
 }
 
+#' Print a Topic-Count Comparison
+#'
+#' @param x An `sbert_topic_sweep` object.
+#' @param ... Ignored.
+#' @return The sweep object, invisibly.
 #' @export
 print.sbert_topic_sweep <- function(x, ...) {
   measure <- attr(x, "measure")
@@ -586,6 +591,11 @@ print.sbert_topic_sweep <- function(x, ...) {
   invisible(x)
 }
 
+#' Coerce a Topic-Count Comparison to a Data Frame
+#'
+#' @param x An `sbert_topic_sweep` object.
+#' @param ... Ignored.
+#' @return A plain data frame without the attached models or sweep attributes.
 #' @export
 as.data.frame.sbert_topic_sweep <- function(x, ...) {
   plain <- x
