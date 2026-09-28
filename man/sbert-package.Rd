@@ -26,7 +26,6 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Sonsoles López-Pernas \email{sonsoles.lopez@uef.fi} (\href{https://orcid.org/0000-0002-9621-1392}{ORCID}) [copyright holder]
   \item Mohammed Saqr \email{mohammed.saqr@uef.fi} (\href{https://orcid.org/0000-0001-5881-3109}{ORCID}) [copyright holder]
 }
 

@@ -20,7 +20,7 @@ Authors@R: c(
   )
 Description: Computes sentence embeddings in 'R' without requiring
     'Python' by running revision-pinned 'Sentence-BERT' models through
-    'ONNX Runtime'. Implements model-specific tokenization,
+    'Open Neural Network Exchange' ('ONNX') 'Runtime'. Implements model-specific tokenization,
     attention-mask-aware mean pooling, L2 normalization, cosine
     similarity, deterministic semantic topic clustering, and class-based
     term weighting following Reimers and Gurevych (2019)
