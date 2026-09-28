@@ -15,7 +15,7 @@ Python installation is required.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://sonsoles.me/sbert}
+  \item \url{https://sonsoles.me/sbert/}
   \item \url{https://github.com/sonsoleslp/sbert}
   \item Report bugs at \url{https://github.com/sonsoleslp/sbert/issues}
 }
@@ -26,6 +26,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Sonsoles López-Pernas \email{sonsoles.lopez@uef.fi} (\href{https://orcid.org/0000-0002-9621-1392}{ORCID}) [copyright holder]
   \item Mohammed Saqr \email{mohammed.saqr@uef.fi} (\href{https://orcid.org/0000-0001-5881-3109}{ORCID}) [copyright holder]
 }
 

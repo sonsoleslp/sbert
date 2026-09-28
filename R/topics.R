@@ -432,13 +432,24 @@ deterministic_topic_centers <- function(embeddings, n_topics, existing_centers =
   # center per step, so the cost is O(n_topics * n * d) rather than the
   # O(n_topics^2 * n * d) of rebuilding the whole distance set each iteration.
   squared_distance_to <- function(center) {
-    center_matrix <- matrix(
-      center,
-      nrow = n_documents,
-      ncol = n_dimensions,
-      byrow = TRUE
-    )
-    rowSums((embeddings - center_matrix)^2)
+    # Broadcasting the centre to a full document-by-dimension matrix and
+    # subtracting it allocates two corpus-sized transients per call, and this
+    # runs once per selected centre. Doing it in row blocks keeps the transient
+    # to one block while leaving the per-row arithmetic (and the selections)
+    # exactly the same.
+    out <- numeric(n_documents)
+    chunk <- 8192L
+    for (start in seq.int(1L, n_documents, chunk)) {
+      idx <- start:min(start + chunk - 1L, n_documents)
+      center_block <- matrix(
+        center,
+        nrow = length(idx),
+        ncol = n_dimensions,
+        byrow = TRUE
+      )
+      out[idx] <- rowSums((embeddings[idx, , drop = FALSE] - center_block)^2)
+    }
+    out
   }
 
   if (is.null(existing_centers) || nrow(existing_centers) == 0L) {
@@ -596,11 +607,19 @@ fit_embedding_topics <- function(
   topic <- as.integer(new_topic_id[fit$cluster])
   centers <- unname(fit$centers[topic_order, , drop = FALSE])
   normalized_centers <- normalize_embedding_rows(centers)
-  # Each document's cosine to its own topic centroid, vectorized over the whole
-  # corpus (one gather + rowSums) instead of an R-level per-document loop.
-  cosine_similarity <- rowSums(
-    normalized_embeddings * normalized_centers[topic, , drop = FALSE]
-  )
+  # Each document's cosine to its own topic centroid. Computed in row blocks so
+  # the gathered centroids and the elementwise product are one block at a time,
+  # not two full corpus-sized transients; the per-row arithmetic is unchanged.
+  n_documents <- nrow(normalized_embeddings)
+  cosine_similarity <- numeric(n_documents)
+  chunk <- 8192L
+  for (start in seq.int(1L, n_documents, chunk)) {
+    idx <- start:min(start + chunk - 1L, n_documents)
+    cosine_similarity[idx] <- rowSums(
+      normalized_embeddings[idx, , drop = FALSE] *
+        normalized_centers[topic[idx], , drop = FALSE]
+    )
+  }
 
   list(
     topic = topic,

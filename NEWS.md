@@ -54,6 +54,41 @@
   `topics = ` subset, or a taller device) instead of the opaque base-graphics
   "invalid graphics state" message.
 
+# sbert 0.5.5
+
+- The two byte-exact floating-point locks — the `topics()` golden-reference
+  comparison and the rowsum-vs-`sweep`/`apply` pooling equivalence — now
+  `skip_on_cran()`. They assert bit-for-bit equality against a reference
+  generated on one platform, which does not hold across CRAN's different OSes,
+  BLAS builds, and C math libraries (the last digit of a distance or centre can
+  differ). They remain strict same-platform regression guards for local runs
+  and CI; the portable guarantee (`topics()` is deterministic across reruns on
+  a given machine) keeps running everywhere.
+- `plot(type = "fit")` no longer errors on a topic whose terms carry a
+  non-finite metric value. A degenerate topic can reach a term panel with an
+  `NA`/`NaN` score or beta, or an `Inf`; base graphics then failed with an
+  opaque `need finite 'ylim' values`, `missing value where TRUE/FALSE needed`,
+  or `need finite 'xlim' values` from deep inside `barplot()`. The panel now
+  drops the non-finite bars (plotting the finite ones) and falls back to the
+  same annotated empty panel as the no-terms case when none remain. All-finite
+  input is untouched, so the normal picture is byte-identical.
+- `encode()` assembles its result with lower peak memory: instead of collecting
+  every batch in a list and `rbind`-ing them (which held the whole corpus of
+  embeddings twice), it fills one pre-allocated matrix batch by batch. Output is
+  byte-identical, and the saving flows through `topics()` and `topic_gamma()`
+  whenever they encode. Measured about 225 MB lower peak assembling 120,000
+  embeddings at 768 dimensions.
+- Lower peak memory in the clustering path. `normalize_embedding_rows()` no
+  longer allocates a full logical copy of the matrix to validate it (an O(n)
+  range scan replaces `all(is.finite())`) and normalizes in row blocks; the
+  farthest-point initializer and the per-document centroid cosine are likewise
+  computed in blocks rather than materializing corpus-sized temporaries. All
+  byte-identical. The dominant cost of `topics()` on a large corpus remains
+  `stats::kmeans` itself, which holds the embedding matrix; there a 384-dimension
+  model roughly halves peak memory against a 768-dimension one, `keep_embeddings
+  = FALSE` drops the stored copy from the result, and clustering distinct
+  sentences via `dedupe()` shrinks the matrix directly.
+
 # sbert 0.5.2
 
 - Added `clean_corpus()`, one place for the text-level cleaning that should

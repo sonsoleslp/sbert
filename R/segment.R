@@ -221,11 +221,25 @@ segment_unit_counter <- function(model = NULL) {
     tokenizer$no_padding()
     tokenizer$no_truncation()
     function(x) {
-      if (length(x) == 0L) {
+      n <- length(x)
+      if (n == 0L) {
         return(integer(0))
       }
-      encoded <- tokenizer$encode_batch(as.list(x), add_special_tokens = TRUE)
-      vapply(encoded, function(item) length(item$ids), integer(1))
+      # Tokenize in batches and keep only the per-item id counts. Encoding all
+      # inputs in one `encode_batch` call materializes an encoding object (ids,
+      # mask, offsets, ...) for every input at once, which exhausts memory on a
+      # corpus of millions of segments; batching bounds that to one batch.
+      out <- integer(n)
+      batch <- 10000L
+      for (start in seq.int(1L, n, batch)) {
+        idx <- start:min(start + batch - 1L, n)
+        encoded <- tokenizer$encode_batch(
+          as.list(x[idx]),
+          add_special_tokens = TRUE
+        )
+        out[idx] <- vapply(encoded, function(item) length(item$ids), integer(1))
+      }
+      out
     }
   }
 }

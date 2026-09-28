@@ -63,11 +63,21 @@ draw_topic_bar_panel <- function(
   value_format,
   cex_names = 0.75
 ) {
-  # A topic can end up with no terms at all when every token in its documents
-  # is a stop word, is shorter than `min_token_length`, or falls below
-  # `min_term_frequency` -- increasingly likely as the topic count grows and
-  # topics get small. barplot() cannot size its axes from an empty vector
-  # ("need finite 'ylim' values"), so draw an annotated empty panel instead.
+  # A topic can end up with no plottable terms: none survive the term filters
+  # (every token is a stop word, is shorter than `min_token_length`, or falls
+  # below `min_term_frequency`), or the terms that remain carry a non-finite
+  # metric value (an NA/NaN/Inf score or beta from a degenerate topic). Either
+  # way barplot() cannot size its axes -- an empty vector gives "need finite
+  # 'ylim' values", an NA gives "missing value where TRUE/FALSE needed", an Inf
+  # gives "need finite 'xlim' values". Drop the non-finite entries (and their
+  # labels) so a topic with a mix still plots its good bars, and fall back to an
+  # annotated empty panel when nothing plottable remains. All-finite input is
+  # untouched, so the normal case is byte-identical.
+  finite <- is.finite(values)
+  if (!all(finite)) {
+    values <- values[finite]
+    labels <- labels[finite]
+  }
   if (length(values) == 0L) {
     graphics::plot.new()
     graphics::text(

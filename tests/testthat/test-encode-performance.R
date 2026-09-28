@@ -31,6 +31,12 @@ right_padded_mask <- function(batch, sequence, lengths) {
 }
 
 testthat::test_that("rowsum pooling is bit-identical to the sweep/apply formulation", {
+  # rowsum and sweep/apply sum the sequence dimension in a different order, so
+  # they agree to the last bit only within one platform's floating-point
+  # arithmetic; across OSes and math libraries the final digit can differ. This
+  # is a same-platform regression lock (the rewrite must not move a bit here),
+  # so skip it on CRAN's heterogeneous machines rather than weaken the tolerance.
+  testthat::skip_on_cran()
   set.seed(42)
   batch <- 8L
   sequence <- 16L

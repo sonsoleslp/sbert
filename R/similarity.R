@@ -3,10 +3,27 @@ normalize_embedding_rows <- function(embeddings) {
     is.matrix(embeddings),
     is.numeric(embeddings),
     !anyNA(embeddings),
-    all(is.finite(embeddings))
+    # `range()` is an O(n) scan returning two values, so this catches Inf and
+    # NaN without allocating a full logical copy of the matrix the way
+    # `all(is.finite(embeddings))` would.
+    all(is.finite(range(embeddings)))
   )
 
-  norms <- sqrt(rowSums(embeddings^2))
+  n <- nrow(embeddings)
+  # Compute the row norms in blocks so squaring never materializes a whole
+  # `embeddings^2` copy, then divide once. The single `embeddings / norms` result
+  # is unavoidable (it is the return value); the point is to avoid a *second*
+  # corpus-sized transient alongside it. Byte-identical row by row.
+  chunk <- 8192L
+  if (n <= chunk) {
+    norms <- sqrt(rowSums(embeddings^2))
+  } else {
+    norms <- numeric(n)
+    for (start in seq.int(1L, n, chunk)) {
+      idx <- start:min(start + chunk - 1L, n)
+      norms[idx] <- sqrt(rowSums(embeddings[idx, , drop = FALSE]^2))
+    }
+  }
   if (any(norms <= 0)) {
     stop("Embedding rows must have non-zero norms.", call. = FALSE)
   }

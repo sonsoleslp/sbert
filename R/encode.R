@@ -267,13 +267,24 @@ encode_in_batches <- function(
     positions,
     ceiling(positions / as.integer(batch_size))
   )
-  embedding_batches <- lapply(
-    batch_groups,
-    function(index) {
-      encode_sbert_batch(model, ordered_text[index], normalize = normalize)
+  # Fill one pre-allocated result matrix batch by batch, rather than collecting
+  # every batch in a list and `rbind`-ing at the end — that held the whole
+  # corpus of embeddings twice (the list of batches and the concatenated copy) at
+  # peak. Writing into a freshly allocated matrix modifies it in place, so the
+  # result is byte-identical while only one batch lives alongside it.
+  embeddings <- NULL
+  for (index in batch_groups) {
+    batch <- encode_sbert_batch(model, ordered_text[index], normalize = normalize)
+    if (is.null(embeddings)) {
+      # Match the batch's storage mode so the assembled result is identical to a
+      # single rbind (real embeddings are double; the tests use integer stubs).
+      embeddings <- matrix(
+        vector(typeof(batch), 1L),
+        nrow = length(ordered_text), ncol = ncol(batch)
+      )
     }
-  )
-  embeddings <- do.call(rbind, embedding_batches)
+    embeddings[index, ] <- batch
+  }
   if (sort_by_length) {
     embeddings <- embeddings[order(order_index), , drop = FALSE]
   }

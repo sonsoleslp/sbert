@@ -177,6 +177,25 @@ testthat::test_that("term panels tolerate a topic with no surviving terms", {
     draw_topic_bar_panel(numeric(0), character(0), "empty", "#000000", "%d"),
     numeric(0)
   )
+  # A topic can also reach the panel with non-finite metric values (an NA/NaN
+  # score or beta, or an Inf); dropping them must not error. When some values
+  # are finite the panel plots the survivors; when none are, it falls back to
+  # the empty panel just like the no-terms case.
+  grDevices::pdf(tempfile(fileext = ".pdf"))
+  on.exit(grDevices::dev.off(), add = TRUE)
+  labels <- c("a", "b", "c")
+  testthat::expect_no_error(
+    draw_topic_bar_panel(c(0.3, NA, 0.1), labels, "one NA", "#000000", "%.2f")
+  )
+  testthat::expect_no_error(
+    draw_topic_bar_panel(c(0.3, Inf, 0.1), labels, "one Inf", "#000000", "%.2f")
+  )
+  testthat::expect_identical(
+    draw_topic_bar_panel(
+      c(NA_real_, NA_real_), c("a", "b"), "all NA", "#000000", "%.2f"
+    ),
+    numeric(0)
+  )
 })
 
 testthat::test_that("a device too small for the stacked fit report errors", {

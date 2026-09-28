@@ -1,7 +1,7 @@
 Package: sbert
 Type: Package
 Title: Sentence Embeddings with 'Sentence-BERT' Models
-Version: 0.5.4
+Version: 0.5.5
 Authors@R: c(
     person(
       given = "Mohammed",
@@ -30,7 +30,7 @@ Description: Computes sentence embeddings in R without requiring
     visualizations. Model files are downloaded only after an explicit user
     request and are stored outside the package library.
 License: MIT + file LICENSE
-URL: https://sonsoles.me/sbert, https://github.com/sonsoleslp/sbert
+URL: https://sonsoles.me/sbert/, https://github.com/sonsoleslp/sbert
 BugReports: https://github.com/sonsoleslp/sbert/issues
 Encoding: UTF-8
 LazyData: true

@@ -4,6 +4,14 @@
 # shipped feedback embeddings; regenerate it ONLY when a change to the modeled
 # output is deliberate and reviewed (see data-raw or the test comment below).
 testthat::test_that("topics() output is bit-identical to the golden reference", {
+  # The golden .rds was generated on one platform. Byte-for-byte floating-point
+  # equality does not hold across different OSes, BLAS builds, and C math
+  # libraries (macOS vs Windows differ in the last digits of distance, centers,
+  # etc.), so this lock is a same-platform regression guard for local runs and
+  # CI on the reference platform, not a claim about CRAN's heterogeneous
+  # machines. The "identical across independent reruns" test below is the
+  # portable determinism guarantee and keeps running everywhere.
+  testthat::skip_on_cran()
   embeddings_fixture <- readRDS(
     system.file("extdata", "feedback_embeddings.rds", package = "sbert")
   )
