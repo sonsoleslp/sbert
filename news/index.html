@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.5</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,6 +56,15 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.3" id="sbert-053">sbert 0.5.3<a class="anchor" aria-label="anchor" href="#sbert-053"></a></h2>
 <ul><li>Topic term plots no longer fail with “need finite ‘ylim’ values” when a topic has no terms left after the stop-word, token-length, and frequency filters (<code>plot(type = "terms")</code>, <code>plot(type = "fit")</code>, and the per-topic figures). Such a topic now draws an empty, labelled panel. A device too small to stack one row per topic in <code>plot(type = "fit")</code> raises a classed <code>sbert_plot_too_small</code> error naming the remedies (<code>per_topic = TRUE</code>, a <code>topics =</code> subset, or a taller device) instead of the opaque base-graphics “invalid graphics state” message.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.5" id="sbert-055">sbert 0.5.5<a class="anchor" aria-label="anchor" href="#sbert-055"></a></h2>
+<ul><li>The two byte-exact floating-point locks — the <code><a href="../reference/topics.html">topics()</a></code> golden-reference comparison and the rowsum-vs-<code>sweep</code>/<code>apply</code> pooling equivalence — now <code>skip_on_cran()</code>. They assert bit-for-bit equality against a reference generated on one platform, which does not hold across CRAN’s different OSes, BLAS builds, and C math libraries (the last digit of a distance or centre can differ). They remain strict same-platform regression guards for local runs and CI; the portable guarantee (<code><a href="../reference/topics.html">topics()</a></code> is deterministic across reruns on a given machine) keeps running everywhere.</li>
+<li>
+<code>plot(type = "fit")</code> no longer errors on a topic whose terms carry a non-finite metric value. A degenerate topic can reach a term panel with an <code>NA</code>/<code>NaN</code> score or beta, or an <code>Inf</code>; base graphics then failed with an opaque <code>need finite 'ylim' values</code>, <code>missing value where TRUE/FALSE needed</code>, or <code>need finite 'xlim' values</code> from deep inside <code><a href="https://rdrr.io/r/graphics/barplot.html" class="external-link">barplot()</a></code>. The panel now drops the non-finite bars (plotting the finite ones) and falls back to the same annotated empty panel as the no-terms case when none remain. All-finite input is untouched, so the normal picture is byte-identical.</li>
+<li>
+<code><a href="../reference/encode.html">encode()</a></code> assembles its result with lower peak memory: instead of collecting every batch in a list and <code>rbind</code>-ing them (which held the whole corpus of embeddings twice), it fills one pre-allocated matrix batch by batch. Output is byte-identical, and the saving flows through <code><a href="../reference/topics.html">topics()</a></code> and <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> whenever they encode. Measured about 225 MB lower peak assembling 120,000 embeddings at 768 dimensions.</li>
+<li>Lower peak memory in the clustering path. <code>normalize_embedding_rows()</code> no longer allocates a full logical copy of the matrix to validate it (an O(n) range scan replaces <code>all(is.finite())</code>) and normalizes in row blocks; the farthest-point initializer and the per-document centroid cosine are likewise computed in blocks rather than materializing corpus-sized temporaries. All byte-identical. The dominant cost of <code><a href="../reference/topics.html">topics()</a></code> on a large corpus remains <code><a href="https://rdrr.io/r/stats/kmeans.html" class="external-link">stats::kmeans</a></code> itself, which holds the embedding matrix; there a 384-dimension model roughly halves peak memory against a 768-dimension one, <code>keep_embeddings = FALSE</code> drops the stored copy from the result, and clustering distinct sentences via <code><a href="../reference/dedupe.html">dedupe()</a></code> shrinks the matrix directly.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.2" id="sbert-052">sbert 0.5.2<a class="anchor" aria-label="anchor" href="#sbert-052"></a></h2>
