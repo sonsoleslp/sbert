@@ -10,6 +10,7 @@
 <url><loc>https://sonsoles.me/sbert/index.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/news/index.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/abbreviations.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/blend.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/cache_dir.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/cache_size.html</loc></url>
@@ -31,10 +32,16 @@
 <url><loc>https://sonsoles.me/sbert/reference/model_remove.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/model_status.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/models.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/plot.sbert_topic_hierarchy.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/plot.sbert_topic_model.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/pool.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/predict.sbert_topic_model.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/print.sbert_model.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/print.sbert_topic_corpus.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/print.sbert_topic_hierarchy.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/print.sbert_topic_model.html</loc></url>
+<url><loc>https://sonsoles.me/sbert/reference/print.sbert_topic_sweep.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/reduce_topics.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/representatives.html</loc></url>
 <url><loc>https://sonsoles.me/sbert/reference/sbert-package.html</loc></url>

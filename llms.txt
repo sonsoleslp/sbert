@@ -557,12 +557,31 @@ Deterministic base-graphics plots, hierarchies, and reports.
   : Plot a Semantic Topic Model
 - [`plot(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
   : Plot a Topic-Count Comparison
+- [`plot(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_hierarchy.md)
+  : Plot a Topic Hierarchy Dendrogram
 - [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
   : Build the Topic Hierarchy of a Fitted Model
 - [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
   : Compute Cosine Similarity
 - [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md)
   : Qualitative Colour Palette for Topics
+
+## Printing and conversion
+
+Print methods and tidy accessors for result objects.
+
+- [`print(`*`<sbert_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_model.md)
+  : Print a Loaded Model
+- [`print(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_corpus.md)
+  : Print a Prepared Topic Corpus
+- [`print(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_model.md)
+  : Print a Semantic Topic Model
+- [`print(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_hierarchy.md)
+  : Print a Topic Hierarchy
+- [`print(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_sweep.md)
+  : Print a Topic-Count Comparison
+- [`as.data.frame(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md)
+  : Coerce a Topic-Count Comparison to a Data Frame
 
 ## Data
 

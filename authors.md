@@ -13,14 +13,14 @@
 Source:
 [`DESCRIPTION`](https://github.com/sonsoleslp/sbert/blob/main/DESCRIPTION)
 
-Saqr M, López-Pernas S (2026). *sbert: Sentence Embeddings with
-'Sentence-BERT' Models*. R package version 0.5.5,
+Saqr M, López-Pernas S (2026). *sbert: Topic Modeling with
+'Sentence-BERT' Embeddings*. R package version 0.5.6,
 <https://sonsoles.me/sbert/>.
 
     @Manual{,
-      title = {sbert: Sentence Embeddings with 'Sentence-BERT' Models},
+      title = {sbert: Topic Modeling with 'Sentence-BERT' Embeddings},
       author = {Mohammed Saqr and Sonsoles López-Pernas},
       year = {2026},
-      note = {R package version 0.5.5},
+      note = {R package version 0.5.6},
       url = {https://sonsoles.me/sbert/},
     }
