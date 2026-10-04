@@ -74,9 +74,20 @@ reference:
   - summary.sbert_topic_model
   - plot.sbert_topic_model
   - plot.sbert_topic_sweep
+  - plot.sbert_topic_hierarchy
   - topic_hierarchy
   - topic_similarity
   - topic_palette
+
+- title: Printing and conversion
+  desc: Print methods and tidy accessors for result objects.
+  contents:
+  - print.sbert_model
+  - print.sbert_topic_corpus
+  - print.sbert_topic_model
+  - print.sbert_topic_hierarchy
+  - print.sbert_topic_sweep
+  - as.data.frame.sbert_topic_sweep
 
 - title: Data
   desc: Bundled corpora for offline examples and topic modeling.

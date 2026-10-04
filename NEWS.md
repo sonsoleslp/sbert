@@ -1,3 +1,9 @@
+# sbert 0.5.6
+
+* The pkgdown site builds again: seven S3 methods documented in 0.5.5 were
+  missing from the `_pkgdown.yml` reference index, which aborted every site
+  build since 2026-09-28.
+
 # sbert 0.5.5
 
 - The two byte-exact floating-point locks — the `topics()` golden-reference
