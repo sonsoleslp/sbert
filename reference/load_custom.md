@@ -101,8 +101,14 @@ makes no numerical-parity claim: you vouch for the configuration.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-model <- load_custom("thenlper/gte-small")
-encode(c("one sentence", "another sentence"), model)
-} # }
+# Cache root used for downloaded and custom models.
+cache_dir()
+#> [1] "/home/runner/.cache/R/sbert"
+
+# \donttest{
+if (interactive()) {
+  model <- load_custom("thenlper/gte-small")
+  encode(c("one sentence", "another sentence"), model)
+}
+# }
 ```

@@ -24,7 +24,13 @@ The result returned by \[onnxr::onnx_install()\], invisibly.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-install_runtime()
-} # }
+# Whether the ONNX Runtime is already available; nothing is installed here.
+onnxr::onnx_is_installed()
+#> [1] FALSE
+
+# \donttest{
+if (interactive()) {
+  install_runtime()
+}
+# }
 ```
