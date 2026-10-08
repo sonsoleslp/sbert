@@ -29,6 +29,7 @@ testthat::test_that("names load lazily once and stay in the session cache", {
 })
 
 testthat::test_that("missing models never download without an explicit yes", {
+  testthat::skip_if_not_installed("withr")
   sbert:::clear_sbert_session()
   downloads <- new.env(parent = emptyenv())
   downloads$count <- 0L

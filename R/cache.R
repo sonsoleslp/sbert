@@ -144,8 +144,13 @@ download_sbert_artifact <- function(
 #' @return Invisibly, the model directory.
 #' @export
 #' @examples
-#' \dontrun{
-#' model_download()
+#' # Report what is already cached; nothing is downloaded here.
+#' model_status(tempdir())
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   model_download()
+#' }
 #' }
 model_download <- function(
   model = "all-MiniLM-L6-v2",

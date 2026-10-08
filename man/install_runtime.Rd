@@ -19,7 +19,12 @@ Explicitly downloads the native ONNX Runtime used by the CRAN package
 `onnxr`. This is never called during package installation or loading.
 }
 \examples{
-\dontrun{
-install_runtime()
+# Whether the ONNX Runtime is already available; nothing is installed here.
+onnxr::onnx_is_installed()
+
+\donttest{
+if (interactive()) {
+  install_runtime()
+}
 }
 }

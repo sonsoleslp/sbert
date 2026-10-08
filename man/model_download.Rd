@@ -31,7 +31,12 @@ revision and checked against package-controlled SHA-256 values. See
 `all-MiniLM-L6-v2`.
 }
 \examples{
-\dontrun{
-model_download()
+# Report what is already cached; nothing is downloaded here.
+model_status(tempdir())
+
+\donttest{
+if (interactive()) {
+  model_download()
+}
 }
 }

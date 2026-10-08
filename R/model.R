@@ -29,8 +29,13 @@
 #' @return An object of class `sbert_model`.
 #' @export
 #' @examples
-#' \dontrun{
-#' model <- load_model()
+#' # Pinned models that can be loaded.
+#' models()
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   model <- load_model()
+#' }
 #' }
 load_model <- function(
   model = "all-MiniLM-L6-v2",

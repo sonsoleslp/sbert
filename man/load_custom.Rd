@@ -74,8 +74,13 @@ read from the graph itself. Unlike registry models, the package makes no
 numerical-parity claim: you vouch for the configuration.
 }
 \examples{
-\dontrun{
-model <- load_custom("thenlper/gte-small")
-encode(c("one sentence", "another sentence"), model)
+# Cache root used for downloaded and custom models.
+cache_dir()
+
+\donttest{
+if (interactive()) {
+  model <- load_custom("thenlper/gte-small")
+  encode(c("one sentence", "another sentence"), model)
+}
 }
 }

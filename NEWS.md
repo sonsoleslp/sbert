@@ -1,3 +1,12 @@
+# sbert 0.5.7
+
+* CRAN resubmission fixes. `Description` now single-quotes only software
+  names. The six `\dontrun{}` examples are now `\donttest{}` guarded by
+  `interactive()` (they download a model or install the runtime), and each of
+  those Rd files gains a small unwrapped example that runs offline.
+* Tests cap OpenMP threads at 2, skip when `withr` or `rmarkdown` is missing,
+  and clean up the files they create in `tempdir()`. `Language: en-US` added.
+
 # sbert 0.5.6
 
 * The pkgdown site builds again: seven S3 methods documented in 0.5.5 were

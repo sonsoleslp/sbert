@@ -1,7 +1,7 @@
 Package: sbert
 Type: Package
 Title: Topic Modeling with 'Sentence-BERT' Embeddings
-Version: 0.5.6
+Version: 0.5.7
 Authors@R: c(
     person(
       given = "Mohammed",
@@ -21,7 +21,7 @@ Authors@R: c(
 Description: Builds semantic topic models from 'Sentence-BERT'
     embeddings (Reimers and Gurevych, 2019) <doi:10.18653/v1/D19-1410>.
     Sentence embeddings are computed in several modes with models run on
-    the 'Open Neural Network Exchange' ('ONNX') 'Runtime', including
+    the Open Neural Network Exchange ('ONNX') Runtime, including
     multilingual and long-context encoders and a fast static model.
     Topics are labelled with class-based term weighting that can be
     retuned without refitting. Candidate topic counts and document
@@ -34,6 +34,7 @@ License: MIT + file LICENSE
 URL: https://sonsoles.me/sbert/, https://github.com/sonsoleslp/sbert
 BugReports: https://github.com/sonsoleslp/sbert/issues
 Encoding: UTF-8
+Language: en-US
 LazyData: true
 Depends:
     R (>= 4.1.0)

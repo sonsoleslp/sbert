@@ -1,4 +1,5 @@
 testthat::test_that("the existing-package sentence embedding example renders", {
+  testthat::skip_if_not_installed("rmarkdown")
   project_root <- normalizePath(
     testthat::test_path("..", ".."),
     mustWork = TRUE

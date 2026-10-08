@@ -209,9 +209,14 @@ verify_custom_files <- function(model_directory, manifest) {
 #' @return An object of class `sbert_model`.
 #' @export
 #' @examples
-#' \dontrun{
-#' model <- load_custom("thenlper/gte-small")
-#' encode(c("one sentence", "another sentence"), model)
+#' # Cache root used for downloaded and custom models.
+#' cache_dir()
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   model <- load_custom("thenlper/gte-small")
+#'   encode(c("one sentence", "another sentence"), model)
+#' }
 #' }
 load_custom <- function(
   id,

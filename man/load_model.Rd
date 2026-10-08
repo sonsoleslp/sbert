@@ -49,7 +49,12 @@ model files or native libraries. See [models()] for the available
 pinned models.
 }
 \examples{
-\dontrun{
-model <- load_model()
+# Pinned models that can be loaded.
+models()
+
+\donttest{
+if (interactive()) {
+  model <- load_model()
+}
 }
 }

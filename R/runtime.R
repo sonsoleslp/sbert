@@ -9,8 +9,13 @@
 #' @return The result returned by [onnxr::onnx_install()], invisibly.
 #' @export
 #' @examples
-#' \dontrun{
-#' install_runtime()
+#' # Whether the ONNX Runtime is already available; nothing is installed here.
+#' onnxr::onnx_is_installed()
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   install_runtime()
+#' }
 #' }
 install_runtime <- function(cuda = NULL) {
   stopifnot(

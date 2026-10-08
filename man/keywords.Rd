@@ -57,10 +57,15 @@ crosses a removed stop word silently: "analysis of networks" yields the
 candidates "analysis", "networks", and "analysis networks".
 }
 \examples{
-\dontrun{
-keywords(
-  "Transition network analysis models learning event sequences.",
-  n = 5
-)
+# Pinned models that can encode the text.
+models()
+
+\donttest{
+if (interactive()) {
+  keywords(
+    "Transition network analysis models learning event sequences.",
+    n = 5
+  )
+}
 }
 }

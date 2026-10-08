@@ -1,4 +1,5 @@
 testthat::test_that("the genuine Python-free SBERT HTML example renders", {
+  testthat::skip_if_not_installed("rmarkdown")
   model_source <- Sys.getenv("SBERT_TEST_MODEL_DIR", unset = "")
   testthat::skip_if(!nzchar(model_source), "official model fixture is not configured")
 

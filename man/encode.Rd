@@ -71,18 +71,24 @@ A numeric matrix with one row per input and one column per
 Encode Text with Sentence-BERT
 }
 \examples{
-\dontrun{
-model <- load_model()
-embeddings <- encode(c("A short sentence.", "Another sentence."), model)
+# Embeddings need a downloaded model, so the full workflow is in the
+# interactive block below. Segmenting needs none.
+segment("One sentence. Another sentence.", level = "sentence")
 
-# Segment-level work benefits most, because segment lengths vary widely.
-segments <- segment(covid$Abstract[1:50], level = "clause")
-embeddings <- encode(segments$text, model, sort_by_length = TRUE)
+\donttest{
+if (interactive()) {
+  model <- load_model()
+  embeddings <- encode(c("A short sentence.", "Another sentence."), model)
 
-# Encode once, then re-run after editing the corpus: only changed rows cost
-# anything the second time.
-store <- file.path(tempdir(), "covid-embeddings.rds")
-embeddings <- encode(covid$Abstract, model, cache = store)
-embeddings <- encode(covid$Abstract, model, cache = store)
+  # Segment-level work benefits most, because segment lengths vary widely.
+  segments <- segment(covid$Abstract[1:50], level = "clause")
+  embeddings <- encode(segments$text, model, sort_by_length = TRUE)
+
+  # Encode once, then re-run after editing the corpus: only changed rows cost
+  # anything the second time.
+  store <- file.path(tempdir(), "covid-embeddings.rds")
+  embeddings <- encode(covid$Abstract, model, cache = store)
+  embeddings <- encode(covid$Abstract, model, cache = store)
+}
 }
 }

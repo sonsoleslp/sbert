@@ -101,11 +101,16 @@ mmr_select <- function(relevance, candidate_similarity, n, topic_diversity) {
 #'   (cosine similarity between the keyword and its document).
 #' @export
 #' @examples
-#' \dontrun{
-#' keywords(
-#'   "Transition network analysis models learning event sequences.",
-#'   n = 5
-#' )
+#' # Pinned models that can encode the text.
+#' models()
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   keywords(
+#'     "Transition network analysis models learning event sequences.",
+#'     n = 5
+#'   )
+#' }
 #' }
 keywords <- function(
   text,
