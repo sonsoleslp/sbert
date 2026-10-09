@@ -1,3 +1,10 @@
+# sbert 0.5.8
+
+* The cross-platform numeric tests now compare at rounding tolerance instead
+  of bit equality: pooling against its reference at 1e-12, the stored golden
+  topic model at 1e-10 (cluster assignment stays exact). Both already skipped
+  on CRAN.
+
 # sbert 0.5.7
 
 * CRAN resubmission fixes. `Description` now single-quotes only software
