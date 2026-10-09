@@ -33,7 +33,9 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, local::.
+          # hypernets is GitHub-only (not on CRAN) and is used by the
+          # hypergraph section of the covid_topics article.
+          extra-packages: any::pkgdown, local::., mohsaqr/hypernets
           needs: website
 
       - name: Build site

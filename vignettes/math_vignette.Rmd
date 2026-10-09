@@ -1,8 +1,8 @@
 ---
-title: "Semantic Topics in AI-powereed Mathematics Feedback"
+title: "Semantic Topics in AI-Powered Mathematics Feedback"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Semantic Topics in an AI-powereed Mathematics Feedback}
+  %\VignetteIndexEntry{Semantic Topics in AI-Powered Mathematics Feedback}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

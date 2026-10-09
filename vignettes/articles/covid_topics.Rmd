@@ -56,7 +56,7 @@ is deterministic: rerunning reproduces every number and figure.
 # Sixteen topics as a hypergraph
 
 Before the Sentence-BERT model, the same abstracts cut sixteen ways with
-**honets**: every abstract is a node of a document-word hypergraph, every
+**hypernets**: every abstract is a node of a document-word hypergraph, every
 word a hyperedge binding the abstracts that use it (tf-idf weights), and
 the hypergraph Laplacian's spectral embedding is cut into sixteen groups.
 Whole abstracts, no encoder, nothing truncated. Sixteen is the count of the
@@ -69,8 +69,17 @@ Limited, trading as Taylor & Francis Group"). Left in, six of the sixteen
 groups are publishers, not research, so the notice is stripped first: from
 the last "©" to the end, whenever that tail is under 300 characters.
 
-```{r honets-hypergraph}
-library(honets)
+`hypernets` is not on CRAN, so install it from GitHub first. This section is
+the only part of the article that needs it; everything below runs on `sbert`
+alone.
+
+```{r hypernets-install, eval = FALSE}
+# install.packages("pak")
+pak::pak("mohsaqr/hypernets")
+```
+
+```{r hypernets-hypergraph}
+library(hypernets)
 hg_abstracts <- covid[covid$Abstract != "[No abstract available]", ]
 hg_abstracts <- hg_abstracts[!duplicated(hg_abstracts$Abstract), ]
 had_notice <- grepl("©", hg_abstracts$Abstract)
@@ -96,7 +105,7 @@ words by the fraction of their corpus count that falls in the topic, and
 handful of its abstracts. Ranked by raw frequency instead, all sixteen
 lists would read "learning, students, education, online, teaching".
 
-```{r honets-topics}
+```{r hypernets-topics}
 knitr::kable(
   hg_keywords(hg, topics16, n = 8, type = "frequency",
               sort_by = "share", min_docs = 15, collapse = TRUE),
@@ -104,7 +113,7 @@ knitr::kable(
 )
 ```
 
-```{r honets-plot, fig.width = 11, fig.height = 13}
+```{r hypernets-plot, fig.width = 11, fig.height = 13}
 plot(hg_keywords(hg, topics16, n = 6, type = "frequency",
                  sort_by = "share", min_docs = 15),
      value = "share", ncol = 4)
