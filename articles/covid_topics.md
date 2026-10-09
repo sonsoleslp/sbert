@@ -7,6 +7,116 @@ and reads the result — including how the mix of topics shifted across
 the pandemic years. Everything is deterministic: rerunning reproduces
 every number and figure.
 
+## Sixteen topics as a hypergraph
+
+Before the Sentence-BERT model, the same abstracts cut sixteen ways with
+**hypernets**: every abstract is a node of a document-word hypergraph,
+every word a hyperedge binding the abstracts that use it (tf-idf
+weights), and the hypergraph Laplacian’s spectral embedding is cut into
+sixteen groups. Whole abstracts, no encoder, nothing truncated. Sixteen
+is the count of the published structural topic model of this literature;
+the spectrum itself supports two or four clean cuts, so read the sixteen
+as a fine partition below those seams rather than as the number the data
+insists on.
+
+Almost every abstract ends in a copyright notice (“© 2021 Informa UK
+Limited, trading as Taylor & Francis Group”). Left in, six of the
+sixteen groups are publishers, not research, so the notice is stripped
+first: from the last “©” to the end, whenever that tail is under 300
+characters.
+
+`hypernets` is not on CRAN, so install it from GitHub first. This
+section is the only part of the article that needs it; everything below
+runs on `sbert` alone.
+
+``` r
+
+# install.packages("pak")
+pak::pak("mohsaqr/hypernets")
+```
+
+``` r
+
+library(hypernets)
+hg_abstracts <- covid[covid$Abstract != "[No abstract available]", ]
+hg_abstracts <- hg_abstracts[!duplicated(hg_abstracts$Abstract), ]
+had_notice <- grepl("©", hg_abstracts$Abstract)
+hg_abstracts$Abstract <- sub("©[^©]{0,300}$", "", hg_abstracts$Abstract,
+                             perl = TRUE)
+hg_abstracts$doc <- sprintf("abs_%04d", seq_len(nrow(hg_abstracts)))
+c(abstracts = nrow(hg_abstracts), with_notice = sum(had_notice))
+#>   abstracts with_notice 
+#>        3670        3655
+boilerplate <- c("covid", "coronavirus", "sars", "cov", "pandemic",
+                 "disease", "study", "studies", "result", "results",
+                 "conclusion", "conclusions", "background", "method",
+                 "methods", "objective", "aim")
+hg <- text_hypergraph(hg_abstracts, column = "Abstract", id = "doc",
+                      weight = "tfidf",
+                      stop_words = c(stop_words_en(), boilerplate),
+                      min_count = 5L, sparse = TRUE)
+hg
+#> Text hypergraph: 3670 documents, 6248 words (documents as nodes, weight = tfidf)
+#> Hyperedges: 6248 (words); sizes 1-2603, median 14
+#>       doc        word count    weight
+#>  abs_0001      access     1  3.275974
+#>  abs_0001 achievement     1  4.917760
+#>  abs_0001       adapt     1  3.890099
+#>  abs_0001   adaptable     1  6.117177
+#>  abs_0001      answer     1  5.165168
+#>  abs_0001      better     1  3.559245
+#>  abs_0001      beyond     1  4.164794
+#>  abs_0001       brief     1  5.424030
+#>  abs_0001        care     3 11.512744
+#>  abs_0001   caribbean     3 21.386334
+#> ... 287948 more rows
+topics16 <- hg_cluster(hg, k = 16, seed = 1)
+```
+
+Each topic is described by the words it *owns*: `sort_by = "share"`
+ranks words by the fraction of their corpus count that falls in the
+topic, and `min_docs = 15` keeps out words a topic owns only because
+they occur in a handful of its abstracts. Ranked by raw frequency
+instead, all sixteen lists would read “learning, students, education,
+online, teaching”.
+
+``` r
+
+knitr::kable(
+  hg_keywords(hg, topics16, n = 8, type = "frequency",
+              sort_by = "share", min_docs = 15, collapse = TRUE),
+  row.names = FALSE
+)
+```
+
+| type | cluster | size | words |
+|:---|:---|---:|:---|
+| frequency | Cluster 1 | 244 | parent, childhood, parental, parents, children’s, child, coping, families |
+| frequency | Cluster 2 | 205 | prevention, original, distribution, behavior, infection, prevent, transmission, virus |
+| frequency | Cluster 3 | 128 | scopus, articles, databases, systematic, review, search, published, reviewed |
+| frequency | Cluster 4 | 249 | sectors, lockdowns, india, down, mode, sector, governments, switch |
+| frequency | Cluster 5 | 234 | my, stories, justice, co, essay, collective, historical, narrative |
+| frequency | Cluster 6 | 264 | library, whatsapp, indonesia, google, interview, users, semi, lecturers |
+| frequency | Cluster 7 | 247 | market, argues, industry, recovery, critically, broader, business, policy |
+| frequency | Cluster 8 | 286 | experiments, laboratories, lab, chemistry, laboratory, semesters, video, conferencing |
+| frequency | Cluster 9 | 324 | agency, notes, grounded, equitable, contexts, reflective, lived, teacher |
+| frequency | Cluster 10 | 232 | alpha, cronbach’s, reliability, validity, anova, statistically, variance, correlation |
+| frequency | Cluster 11 | 265 | methodological, methodologies, sustainable, analyzes, spain, professors, proposed, concept |
+| frequency | Cluster 12 | 157 | tam, pls, expectancy, equation, squares, sem, intention, modelling |
+| frequency | Cluster 13 | 143 | surgery, cohort, p, dental, score, examination, likert, scores |
+| frequency | Cluster 14 | 255 | households, districts, household, disadvantaged, disparities, income, disabilities, fall |
+| frequency | Cluster 15 | 265 | switch, spring, moved, campus, campuses, semester, instruction, taught |
+| frequency | Cluster 16 | 172 | resident, patients, residents, residency, physicians, patient, surgical, hospitals |
+
+``` r
+
+plot(hg_keywords(hg, topics16, n = 6, type = "frequency",
+                 sort_by = "share", min_docs = 15),
+     value = "share", ncol = 4)
+```
+
+![](covid_topics_files/figure-html/hypernets-plot-1.png)
+
 ## Building the model
 
 Drop the records indexed without an abstract, then clean the source text

@@ -192,7 +192,7 @@ topics(
   The unit the model is fitted on. \`"document"\` (default) embeds each
   document whole. \`"sentence"\`, \`"clause"\`, or \`"phrase"\` first
   splits every document with \[segment()\] at that level and fits the
-  topics on the segments, so long documents are modelled in full instead
+  topics on the segments, so long documents are modeled in full instead
   of being truncated to the encoder's context window, and a document can
   span several topics. The fitted \`\$documents\` then has one row per
   segment with its parent \`document_id\` and \`segment\` position;
@@ -210,7 +210,7 @@ topics(
 
 - merge_below:
 
-  Re-join segments shorter than this many words into their neighbour,
+  Re-join segments shorter than this many words into their neighbor,
   passed to \[segment()\]. Only with a segmented fit.
 
 - min_content:

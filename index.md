@@ -63,7 +63,7 @@ topic_model$topics
 
 You can run the whole thing with no download by passing a precomputed
 embedding matrix. Here two clearly separated groups — cooking and
-astronomy — fall out, each labelled by its most distinctive terms:
+astronomy — fall out, each labeled by its most distinctive terms:
 
 ``` r
 
@@ -131,7 +131,7 @@ Long documents do not have to be truncated to the encoder’s context
 window. `segment = "sentence"` (or `"clause"`, `"phrase"`) splits every
 document with
 [`segment()`](https://sonsoles.me/sbert/reference/segment.md) first and
-fits the topics on the segments, so a 5,000-word report is modelled in
+fits the topics on the segments, so a 5,000-word report is modeled in
 full and can span several topics. The segment options ride along under
 their [`segment()`](https://sonsoles.me/sbert/reference/segment.md)
 names, and every downstream verb knows which document each segment came
@@ -301,7 +301,7 @@ moves:
 keywords(text, n = 5)                                 # embedding-ranked keywords (MMR)
 stop_words(add = c("students", "learning"))           # exclude corpus vocabulary
 compare_topics(text, n_topics = c(10, 20, 30), embeddings = embeddings)
-tree <- topic_hierarchy(topic_model)                  # which topics are neighbours?
+tree <- topic_hierarchy(topic_model)                  # which topics are neighbors?
 plot(tree)                                            # labeled dendrogram
 smaller <- reduce_topics(topic_model, n_topics = 12)  # merge down, keep all verbs
 ```
@@ -355,9 +355,8 @@ embeddings <- blend(sentences, abstracts, alpha = 0.5)
 ```
 
 The bundled `feedback_translations` dataset (8,757 multilingual
-AI-generated mathematics feedback messages from the Levebee educational
-application, with English translations) provides a realistic corpus for
-trying the full workflow offline:
+AI-generated mathematics feedback messages, with English translations)
+provides a realistic corpus for trying the full workflow offline:
 
 ``` r
 

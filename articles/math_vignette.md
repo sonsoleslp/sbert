@@ -1,4 +1,4 @@
-# Semantic Topics in AI-powereed Mathematics Feedback
+# Semantic Topics in AI-Powered Mathematics Feedback
 
 ## Why this tutorial
 
@@ -425,7 +425,7 @@ The model built here is reusable, not just describable.
 feedback message to these six topics without refitting;
 [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
 replaces the hard assignment with graded probabilities when a message
-sits between topics. Multi-sentence messages can be modelled sentence by
+sits between topics. Multi-sentence messages can be modeled sentence by
 sentence instead of whole: `segment = "sentence"` on the fitting verbs
 splits every message first and fits the topics on the sentences, and
 [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)

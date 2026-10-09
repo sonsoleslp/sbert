@@ -17,7 +17,7 @@ object to [topics()] or [compare_topics()] in place of the raw `text`."><meta pr
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,7 +29,7 @@ object to [topics()] or [compare_topics()] in place of the raw `text`."><meta pr
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-powereed Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
     <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -168,7 +168,7 @@ junk characters — before encoding, see [clean_corpus()].</p></dd>
 <dd><p>The unit the model is fitted on. `"document"` (default)
 embeds each document whole. `"sentence"`, `"clause"`, or `"phrase"` first
 splits every document with [segment()] at that level and fits the topics
-on the segments, so long documents are modelled in full instead of being
+on the segments, so long documents are modeled in full instead of being
 truncated to the encoder's context window, and a document can span several
 topics. The fitted `$documents` then has one row per segment with its
 parent `document_id` and `segment` position; [topic_sizes()] counts by
@@ -186,7 +186,7 @@ precomputed `embeddings` it counts words. Only with a segmented fit.</p></dd>
 
 <dt id="arg-merge-below">merge_below<a class="anchor" aria-label="anchor" href="#arg-merge-below"></a></dt>
 <dd><p>Re-join segments shorter than this many words into their
-neighbour, passed to [segment()]. Only with a segmented fit.</p></dd>
+neighbor, passed to [segment()]. Only with a segmented fit.</p></dd>
 
 
 <dt id="arg-min-content">min_content<a class="anchor" aria-label="anchor" href="#arg-min-content"></a></dt>
@@ -197,7 +197,7 @@ kept, passed to [segment()]. Only with a segmented fit.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class `sbert_topic_corpus`: a list with the prepared
-  `text` (one element per modelled unit), carried `metadata`, `units` (the
+  `text` (one element per modeled unit), carried `metadata`, `units` (the
   `document_id`, `document_name`, and `segment` of every unit when the corpus
   is segmented, otherwise `NULL`), unit `embeddings`, cached `token_lists`,
   `model` information, and the fixed segmentation and tokenization

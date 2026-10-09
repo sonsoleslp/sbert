@@ -1,13 +1,12 @@
 # Reduce a Fitted Topic Model to Fewer Topics
 
-Cuts the topic topic_hierarchy (see \[topic_hierarchy()\]) at the
-requested count and rebuilds the model: documents keep their cluster
-memberships (merged, never re-clustered), centroids are recomputed from
-the member documents, and terms, labels, sizes, and representatives are
-derived afresh for the merged topics. The result is a full
-\`sbert_topic_model\` — every downstream verb (\`summary()\`,
-\`coherence()\`, \`predict()\`, \[representatives()\], plots) works
-unchanged.
+Cuts the topic hierarchy (see \[topic_hierarchy()\]) at the requested
+count and rebuilds the model: documents keep their cluster memberships
+(merged, never re-clustered), centroids are recomputed from the member
+documents, and terms, labels, sizes, and representatives are derived
+afresh for the merged topics. The result is a full \`sbert_topic_model\`
+— every downstream verb (\`summary()\`, \`coherence()\`, \`predict()\`,
+\[representatives()\], plots) works unchanged.
 
 ## Usage
 

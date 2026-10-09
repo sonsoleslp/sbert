@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-powereed Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
     <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul>
 </li>
@@ -66,7 +66,7 @@
             <h3 data-toc-skip class="subtitle">A semantic review of the
 pandemic education literature, 2020-2024</h3>
             
-            <h4 data-toc-skip class="date">2026-10-08</h4>
+            <h4 data-toc-skip class="date">2026-10-09</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/vignettes/articles/covid_topics.Rmd" class="external-link"><code>vignettes/articles/covid_topics.Rmd</code></a></small>
       <div class="d-none name"><code>covid_topics.Rmd</code></div>
@@ -100,6 +100,210 @@ embeds every abstract with a Sentence-BERT model, groups them into
 semantic topics, and reads the result — including how the mix of topics
 shifted across the pandemic years. Everything is deterministic:
 rerunning reproduces every number and figure.</p>
+<div class="section level2">
+<h2 id="sixteen-topics-as-a-hypergraph">Sixteen topics as a hypergraph<a class="anchor" aria-label="anchor" href="#sixteen-topics-as-a-hypergraph"></a>
+</h2>
+<p>Before the Sentence-BERT model, the same abstracts cut sixteen ways
+with <strong>hypernets</strong>: every abstract is a node of a
+document-word hypergraph, every word a hyperedge binding the abstracts
+that use it (tf-idf weights), and the hypergraph Laplacian’s spectral
+embedding is cut into sixteen groups. Whole abstracts, no encoder,
+nothing truncated. Sixteen is the count of the published structural
+topic model of this literature; the spectrum itself supports two or four
+clean cuts, so read the sixteen as a fine partition below those seams
+rather than as the number the data insists on.</p>
+<p>Almost every abstract ends in a copyright notice (“© 2021 Informa UK
+Limited, trading as Taylor &amp; Francis Group”). Left in, six of the
+sixteen groups are publishers, not research, so the notice is stripped
+first: from the last “©” to the end, whenever that tail is under 300
+characters.</p>
+<p><code>hypernets</code> is not on CRAN, so install it from GitHub
+first. This section is the only part of the article that needs it;
+everything below runs on <code>sbert</code> alone.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"mohsaqr/hypernets"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/mohsaqr/hypernets" class="external-link">hypernets</a></span><span class="op">)</span></span>
+<span><span class="va">hg_abstracts</span> <span class="op">&lt;-</span> <span class="va">covid</span><span class="op">[</span><span class="va">covid</span><span class="op">$</span><span class="va">Abstract</span> <span class="op">!=</span> <span class="st">"[No abstract available]"</span>, <span class="op">]</span></span>
+<span><span class="va">hg_abstracts</span> <span class="op">&lt;-</span> <span class="va">hg_abstracts</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/duplicated.html" class="external-link">duplicated</a></span><span class="op">(</span><span class="va">hg_abstracts</span><span class="op">$</span><span class="va">Abstract</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="va">had_notice</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"©"</span>, <span class="va">hg_abstracts</span><span class="op">$</span><span class="va">Abstract</span><span class="op">)</span></span>
+<span><span class="va">hg_abstracts</span><span class="op">$</span><span class="va">Abstract</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"©[^©]{0,300}$"</span>, <span class="st">""</span>, <span class="va">hg_abstracts</span><span class="op">$</span><span class="va">Abstract</span>,</span>
+<span>                             perl <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">hg_abstracts</span><span class="op">$</span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"abs_%04d"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">hg_abstracts</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>abstracts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">hg_abstracts</span><span class="op">)</span>, with_notice <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">had_notice</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   abstracts with_notice </span></span>
+<span><span class="co">#&gt;        3670        3655</span></span>
+<span><span class="va">boilerplate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"covid"</span>, <span class="st">"coronavirus"</span>, <span class="st">"sars"</span>, <span class="st">"cov"</span>, <span class="st">"pandemic"</span>,</span>
+<span>                 <span class="st">"disease"</span>, <span class="st">"study"</span>, <span class="st">"studies"</span>, <span class="st">"result"</span>, <span class="st">"results"</span>,</span>
+<span>                 <span class="st">"conclusion"</span>, <span class="st">"conclusions"</span>, <span class="st">"background"</span>, <span class="st">"method"</span>,</span>
+<span>                 <span class="st">"methods"</span>, <span class="st">"objective"</span>, <span class="st">"aim"</span><span class="op">)</span></span>
+<span><span class="va">hg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mohsaqr.github.io/hypernets/reference/text_hypergraph.html" class="external-link">text_hypergraph</a></span><span class="op">(</span><span class="va">hg_abstracts</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, id <span class="op">=</span> <span class="st">"doc"</span>,</span>
+<span>                      weight <span class="op">=</span> <span class="st">"tfidf"</span>,</span>
+<span>                      stop_words <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://mohsaqr.github.io/hypernets/reference/stop_words_en.html" class="external-link">stop_words_en</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">boilerplate</span><span class="op">)</span>,</span>
+<span>                      min_count <span class="op">=</span> <span class="fl">5L</span>, sparse <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">hg</span></span>
+<span><span class="co">#&gt; Text hypergraph: 3670 documents, 6248 words (documents as nodes, weight = tfidf)</span></span>
+<span><span class="co">#&gt; Hyperedges: 6248 (words); sizes 1-2603, median 14</span></span>
+<span><span class="co">#&gt;       doc        word count    weight</span></span>
+<span><span class="co">#&gt;  abs_0001      access     1  3.275974</span></span>
+<span><span class="co">#&gt;  abs_0001 achievement     1  4.917760</span></span>
+<span><span class="co">#&gt;  abs_0001       adapt     1  3.890099</span></span>
+<span><span class="co">#&gt;  abs_0001   adaptable     1  6.117177</span></span>
+<span><span class="co">#&gt;  abs_0001      answer     1  5.165168</span></span>
+<span><span class="co">#&gt;  abs_0001      better     1  3.559245</span></span>
+<span><span class="co">#&gt;  abs_0001      beyond     1  4.164794</span></span>
+<span><span class="co">#&gt;  abs_0001       brief     1  5.424030</span></span>
+<span><span class="co">#&gt;  abs_0001        care     3 11.512744</span></span>
+<span><span class="co">#&gt;  abs_0001   caribbean     3 21.386334</span></span>
+<span><span class="co">#&gt; ... 287948 more rows</span></span>
+<span><span class="va">topics16</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://mohsaqr.github.io/hypernets/reference/hg_cluster.html" class="external-link">hg_cluster</a></span><span class="op">(</span><span class="va">hg</span>, k <span class="op">=</span> <span class="fl">16</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<p>Each topic is described by the words it <em>owns</em>:
+<code>sort_by = "share"</code> ranks words by the fraction of their
+corpus count that falls in the topic, and <code>min_docs = 15</code>
+keeps out words a topic owns only because they occur in a handful of its
+abstracts. Ranked by raw frequency instead, all sixteen lists would read
+“learning, students, education, online, teaching”.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://mohsaqr.github.io/hypernets/reference/hg_keywords.html" class="external-link">hg_keywords</a></span><span class="op">(</span><span class="va">hg</span>, <span class="va">topics16</span>, n <span class="op">=</span> <span class="fl">8</span>, type <span class="op">=</span> <span class="st">"frequency"</span>,</span>
+<span>              sort_by <span class="op">=</span> <span class="st">"share"</span>, min_docs <span class="op">=</span> <span class="fl">15</span>, collapse <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="8%">
+<col width="9%">
+<col width="4%">
+<col width="77%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">type</th>
+<th align="left">cluster</th>
+<th align="right">size</th>
+<th align="left">words</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 1</td>
+<td align="right">244</td>
+<td align="left">parent, childhood, parental, parents, children’s,
+child, coping, families</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 2</td>
+<td align="right">205</td>
+<td align="left">prevention, original, distribution, behavior,
+infection, prevent, transmission, virus</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 3</td>
+<td align="right">128</td>
+<td align="left">scopus, articles, databases, systematic, review,
+search, published, reviewed</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 4</td>
+<td align="right">249</td>
+<td align="left">sectors, lockdowns, india, down, mode, sector,
+governments, switch</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 5</td>
+<td align="right">234</td>
+<td align="left">my, stories, justice, co, essay, collective,
+historical, narrative</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 6</td>
+<td align="right">264</td>
+<td align="left">library, whatsapp, indonesia, google, interview, users,
+semi, lecturers</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 7</td>
+<td align="right">247</td>
+<td align="left">market, argues, industry, recovery, critically,
+broader, business, policy</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 8</td>
+<td align="right">286</td>
+<td align="left">experiments, laboratories, lab, chemistry, laboratory,
+semesters, video, conferencing</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 9</td>
+<td align="right">324</td>
+<td align="left">agency, notes, grounded, equitable, contexts,
+reflective, lived, teacher</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 10</td>
+<td align="right">232</td>
+<td align="left">alpha, cronbach’s, reliability, validity, anova,
+statistically, variance, correlation</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 11</td>
+<td align="right">265</td>
+<td align="left">methodological, methodologies, sustainable, analyzes,
+spain, professors, proposed, concept</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 12</td>
+<td align="right">157</td>
+<td align="left">tam, pls, expectancy, equation, squares, sem,
+intention, modelling</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 13</td>
+<td align="right">143</td>
+<td align="left">surgery, cohort, p, dental, score, examination, likert,
+scores</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 14</td>
+<td align="right">255</td>
+<td align="left">households, districts, household, disadvantaged,
+disparities, income, disabilities, fall</td>
+</tr>
+<tr class="odd">
+<td align="left">frequency</td>
+<td align="left">Cluster 15</td>
+<td align="right">265</td>
+<td align="left">switch, spring, moved, campus, campuses, semester,
+instruction, taught</td>
+</tr>
+<tr class="even">
+<td align="left">frequency</td>
+<td align="left">Cluster 16</td>
+<td align="right">172</td>
+<td align="left">resident, patients, residents, residency, physicians,
+patient, surgical, hospitals</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://mohsaqr.github.io/hypernets/reference/hg_keywords.html" class="external-link">hg_keywords</a></span><span class="op">(</span><span class="va">hg</span>, <span class="va">topics16</span>, n <span class="op">=</span> <span class="fl">6</span>, type <span class="op">=</span> <span class="st">"frequency"</span>,</span>
+<span>                 sort_by <span class="op">=</span> <span class="st">"share"</span>, min_docs <span class="op">=</span> <span class="fl">15</span><span class="op">)</span>,</span>
+<span>     value <span class="op">=</span> <span class="st">"share"</span>, ncol <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
+<p><img src="covid_topics_files/figure-html/hypernets-plot-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
 <div class="section level2">
 <h2 id="building-the-model">Building the model<a class="anchor" aria-label="anchor" href="#building-the-model"></a>
 </h2>
@@ -154,7 +358,7 @@ custom patterns —
 European Union Official Journal identifiers, for example. The same clean
 text then feeds the encoder, the topic terms, and the representative
 abstracts.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="va">covid</span><span class="op">[</span><span class="va">covid</span><span class="op">$</span><span class="va">Abstract</span> <span class="op">!=</span> <span class="st">"[No abstract available]"</span>, <span class="op">]</span></span>
 <span><span class="va">covid_content</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/clean_corpus.html">clean_corpus</a></span><span class="op">(</span><span class="va">covid_content</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, min_content <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
 <p>The pinned default model, <code>all-MiniLM-L6-v2</code>, turns each
@@ -163,7 +367,7 @@ abstract into a 384-dimensional vector. Abstracts longer than its
 fits every candidate count twice: on whole abstracts, and on their
 sentences, which are never truncated. Both downloads are explicit and
 happen once:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/model_download.html">model_download</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Every abstract shares a scientific boilerplate — <em>covid</em>,
@@ -173,7 +377,7 @@ signal about what separates one topic from another, so they are excluded
 up front; <code>numbers = "remove"</code> drops bare years and counts
 (<em>2020</em>, <em>19</em>) for the same reason. Domain stop words are
 the standard way to keep topic labels informative.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">covid_stops</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stop_words.html">stop_words</a></span><span class="op">(</span>add <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"covid"</span>, <span class="st">"coronavirus"</span>, <span class="st">"sars"</span>, <span class="st">"cov"</span>, <span class="st">"pandemic"</span>, <span class="st">"disease"</span>,</span>
 <span>  <span class="st">"study"</span>, <span class="st">"studies"</span>, <span class="st">"result"</span>, <span class="st">"results"</span>, <span class="st">"conclusion"</span>, <span class="st">"conclusions"</span>,</span>
@@ -186,7 +390,7 @@ sentences, with sentences over 200 words re-split at punctuation — and
 reports the numbers that justify both choices. Passing the data frame
 with <code>column</code> carries <code>Year</code> into every fitted
 model.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span></span>
 <span>  <span class="va">covid_content</span>,</span>
 <span>  column <span class="op">=</span> <span class="st">"Abstract"</span>,</span>
@@ -212,7 +416,7 @@ model.</p>
 <span><span class="co">#&gt;  sentence       12  0.04974678       0.7641509 0.2137696</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Fitted models retained: fitted(x, n_topics = 8, segment = "document")</span></span></code></pre></div>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">)</span></span></code></pre></div>
 <p><img src="covid_topics_files/figure-html/sweep-plot-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Read the count from the table rather than by habit: coherence rises,
@@ -222,7 +426,7 @@ abstracts is the granularity this corpus best supports — the point after
 which splitting topics stops buying coherence — so the document model is
 fitted there. <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code> takes it straight out of the
 comparison, naming both the count and the level.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">by_document</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">sweep</span>, <span class="va">segment</span> <span class="op">==</span> <span class="st">"document"</span><span class="op">)</span></span>
 <span><span class="va">best_n</span> <span class="op">&lt;-</span> <span class="va">by_document</span><span class="op">$</span><span class="va">n_topics</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">by_document</span><span class="op">$</span><span class="va">coherence</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="va">best_n</span>, segment <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span></span></code></pre></div>
@@ -348,7 +552,7 @@ education topics.</p>
 three keyword views (raw within-topic count, class-based TF-IDF, and
 generative probability) beside each topic’s representative abstracts,
 one row per topic:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 <p><img src="covid_topics_files/figure-html/plot-fit-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
@@ -359,14 +563,14 @@ one row per topic:</p>
 <code>type = "fit"</code> on the comparison draws the per-topic report
 for both levels at the chosen count, one figure per level, so the two
 segmentations can be read against each other:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_topics <span class="op">=</span> <span class="va">best_n</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span></code></pre></div>
 <p><img src="covid_topics_files/figure-html/compare-fit-1.png" class="r-plt" alt="" width="100%"><img src="covid_topics_files/figure-html/compare-fit-2.png" class="r-plt" alt="" width="100%"></p>
 <p>The sentence model stores every sentence with the abstract it came
 from, so <code>topic_sizes(by = "document")</code> counts the abstracts
 each topic reaches and <code><a href="../reference/topic_gamma.html">topic_gamma()</a></code> returns each
 abstract’s topic mixture with no further encoding:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sentence_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="va">best_n</span>, segment <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">sentence_model</span>, by <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   topic                           label n_documents proportion</span></span>
@@ -838,7 +1042,7 @@ re-splitting it at punctuation first. The cap counts words here, a
 deterministic offline proxy; 200 words sits comfortably under the
 256-token limit (pass <code>model =</code> to count that model’s exact
 tokens instead):</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">segments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/segment.html">segment</a></span><span class="op">(</span><span class="va">covid_content</span><span class="op">$</span><span class="va">Abstract</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, max_tokens <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">segments</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   document_id document_name segment</span></span>
@@ -855,7 +1059,7 @@ abstract’s topic <em>mixture</em> (<code>gamma</code> sums to 1 within a
 document). Passing the <code><a href="../reference/segment.html">segment()</a></code> frame keeps the cap and
 lets a single encode be reused rather than segmenting again inside the
 call:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">segments</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">gamma</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   document_id topic gamma n_segments</span></span>

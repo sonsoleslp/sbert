@@ -16,8 +16,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Topic Modeling with Sentence-BERT Embeddings">
-<meta name="description" content="Builds semantic topic models from Sentence-BERT embeddings (Reimers and Gurevych, 2019) &lt;doi:10.18653/v1/D19-1410&gt;. Sentence embeddings are computed in several modes with models run on the Open Neural Network Exchange (ONNX) Runtime, including multilingual and long-context encoders and a fast static model. Topics are labelled with class-based term weighting that can be retuned without refitting. Candidate topic counts and document granularities (whole documents, sentences, clauses, or phrases) can be compared side by side, and fitted models assign topics to new documents, give soft memberships and per-document topic mixtures. The package offers coherence and diversity metrics and visualizations.">
-<meta property="og:description" content="Builds semantic topic models from Sentence-BERT embeddings (Reimers and Gurevych, 2019) &lt;doi:10.18653/v1/D19-1410&gt;. Sentence embeddings are computed in several modes with models run on the Open Neural Network Exchange (ONNX) Runtime, including multilingual and long-context encoders and a fast static model. Topics are labelled with class-based term weighting that can be retuned without refitting. Candidate topic counts and document granularities (whole documents, sentences, clauses, or phrases) can be compared side by side, and fitted models assign topics to new documents, give soft memberships and per-document topic mixtures. The package offers coherence and diversity metrics and visualizations.">
+<meta name="description" content="Builds semantic topic models from Sentence-BERT embeddings (Reimers and Gurevych, 2019) &lt;doi:10.18653/v1/D19-1410&gt;. Sentence embeddings are computed in several modes with models run on the Open Neural Network Exchange (ONNX) Runtime, including multilingual and long-context encoders and a fast static model. Topics are labeled with class-based term weighting that can be retuned without refitting. Candidate topic counts and document granularities (whole documents, sentences, clauses, or phrases) can be compared side by side, and fitted models assign topics to new documents, give soft memberships and per-document topic mixtures. The package offers coherence and diversity metrics and visualizations.">
+<meta property="og:description" content="Builds semantic topic models from Sentence-BERT embeddings (Reimers and Gurevych, 2019) &lt;doi:10.18653/v1/D19-1410&gt;. Sentence embeddings are computed in several modes with models run on the Open Neural Network Exchange (ONNX) Runtime, including multilingual and long-context encoders and a fast static model. Topics are labeled with class-based term weighting that can be retuned without refitting. Candidate topic counts and document granularities (whole documents, sentences, clauses, or phrases) can be compared side by side, and fitted models assign topics to new documents, give soft memberships and per-document topic mixtures. The package offers coherence and diversity metrics and visualizations.">
 <meta property="og:image" content="https://sonsoles.me/sbert/logo.png">
 </head>
 <body>
@@ -28,7 +28,7 @@
 
     <a class="navbar-brand me-2" href="index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,7 +42,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="articles/math_vignette.html">Semantic Topics in AI-powereed Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
     <li><a class="dropdown-item" href="articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul>
 </li>
@@ -90,7 +90,7 @@
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">topic_model</span><span class="op">$</span><span class="va">topics</span></span></code></pre></div>
-<p>You can run the whole thing with no download by passing a precomputed embedding matrix. Here two clearly separated groups — cooking and astronomy — fall out, each labelled by its most distinctive terms:</p>
+<p>You can run the whole thing with no download by passing a precomputed embedding matrix. Here two clearly separated groups — cooking and astronomy — fall out, each labeled by its most distinctive terms:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sentences</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Simmer the soup with onions and carrots"</span>,</span>
@@ -126,7 +126,7 @@
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></code></pre></div>
-<p>Long documents do not have to be truncated to the encoder’s context window. <code>segment = "sentence"</code> (or <code>"clause"</code>, <code>"phrase"</code>) splits every document with <code><a href="reference/segment.html">segment()</a></code> first and fits the topics on the segments, so a 5,000-word report is modelled in full and can span several topics. The segment options ride along under their <code><a href="reference/segment.html">segment()</a></code> names, and every downstream verb knows which document each segment came from:</p>
+<p>Long documents do not have to be truncated to the encoder’s context window. <code>segment = "sentence"</code> (or <code>"clause"</code>, <code>"phrase"</code>) splits every document with <code><a href="reference/segment.html">segment()</a></code> first and fits the topics on the segments, so a 5,000-word report is modeled in full and can span several topics. The segment options ride along under their <code><a href="reference/segment.html">segment()</a></code> names, and every downstream verb knows which document each segment came from:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span></span>
 <span>  <span class="va">reports</span>,</span>
@@ -209,7 +209,7 @@
 <code class="sourceCode R"><span><span class="fu"><a href="reference/keywords.html">keywords</a></span><span class="op">(</span><span class="va">text</span>, n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>                                 <span class="co"># embedding-ranked keywords (MMR)</span></span>
 <span><span class="fu"><a href="reference/stop_words.html">stop_words</a></span><span class="op">(</span>add <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"students"</span>, <span class="st">"learning"</span><span class="op">)</span><span class="op">)</span>           <span class="co"># exclude corpus vocabulary</span></span>
 <span><span class="fu"><a href="reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span><span class="op">)</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
-<span><span class="va">tree</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topic_hierarchy.html">topic_hierarchy</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                  <span class="co"># which topics are neighbours?</span></span>
+<span><span class="va">tree</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topic_hierarchy.html">topic_hierarchy</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                  <span class="co"># which topics are neighbors?</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">tree</span><span class="op">)</span>                                            <span class="co"># labeled dendrogram</span></span>
 <span><span class="va">smaller</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/reduce_topics.html">reduce_topics</a></span><span class="op">(</span><span class="va">topic_model</span>, n_topics <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>  <span class="co"># merge down, keep all verbs</span></span></code></pre></div>
 <p>Documents can be split into sentences, clauses, or phrases before embedding, entirely offline and deterministically:</p>
@@ -230,7 +230,7 @@
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sentences</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span><span class="va">abstracts</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
 <span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blend.html">blend</a></span><span class="op">(</span><span class="va">sentences</span>, <span class="va">abstracts</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
-<p>The bundled <code>feedback_translations</code> dataset (8,757 multilingual AI-generated mathematics feedback messages from the Levebee educational application, with English translations) provides a realistic corpus for trying the full workflow offline:</p>
+<p>The bundled <code>feedback_translations</code> dataset (8,757 multilingual AI-generated mathematics feedback messages, with English translations) provides a realistic corpus for trying the full workflow offline:</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                                       feedback</span></span>

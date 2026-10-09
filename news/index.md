@@ -1,5 +1,29 @@
 # Changelog
 
+## sbert 0.5.8
+
+- The cross-platform numeric tests now compare at rounding tolerance
+  instead of bit equality: pooling against its reference at 1e-12, the
+  stored golden topic model at 1e-10 (cluster assignment stays exact).
+  Both already skipped on CRAN.
+- [`?sbert`](https://sonsoles.me/sbert/reference/sbert-package.md) now
+  shows the package’s own title and description instead of the pre-0.5.5
+  ones. `R/package.R` hard-coded “Python-Free Sentence-BERT Inference”
+  above `"_PACKAGE"`, which overrode the `DESCRIPTION` fields that 0.5.5
+  retitled, so the package help page and the `DESCRIPTION` disagreed.
+- British spellings in the documentation are now American, matching the
+  declared `Language: en-US` (`modelled`, `labelled`, `colour`,
+  `neighbour`, `normalised`, `centre`). Stemming test fixtures keep
+  their British forms.
+- The seven S3 methods documented in 0.5.6 gain runnable offline
+  `@examples` and descriptions of their own rather than a repeat of the
+  title.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a topic
+  hierarchy is titled “Topic hierarchy”; it read “Topic
+  topic_hierarchy”, a leftover from the 0.5.4 rename, as did the
+  [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
+  description and the under-two-topics error.
+
 ## sbert 0.5.7
 
 - CRAN resubmission fixes. `Description` now single-quotes only software

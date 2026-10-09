@@ -1,6 +1,6 @@
 # Qualitative Colour Palette for Topics
 
-A colour-blind-friendly qualitative palette used by the package plots.
+A color-blind-friendly qualitative palette used by the package plots.
 
 ## Usage
 
@@ -12,11 +12,11 @@ topic_palette(n)
 
 - n:
 
-  Number of colours to return.
+  Number of colors to return.
 
 ## Value
 
-A character vector of \`n\` hex colours.
+A character vector of \`n\` hex colors.
 
 ## Examples
 

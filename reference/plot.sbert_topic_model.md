@@ -36,7 +36,7 @@ plot(
   with all three term views – count, TF-IDF, beta – followed by the
   representative documents, one row per topic), or \`"map"\` (a
   two-dimensional classical-MDS projection of the document embeddings,
-  coloured by topic). The \`"map"\` view requires a model fitted with
+  colored by topic). The \`"map"\` view requires a model fitted with
   \`keep_embeddings = TRUE\`.
 
 - by:
@@ -75,7 +75,7 @@ plot(
 
 - colors:
 
-  Optional vector of topic colours; defaults to \[topic_palette()\].
+  Optional vector of topic colors; defaults to \[topic_palette()\].
 
 - max_points:
 

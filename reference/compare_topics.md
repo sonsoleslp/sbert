@@ -43,7 +43,7 @@ compare_topics(
 - n_topics:
 
   Integer vector of candidate topic counts, each at least 2 and below
-  the number of modelled units. Default \`c(5, 10, 15, 20, 25, 30)\`.
+  the number of modeled units. Default \`c(5, 10, 15, 20, 25, 30)\`.
 
 - column:
 
@@ -119,7 +119,7 @@ compare_topics(
 
 - merge_below:
 
-  Re-join segments shorter than this many words into their neighbour,
+  Re-join segments shorter than this many words into their neighbor,
   passed to \[segment()\]. Only with a segmented fit.
 
 - min_content:

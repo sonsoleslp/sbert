@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,7 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-powereed Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
     <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -37,6 +37,16 @@
       <small>Source: <a href="https://github.com/sonsoleslp/sbert/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.8" id="sbert-058">sbert 0.5.8<a class="anchor" aria-label="anchor" href="#sbert-058"></a></h2>
+<ul><li>The cross-platform numeric tests now compare at rounding tolerance instead of bit equality: pooling against its reference at 1e-12, the stored golden topic model at 1e-10 (cluster assignment stays exact). Both already skipped on CRAN.</li>
+<li>
+<code><a href="../reference/sbert-package.html">?sbert</a></code> now shows the package’s own title and description instead of the pre-0.5.5 ones. <code>R/package.R</code> hard-coded “Python-Free Sentence-BERT Inference” above <code>"_PACKAGE"</code>, which overrode the <code>DESCRIPTION</code> fields that 0.5.5 retitled, so the package help page and the <code>DESCRIPTION</code> disagreed.</li>
+<li>British spellings in the documentation are now American, matching the declared <code>Language: en-US</code> (<code>modelled</code>, <code>labelled</code>, <code>colour</code>, <code>neighbour</code>, <code>normalised</code>, <code>centre</code>). Stemming test fixtures keep their British forms.</li>
+<li>The seven S3 methods documented in 0.5.6 gain runnable offline <code>@examples</code> and descriptions of their own rather than a repeat of the title.</li>
+<li>
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on a topic hierarchy is titled “Topic hierarchy”; it read “Topic topic_hierarchy”, a leftover from the 0.5.4 rename, as did the <code><a href="../reference/reduce_topics.html">reduce_topics()</a></code> description and the under-two-topics error.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.7" id="sbert-057">sbert 0.5.7<a class="anchor" aria-label="anchor" href="#sbert-057"></a></h2>
 <ul><li>CRAN resubmission fixes. <code>Description</code> now single-quotes only software names. The six <code>\dontrun{}</code> examples are now <code>\donttest{}</code> guarded by <code><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive()</a></code> (they download a model or install the runtime), and each of those Rd files gains a small unwrapped example that runs offline.</li>
