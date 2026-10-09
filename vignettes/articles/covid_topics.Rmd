@@ -53,6 +53,63 @@ Sentence-BERT model, groups them into semantic topics, and reads the result —
 including how the mix of topics shifted across the pandemic years. Everything
 is deterministic: rerunning reproduces every number and figure.
 
+# Sixteen topics as a hypergraph
+
+Before the Sentence-BERT model, the same abstracts cut sixteen ways with
+**honets**: every abstract is a node of a document-word hypergraph, every
+word a hyperedge binding the abstracts that use it (tf-idf weights), and
+the hypergraph Laplacian's spectral embedding is cut into sixteen groups.
+Whole abstracts, no encoder, nothing truncated. Sixteen is the count of the
+published structural topic model of this literature; the spectrum itself
+supports two or four clean cuts, so read the sixteen as a fine partition
+below those seams rather than as the number the data insists on.
+
+Almost every abstract ends in a copyright notice ("© 2021 Informa UK
+Limited, trading as Taylor & Francis Group"). Left in, six of the sixteen
+groups are publishers, not research, so the notice is stripped first: from
+the last "©" to the end, whenever that tail is under 300 characters.
+
+```{r honets-hypergraph}
+library(honets)
+hg_abstracts <- covid[covid$Abstract != "[No abstract available]", ]
+hg_abstracts <- hg_abstracts[!duplicated(hg_abstracts$Abstract), ]
+had_notice <- grepl("©", hg_abstracts$Abstract)
+hg_abstracts$Abstract <- sub("©[^©]{0,300}$", "", hg_abstracts$Abstract,
+                             perl = TRUE)
+hg_abstracts$doc <- sprintf("abs_%04d", seq_len(nrow(hg_abstracts)))
+c(abstracts = nrow(hg_abstracts), with_notice = sum(had_notice))
+boilerplate <- c("covid", "coronavirus", "sars", "cov", "pandemic",
+                 "disease", "study", "studies", "result", "results",
+                 "conclusion", "conclusions", "background", "method",
+                 "methods", "objective", "aim")
+hg <- text_hypergraph(hg_abstracts, column = "Abstract", id = "doc",
+                      weight = "tfidf",
+                      stop_words = c(stop_words_en(), boilerplate),
+                      min_count = 5L, sparse = TRUE)
+hg
+topics16 <- hg_cluster(hg, k = 16, seed = 1)
+```
+
+Each topic is described by the words it *owns*: `sort_by = "share"` ranks
+words by the fraction of their corpus count that falls in the topic, and
+`min_docs = 15` keeps out words a topic owns only because they occur in a
+handful of its abstracts. Ranked by raw frequency instead, all sixteen
+lists would read "learning, students, education, online, teaching".
+
+```{r honets-topics}
+knitr::kable(
+  hg_keywords(hg, topics16, n = 8, type = "frequency",
+              sort_by = "share", min_docs = 15, collapse = TRUE),
+  row.names = FALSE
+)
+```
+
+```{r honets-plot, fig.width = 11, fig.height = 13}
+plot(hg_keywords(hg, topics16, n = 6, type = "frequency",
+                 sort_by = "share", min_docs = 15),
+     value = "share", ncol = 4)
+```
+
 # Building the model
 
 Drop the records indexed without an abstract, then clean the source text before
