@@ -25,13 +25,23 @@ testthat::test_that("topics() output is bit-identical to the golden reference", 
     embeddings = embeddings_fixture$embeddings
   )
 
-  # Every modeled surface, compared with zero tolerance.
+  # Determinism is locked by the rerun test below, which compares two runs on the
+  # SAME machine at zero tolerance. A STORED golden file cannot also be held to
+  # zero tolerance: the fixture was generated under one BLAS, and a different one
+  # (Apple Accelerate here, OpenBLAS on the r-universe runners) re-associates the
+  # sums inside kmeans and moves distances in the last bits. Observed drift is
+  # ~2e-15 relative, which is why every numeric surface below failed on Linux
+  # while the cluster ASSIGNMENT did not -- assignments are robust to it, so that
+  # one stays an exact check. 1e-10 leaves five orders of margin over the drift
+  # while still catching any real change to the modeled output.
   testthat::expect_identical(model$documents$topic, golden$topic)
-  testthat::expect_identical(model$documents$distance, golden$distance)
-  testthat::expect_identical(model$topics, golden$topics)
-  testthat::expect_identical(model$terms, golden$terms)
-  testthat::expect_identical(model$representatives, golden$representatives)
-  testthat::expect_identical(model$centers, golden$centers)
+  tol <- 1e-10
+  testthat::expect_equal(model$documents$distance, golden$distance, tolerance = tol)
+  testthat::expect_equal(model$topics, golden$topics, tolerance = tol)
+  testthat::expect_equal(model$terms, golden$terms, tolerance = tol)
+  testthat::expect_equal(model$representatives, golden$representatives,
+                         tolerance = tol)
+  testthat::expect_equal(model$centers, golden$centers, tolerance = tol)
 })
 
 testthat::test_that("topics() is identical across independent reruns", {
