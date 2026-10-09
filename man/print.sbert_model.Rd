@@ -15,5 +15,16 @@
 The model object, invisibly.
 }
 \description{
-Print a Loaded Model
+Shows the model's identity and the settings inference will run under:
+pinned revision, embedding dimensions, backend, and thread count.
+}
+\examples{
+# Pinned models that can be loaded and printed.
+models()
+
+\donttest{
+if (interactive()) {
+  print(load_model())
+}
+}
 }

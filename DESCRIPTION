@@ -23,7 +23,7 @@ Description: Builds semantic topic models from 'Sentence-BERT'
     Sentence embeddings are computed in several modes with models run on
     the Open Neural Network Exchange ('ONNX') Runtime, including
     multilingual and long-context encoders and a fast static model.
-    Topics are labelled with class-based term weighting that can be
+    Topics are labeled with class-based term weighting that can be
     retuned without refitting. Candidate topic counts and document
     granularities (whole documents, sentences, clauses, or phrases) can
     be compared side by side, and fitted models assign topics to new

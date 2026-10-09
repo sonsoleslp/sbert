@@ -23,7 +23,7 @@
 #'   the documents once and reuses that work across every candidate, instead
 #'   of re-tokenizing per candidate.
 #' @param n_topics Integer vector of candidate topic counts, each at least 2
-#'   and below the number of modelled units. Default `c(5, 10, 15, 20, 25, 30)`.
+#'   and below the number of modeled units. Default `c(5, 10, 15, 20, 25, 30)`.
 #' @param model A loaded sbert model, a pinned model name, or `NULL` for the
 #'   session default. Ignored when `embeddings` is supplied.
 #' @param embeddings Optional precomputed embedding matrix, one row per
@@ -160,7 +160,7 @@ compare_topics <- function(
       call. = FALSE
     )
   }
-  # The upper bound is the number of modelled units. At document level it is
+  # The upper bound is the number of modeled units. At document level it is
   # known before any encoding; a segmented fit only knows it once the corpus
   # exists, so that case is checked below.
   if (segment == "document") {
@@ -562,10 +562,24 @@ fitted.sbert_topic_sweep <- function(object, n_topics, segment = NULL, ...) {
 
 #' Print a Topic-Count Comparison
 #'
+#' Shows one row per candidate with its quality measures, and the call that
+#' pulls the best-scoring fitted model back out.
+#'
 #' @param x An `sbert_topic_sweep` object.
 #' @param ... Ignored.
 #' @return The sweep object, invisibly.
 #' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+#' print(comparison)
 print.sbert_topic_sweep <- function(x, ...) {
   measure <- attr(x, "measure")
   models <- attr(x, "models")
@@ -593,10 +607,24 @@ print.sbert_topic_sweep <- function(x, ...) {
 
 #' Coerce a Topic-Count Comparison to a Data Frame
 #'
+#' Drops the retained models and the sweep attributes, leaving the plain
+#' table of candidates and their measures for further manipulation.
+#'
 #' @param x An `sbert_topic_sweep` object.
 #' @param ... Ignored.
 #' @return A plain data frame without the attached models or sweep attributes.
 #' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+#' as.data.frame(comparison)
 as.data.frame.sbert_topic_sweep <- function(x, ...) {
   plain <- x
   attr(plain, "models") <- NULL
@@ -609,7 +637,7 @@ as.data.frame.sbert_topic_sweep <- function(x, ...) {
 #' `type = "metrics"` (the default) draws coherence, topic diversity, and
 #' between-topic variance against the candidate topic counts, marking the
 #' count with the highest coherence. A comparison over several segment levels
-#' draws one line per level in each panel, told apart by colour, point shape,
+#' draws one line per level in each panel, told apart by color, point shape,
 #' and line type, with a legend. There is no single correct topic count; the
 #' useful signal is the count after which coherence stops improving, not a
 #' global maximum.

@@ -424,7 +424,7 @@ topic_sizes <- function(object, weights = NULL, by = c("segment", "document")) {
 
 # Accepts either a character vector (the historical input) or a data frame
 # together with `column`, the name of the text column. Rows whose text is
-# missing, blank, or a bibliographic placeholder cannot be modelled, so they
+# missing, blank, or a bibliographic placeholder cannot be modeled, so they
 # are dropped once here instead of by every caller; the surviving row indices
 # come back so precomputed embeddings can be subset the same way.
 prepare_topic_input <- function(text, column = NULL) {

@@ -209,10 +209,22 @@ load_sbert_onnx_model <- function(path, backend, threads) {
 
 #' Print a Loaded Model
 #'
+#' Shows the model's identity and the settings inference will run under:
+#' pinned revision, embedding dimensions, backend, and thread count.
+#'
 #' @param x An `sbert_model` object.
 #' @param ... Ignored.
 #' @return The model object, invisibly.
 #' @export
+#' @examples
+#' # Pinned models that can be loaded and printed.
+#' models()
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   print(load_model())
+#' }
+#' }
 print.sbert_model <- function(x, ...) {
   stopifnot(inherits(x, "sbert_model"))
   cat(sprintf(

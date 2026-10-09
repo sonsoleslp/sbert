@@ -26,7 +26,7 @@ terms per topic), `"representatives"` (a ranked text list of the
 centroid-nearest documents per topic), `"fit"` (a per-topic report with all
 three term views -- count, TF-IDF, beta -- followed by the representative
 documents, one row per topic), or `"map"` (a two-dimensional classical-MDS
-projection of the document embeddings, coloured by topic). The `"map"` view
+projection of the document embeddings, colored by topic). The `"map"` view
 requires a model fitted with `keep_embeddings = TRUE`.}
 
 \item{by}{For `type = "terms"`, one or more of `"score"` (class-based
@@ -53,7 +53,7 @@ the model stored at fit time, they are recomputed from the retained
 embeddings; if the model was fitted with `keep_embeddings = FALSE`, the
 stored set is used and a warning is issued.}
 
-\item{colors}{Optional vector of topic colours; defaults to [topic_palette()].}
+\item{colors}{Optional vector of topic colors; defaults to [topic_palette()].}
 
 \item{max_points}{Maximum documents drawn when `type = "map"`. Larger corpora
 are thinned to a deterministic stratified subsample so the classical-MDS

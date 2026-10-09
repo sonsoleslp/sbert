@@ -257,7 +257,7 @@ representatives(topic_model, n = 2)
 The model built here is reusable, not just describable. `predict()` assigns
 any new feedback message to these six topics without refitting;
 `topic_membership()` replaces the hard assignment with graded probabilities
-when a message sits between topics. Multi-sentence messages can be modelled
+when a message sits between topics. Multi-sentence messages can be modeled
 sentence by sentence instead of whole: `segment = "sentence"` on the fitting
 verbs splits every message first and fits the topics on the sentences, and
 `compare_topics()` takes several levels at once so the unit is chosen from a

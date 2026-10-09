@@ -23,7 +23,7 @@ models fitted with `keep_embeddings = TRUE` carry their embeddings.}
 An `sbert_topic_model` with `n_topics` topics.
 }
 \description{
-Cuts the topic topic_hierarchy (see [topic_hierarchy()]) at the requested
+Cuts the topic hierarchy (see [topic_hierarchy()]) at the requested
 count and rebuilds the model: documents keep their cluster memberships
 (merged, never re-clustered), centroids are recomputed from the member
 documents, and terms, labels, sizes, and representatives are derived

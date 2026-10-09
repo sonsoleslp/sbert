@@ -40,7 +40,7 @@ every level in the comparison.}
 `type = "metrics"` (the default) draws coherence, topic diversity, and
 between-topic variance against the candidate topic counts, marking the
 count with the highest coherence. A comparison over several segment levels
-draws one line per level in each panel, told apart by colour, point shape,
+draws one line per level in each panel, told apart by color, point shape,
 and line type, with a legend. There is no single correct topic count; the
 useful signal is the count after which coherence stops improving, not a
 global maximum.

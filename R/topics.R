@@ -432,9 +432,9 @@ deterministic_topic_centers <- function(embeddings, n_topics, existing_centers =
   # center per step, so the cost is O(n_topics * n * d) rather than the
   # O(n_topics^2 * n * d) of rebuilding the whole distance set each iteration.
   squared_distance_to <- function(center) {
-    # Broadcasting the centre to a full document-by-dimension matrix and
+    # Broadcasting the center to a full document-by-dimension matrix and
     # subtracting it allocates two corpus-sized transients per call, and this
-    # runs once per selected centre. Doing it in row blocks keeps the transient
+    # runs once per selected center. Doing it in row blocks keeps the transient
     # to one block while leaving the per-row arithmetic (and the selections)
     # exactly the same.
     out <- numeric(n_documents)
@@ -830,7 +830,7 @@ is_segmented_topic_model <- function(object) {
 #'
 #' @inheritParams topics
 #' @return An object of class `sbert_topic_corpus`: a list with the prepared
-#'   `text` (one element per modelled unit), carried `metadata`, `units` (the
+#'   `text` (one element per modeled unit), carried `metadata`, `units` (the
 #'   `document_id`, `document_name`, and `segment` of every unit when the corpus
 #'   is segmented, otherwise `NULL`), unit `embeddings`, cached `token_lists`,
 #'   `model` information, and the fixed segmentation and tokenization
@@ -887,7 +887,7 @@ topic_corpus <- function(
   prepared <- prepare_topic_input(text, column)
   text <- prepared$text
   metadata <- prepared$metadata
-  # Supplied embeddings follow the modelled units: one row per document at
+  # Supplied embeddings follow the modeled units: one row per document at
   # document level (so dropped rows are dropped here too), one row per segment
   # otherwise (checked once the segments exist).
   if (
@@ -1042,10 +1042,20 @@ topic_corpus <- function(
 
 #' Print a Prepared Topic Corpus
 #'
+#' Shows what the corpus holds and can be reused for: document and unit
+#' counts, the segmentation level, and whether embeddings are attached.
+#'
 #' @param x An `sbert_topic_corpus` object.
 #' @param ... Ignored.
 #' @return The corpus object, invisibly.
 #' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls",
+#'   "Stocks and bonds trade", "Markets price shares"
+#' )
+#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
+#' print(topic_corpus(text, embeddings = embeddings))
 print.sbert_topic_corpus <- function(x, ...) {
   cat("<sbert_topic_corpus>\n")
   if (is.null(x$units)) {
@@ -1161,7 +1171,7 @@ print.sbert_topic_corpus <- function(x, ...) {
 #' @param segment The unit the model is fitted on. `"document"` (default)
 #'   embeds each document whole. `"sentence"`, `"clause"`, or `"phrase"` first
 #'   splits every document with [segment()] at that level and fits the topics
-#'   on the segments, so long documents are modelled in full instead of being
+#'   on the segments, so long documents are modeled in full instead of being
 #'   truncated to the encoder's context window, and a document can span several
 #'   topics. The fitted `$documents` then has one row per segment with its
 #'   parent `document_id` and `segment` position; [topic_sizes()] counts by
@@ -1173,7 +1183,7 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   When a `model` is used, the budget counts that model's exact tokens; with
 #'   precomputed `embeddings` it counts words. Only with a segmented fit.
 #' @param merge_below Re-join segments shorter than this many words into their
-#'   neighbour, passed to [segment()]. Only with a segmented fit.
+#'   neighbor, passed to [segment()]. Only with a segmented fit.
 #' @param min_content Minimum alphabetic-content ratio for a segment to be
 #'   kept, passed to [segment()]. Only with a segmented fit.
 #' @return An object of class `sbert_topic_model` containing unit
@@ -1499,7 +1509,7 @@ topics <- function(
     reorder = is.null(seeds),
     fixed = !is.null(seeds) && isTRUE(fixed_seeds)
   )
-  # One row per modelled unit. A segmented fit keeps the parent document and
+  # One row per modeled unit. A segmented fit keeps the parent document and
   # the segment's position so every downstream verb can aggregate back.
   documents <- if (is.null(units)) {
     document_names <- names(text)
@@ -1630,10 +1640,23 @@ topics <- function(
 
 #' Print a Semantic Topic Model
 #'
+#' Shows the fit at a glance: how many documents and topics, the variance
+#' explained, and each topic with its size and its most distinctive terms.
+#'
 #' @param x An `sbert_topic_model` object.
 #' @param ... Ignored.
 #' @return The topic model object, invisibly.
 #' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' print(topics(text, n_topics = 2, embeddings = embeddings, n_terms = 3))
 print.sbert_topic_model <- function(x, ...) {
   stopifnot(inherits(x, "sbert_topic_model"))
   explained <- if (x$diagnostics$totss > 0) {

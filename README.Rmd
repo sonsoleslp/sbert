@@ -76,7 +76,7 @@ topic_model$topics
 
 You can run the whole thing with no download by passing a precomputed
 embedding matrix. Here two clearly separated groups — cooking and astronomy —
-fall out, each labelled by its most distinctive terms:
+fall out, each labeled by its most distinctive terms:
 
 ```{r topics-live, eval = TRUE}
 sentences <- c(
@@ -129,7 +129,7 @@ topic_model <- fitted(sweep, n_topics = 30)
 Long documents do not have to be truncated to the encoder's context
 window. `segment = "sentence"` (or `"clause"`, `"phrase"`) splits every
 document with `segment()` first and fits the topics on the segments, so a
-5,000-word report is modelled in full and can span several topics. The
+5,000-word report is modeled in full and can span several topics. The
 segment options ride along under their `segment()` names, and every
 downstream verb knows which document each segment came from:
 
@@ -276,7 +276,7 @@ Around the topic model, a few utilities cover the everyday analysis moves:
 keywords(text, n = 5)                                 # embedding-ranked keywords (MMR)
 stop_words(add = c("students", "learning"))           # exclude corpus vocabulary
 compare_topics(text, n_topics = c(10, 20, 30), embeddings = embeddings)
-tree <- topic_hierarchy(topic_model)                  # which topics are neighbours?
+tree <- topic_hierarchy(topic_model)                  # which topics are neighbors?
 plot(tree)                                            # labeled dendrogram
 smaller <- reduce_topics(topic_model, n_topics = 12)  # merge down, keep all verbs
 ```

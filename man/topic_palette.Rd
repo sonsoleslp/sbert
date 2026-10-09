@@ -7,13 +7,13 @@
 topic_palette(n)
 }
 \arguments{
-\item{n}{Number of colours to return.}
+\item{n}{Number of colors to return.}
 }
 \value{
-A character vector of `n` hex colours.
+A character vector of `n` hex colors.
 }
 \description{
-A colour-blind-friendly qualitative palette used by the package plots.
+A color-blind-friendly qualitative palette used by the package plots.
 }
 \examples{
 topic_palette(4)

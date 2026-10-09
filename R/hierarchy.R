@@ -1,4 +1,4 @@
-# Topic topic_hierarchy and reduction: agglomerative clustering of topic centroids
+# Topic hierarchy and reduction: agglomerative clustering of topic centroids
 # (cosine distance, deterministic) exposes which topics are near-duplicates
 # and which are genuinely distinct, and cutting the tree merges a fitted
 # model down to fewer topics without re-running k-means.
@@ -63,7 +63,7 @@ topic_hierarchy <- function(object, method = "average") {
     length(method) == 1L
   )
   if (nrow(object$topics) < 2L) {
-    stop("A topic_hierarchy needs at least two topics.", call. = FALSE)
+    stop("A topic hierarchy needs at least two topics.", call. = FALSE)
   }
   tree <- hierarchy_tree(object, method)
   branch_name <- function(node) {
@@ -88,10 +88,24 @@ topic_hierarchy <- function(object, method = "average") {
 
 #' Print a Topic Hierarchy
 #'
+#' Shows the merge table: one row per merge, with its height and the two
+#' branches that fused.
+#'
 #' @param x An `sbert_topic_hierarchy` object.
 #' @param ... Ignored.
 #' @return The hierarchy object, invisibly.
 #' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
+#' print(tree)
 print.sbert_topic_hierarchy <- function(x, ...) {
   cat(sprintf(
     "<sbert_topic_hierarchy> %d topics, %d merges (cosine distance)\n\n",
@@ -104,15 +118,30 @@ print.sbert_topic_hierarchy <- function(x, ...) {
 
 #' Plot a Topic Hierarchy Dendrogram
 #'
+#' Draws the merge tree as a dendrogram labeled with topic labels, with
+#' cosine distance on the height axis. Early merges at small heights are
+#' near-duplicate topics.
+#'
 #' @param x An `sbert_topic_hierarchy` object.
 #' @param main Plot title.
 #' @param cex Character expansion factor for labels.
 #' @param ... Passed to [plot.dendrogram()].
 #' @return The hierarchy object, invisibly.
 #' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
+#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
+#' )
+#' embeddings <- rbind(
+#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
+#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
+#' )
+#' tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
+#' plot(tree)
 plot.sbert_topic_hierarchy <- function(
   x,
-  main = "Topic topic_hierarchy",
+  main = "Topic hierarchy",
   cex = 0.8,
   ...
 ) {
@@ -135,7 +164,7 @@ plot.sbert_topic_hierarchy <- function(
 
 #' Reduce a Fitted Topic Model to Fewer Topics
 #'
-#' Cuts the topic topic_hierarchy (see [topic_hierarchy()]) at the requested
+#' Cuts the topic hierarchy (see [topic_hierarchy()]) at the requested
 #' count and rebuilds the model: documents keep their cluster memberships
 #' (merged, never re-clustered), centroids are recomputed from the member
 #' documents, and terms, labels, sizes, and representatives are derived

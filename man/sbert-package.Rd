@@ -4,13 +4,11 @@
 \name{sbert-package}
 \alias{sbert}
 \alias{sbert-package}
-\title{sbert: Python-Free Sentence-BERT Inference}
+\title{sbert: Topic Modeling with 'Sentence-BERT' Embeddings}
 \description{
-The package runs a pinned Sentence-BERT-compatible ONNX model through
-native ONNX Runtime, with Hugging Face-compatible tokenization supplied by
-the CRAN package `tok`. It also provides deterministic semantic topic
-clustering with representative documents and class-based TF-IDF terms. No
-Python installation is required.
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
+Builds semantic topic models from 'Sentence-BERT' embeddings (Reimers and Gurevych, 2019) \doi{10.18653/v1/D19-1410}. Sentence embeddings are computed in several modes with models run on the Open Neural Network Exchange ('ONNX') Runtime, including multilingual and long-context encoders and a fast static model. Topics are labeled with class-based term weighting that can be retuned without refitting. Candidate topic counts and document granularities (whole documents, sentences, clauses, or phrases) can be compared side by side, and fitted models assign topics to new documents, give soft memberships and per-document topic mixtures. The package offers coherence and diversity metrics and visualizations.
 }
 \seealso{
 Useful links:
@@ -26,6 +24,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Sonsoles López-Pernas \email{sonsoles.lopez@uef.fi} (\href{https://orcid.org/0000-0002-9621-1392}{ORCID}) [copyright holder]
   \item Mohammed Saqr \email{mohammed.saqr@uef.fi} (\href{https://orcid.org/0000-0001-5881-3109}{ORCID}) [copyright holder]
 }
 

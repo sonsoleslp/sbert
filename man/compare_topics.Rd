@@ -31,7 +31,7 @@ the documents once and reuses that work across every candidate, instead
 of re-tokenizing per candidate.}
 
 \item{n_topics}{Integer vector of candidate topic counts, each at least 2
-and below the number of modelled units. Default `c(5, 10, 15, 20, 25, 30)`.}
+and below the number of modeled units. Default `c(5, 10, 15, 20, 25, 30)`.}
 
 \item{column}{When `text` is a data frame, the name of the column
 holding the documents to model. Every other column is carried into
@@ -82,7 +82,7 @@ When a `model` is used, the budget counts that model's exact tokens; with
 precomputed `embeddings` it counts words. Only with a segmented fit.}
 
 \item{merge_below}{Re-join segments shorter than this many words into their
-neighbour, passed to [segment()]. Only with a segmented fit.}
+neighbor, passed to [segment()]. Only with a segmented fit.}
 
 \item{min_content}{Minimum alphabetic-content ratio for a segment to be
 kept, passed to [segment()]. Only with a segmented fit.}
