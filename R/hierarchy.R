@@ -308,6 +308,8 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
   documents$label <- NULL
 
   settings <- object$settings
+  # Names given with name_topics() belong to the topics before merging.
+  settings$topic_names <- NULL
   term_results <- topic_term_scores(
     text = documents$text,
     topic = documents$topic,

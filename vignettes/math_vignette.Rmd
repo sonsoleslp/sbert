@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 library(sbert)
 ```
 
-**sbert** computes Sentence-BERT embeddings in R, without Python.
+**sbert** computes Sentence-BERT embeddings natively in R.
 Sentence-BERT (Reimers and Gurevych, 2019) is a family of neural models that
 turn a whole sentence or short text into an embedding: a vector of numbers in
 which texts with similar meaning lie close together, even when they share few
@@ -212,11 +212,30 @@ two others, and use the same words. The model still separates them, because
 an instruction, a hint, and a question do different things. Topics 3 and 5
 both deal with meaning, but one asks the learner and the other tells them.
 
+`name_topics()` gives the topics these names, one per topic in topic order.
+The names replace the labels in every table and plot that follows; nothing
+is refitted.
+
+```{r name-topics}
+topic_model <- name_topics(
+  topic_model,
+  c(
+    "Guiding question and instruction",
+    "Short hint",
+    "Question about meaning",
+    "Correction",
+    "Definition",
+    "Negation"
+  )
+)
+topic_sizes(topic_model)
+```
+
 # Example messages
 
-One sentence names a topic; a few more show its range. `representatives()`
-returns the messages closest to each topic's center, so the first message of
-each topic is the one that names it:
+A few messages per topic show its range. `representatives()` returns the
+messages closest to each topic's center; the first message of each topic is
+the one that labeled it before we named it:
 
 ```{r representatives}
 knitr::kable(

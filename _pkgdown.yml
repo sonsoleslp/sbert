@@ -52,6 +52,7 @@ reference:
   contents:
   - terms.sbert_topic_model
   - representatives
+  - name_topics
   - topic_sizes
   - keywords
 

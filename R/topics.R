@@ -1690,3 +1690,61 @@ print.sbert_topic_model <- function(x, ...) {
   ))
   invisible(x)
 }
+
+#' Name the Topics of a Fitted Model
+#'
+#' Replaces each topic's label with a name you choose after reading its
+#' representative texts, for example the kind of message a topic holds
+#' (`"Correction"`, `"Short hint"`). The names replace the `label` column of
+#' every table keyed by topic (`$topics`, `$documents`, `terms()`,
+#' `representatives`), so they appear in [summary()], [topic_sizes()],
+#' [predict()], [topic_hierarchy()], and every plot. Nothing is refitted.
+#'
+#' @param object A fitted [topics()] model.
+#' @param labels Character vector with one distinct, non-empty name per
+#'   topic, in topic order (topic 1 first).
+#' @return The model with its labels replaced: an `sbert_topic_model` whose
+#'   `$settings$topic_names` records the names. [reduce_topics()] merges
+#'   topics, so it drops the names and labels the merged topics afresh.
+#' @section Errors: Raises a condition of class `sbert_bad_topic_names` when
+#'   `labels` is not a character vector with one distinct, non-empty,
+#'   non-missing name per topic.
+#' @export
+#' @examples
+#' text <- c(
+#'   "Cats chase mice", "Dogs chase balls",
+#'   "Stocks and bonds trade", "Markets price shares"
+#' )
+#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
+#' fitted <- topics(text, 2, embeddings = embeddings)
+#' named <- name_topics(fitted, c("Pets", "Finance"))
+#' topic_sizes(named)
+name_topics <- function(object, labels) {
+  stopifnot(
+    "`object` must be a model fitted with topics()" =
+      inherits(object, "sbert_topic_model")
+  )
+  n_topics <- nrow(object$topics)
+  valid <- is.character(labels) &&
+    length(labels) == n_topics &&
+    !anyNA(labels) &&
+    all(nzchar(trimws(labels))) &&
+    !anyDuplicated(labels)
+  if (!valid) {
+    stop(errorCondition(
+      sprintf(
+        "`labels` must be %d distinct, non-empty names, one per topic in topic order.",
+        n_topics
+      ),
+      class = "sbert_bad_topic_names",
+      call = NULL
+    ))
+  }
+  labels <- unname(labels)
+  object$topics$label <- labels
+  object$documents <- insert_topic_label(object$documents, labels)
+  object$terms <- insert_topic_label(object$terms, labels)
+  object$representatives <- insert_topic_label(object$representatives, labels)
+  object$settings$topic_names <- labels
+  object
+}

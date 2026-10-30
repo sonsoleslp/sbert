@@ -455,3 +455,36 @@ testthat::test_that("reduce_topics keeps the label style of the fit", {
   )
   testthat::expect_true(all(grepl(" / ", word_named$topics$label, fixed = TRUE)))
 })
+
+testthat::test_that("name_topics replaces the label on every topic table", {
+  fitted <- topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings())
+  names_chosen <- c("Animals", "Learning", "Vehicles")
+  named <- name_topics(fitted, names_chosen)
+  testthat::expect_identical(named$topics$label, names_chosen)
+  for (table in list(named$documents, named$terms, named$representatives)) {
+    testthat::expect_identical(table$label, names_chosen[table$topic])
+  }
+  testthat::expect_identical(topic_sizes(named)$label, names_chosen)
+  testthat::expect_identical(named$settings$topic_names, names_chosen)
+  # Only the labels change.
+  testthat::expect_identical(named$documents$topic, fitted$documents$topic)
+  testthat::expect_identical(named$centers, fitted$centers)
+})
+
+testthat::test_that("name_topics refuses names that do not fit the topics", {
+  fitted <- topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings())
+  bad <- list(c("a", "b"), c("a", "b", "b"), c("a", "", "c"), c("a", NA, "c"), 1:3)
+  for (labels in bad) {
+    testthat::expect_error(name_topics(fitted, labels), class = "sbert_bad_topic_names")
+  }
+})
+
+testthat::test_that("predict carries the names, and reduce_topics drops them", {
+  fitted <- topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings())
+  named <- name_topics(fitted, c("Animals", "Learning", "Vehicles"))
+  predicted <- predict(named, "Kittens", embeddings = rbind(c(1, 0, 0)))
+  testthat::expect_identical(predicted$label, named$topics$label[predicted$topic])
+  reduced <- reduce_topics(named, n_topics = 2)
+  testthat::expect_null(reduced$settings$topic_names)
+  testthat::expect_false(any(reduced$topics$label %in% c("Animals", "Learning", "Vehicles")))
+})

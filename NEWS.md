@@ -1,3 +1,14 @@
+# sbert 0.5.10
+
+* New `name_topics(object, labels)` names the topics of a fitted model, for
+  example by the kind of message each holds, after reading its
+  representatives. The names replace the `label` column of every topic
+  table, so they appear in `summary()`, `topic_sizes()`, `predict()`,
+  `topic_hierarchy()`, and every plot; nothing is refitted. They are recorded
+  in `$settings$topic_names`, and `reduce_topics()` drops them because merged
+  topics need new names. Invalid names raise `sbert_bad_topic_names`.
+* The vignette names its six topics with `name_topics()`.
+
 # sbert 0.5.9
 
 * Topics are named by sentences, not words. `topics()` gains

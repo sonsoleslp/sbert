@@ -272,6 +272,16 @@ wrap_topic_text <- function(text, width, max_lines = 2L) {
   paste(lines, collapse = "\n")
 }
 
+# A representatives panel lists the topic's texts, and a default label is the
+# first of them, so the panel is titled by number. A name given with
+# name_topics() is not one of the texts, so it is shown.
+rep_panel_title <- function(x, topic_id) {
+  if (is.null(x$settings$topic_names)) {
+    return(sprintf("Topic %d", topic_id))
+  }
+  topic_title(topic_id, x$topics$label[[match(topic_id, x$topics$topic)]], 60L)
+}
+
 # "3. All the ones between the fly and the cat": the topic number ties a
 # shortened label to its topic in titles, axes, and legends.
 topic_title <- function(topic, label, max_chars) {
@@ -375,7 +385,7 @@ plot_topic_representatives <- function(x, colors, n_representatives, topic_ids) 
       reps <- utils::head(reps, n_representatives)
       draw_topic_rep_panel(
         reps,
-        sprintf("Topic %d", topic_id),
+        rep_panel_title(x, topic_id),
         colors[color_index[i]],
         max_chars
       )
@@ -446,7 +456,7 @@ plot_topic_fit <- function(
         graphics::par(mar = c(2.6, 0.5, 2.4, 0.5))
         draw_topic_rep_panel(
           reps,
-          sprintf("Topic %d", topic_id),
+          rep_panel_title(x, topic_id),
           color,
           48L
         )
