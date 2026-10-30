@@ -31,7 +31,8 @@ topics(
   segment = c("document", "sentence", "clause", "phrase"),
   max_tokens = NULL,
   merge_below = 0L,
-  min_content = 0
+  min_content = 0,
+  label = c("representative", "terms")
 )
 }
 \arguments{
@@ -153,6 +154,11 @@ neighbor, passed to [segment()]. Only with a segmented fit.}
 
 \item{min_content}{Minimum alphabetic-content ratio for a segment to be
 kept, passed to [segment()]. Only with a segmented fit.}
+
+\item{label}{How each topic is named in `label` columns and plots.
+`"representative"` (default) uses the topic's most central text,
+shortened to 60 characters; `"terms"` joins its three most distinctive
+words (`"box / red / blue"`). Named `seeds` override either.}
 }
 \value{
 An object of class `sbert_topic_model` containing unit
@@ -167,8 +173,12 @@ Topics are summarized with representative documents and class-based TF-IDF
 terms. This is embedding-based topic discovery, not a probabilistic LDA model.
 }
 \details{
-Topic labels are arbitrary cluster identifiers. Interpret them with
-  the ranked `terms` and `representatives` tables. Term scores use the
+Each topic is named by its most central unit: the document or
+  segment nearest the topic's centroid, shortened to 60 characters. The
+  topics come from the meaning of whole texts, so a text names a topic
+  better than its top words do; `label = "terms"` names topics by their
+  three most distinctive words instead. Read more examples per topic with
+  [representatives()], and its typical words with [terms()]. Term scores use the
   class-based TF-IDF weighting `tf * log(1 + A / f_x)`, where `tf` is the
   frequency of a term normalized within its topic, `f_x` is the term's
   frequency across all topics, and `A` is the mean topic length (a real

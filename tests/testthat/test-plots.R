@@ -216,3 +216,32 @@ testthat::test_that("a device too small for the stacked fit report errors", {
   )
   testthat::expect_error(plot(model, type = "fit"), "per_topic = TRUE")
 })
+
+testthat::test_that("representative texts wrap onto two lines before they are cut", {
+  short <- "All the ones between the cat and the dog."
+  testthat::expect_identical(wrap_topic_text(short, 48L), short)
+  long <- paste(rep("Where is the cow and the cake?", 6), collapse = " ")
+  wrapped <- strsplit(wrap_topic_text(long, 48L), "\n", fixed = TRUE)[[1]]
+  testthat::expect_length(wrapped, 2L)
+  testthat::expect_true(all(nchar(wrapped) <= 48L))
+  testthat::expect_true(endsWith(wrapped[[2]], "..."))
+})
+
+testthat::test_that("panel titles are shortened to fit the panel", {
+  path <- tempfile(fileext = ".pdf")
+  grDevices::pdf(path, width = 3, height = 3)
+  on.exit({
+    grDevices::dev.off()
+    unlink(path)
+  }, add = TRUE)
+  graphics::plot.new()
+  title <- paste(rep("Are you sure you have fewer pictures", 4), collapse = " ")
+  fitted_title <- fit_panel_title(title, cex = 0.9, font = 2)
+  available <- graphics::par("pin")[[1L]] + graphics::par("mai")[[4L]]
+  testthat::expect_true(endsWith(fitted_title, "..."))
+  testthat::expect_lte(
+    graphics::strwidth(fitted_title, units = "inches", cex = 0.9, font = 2),
+    available
+  )
+  testthat::expect_identical(fit_panel_title("Topic 1", cex = 0.9, font = 2), "Topic 1")
+})

@@ -3,6 +3,51 @@
 # and which are genuinely distinct, and cutting the tree merges a fitted
 # model down to fewer topics without re-running k-means.
 
+# A topic is named by the unit nearest its centroid: a sentence (or document)
+# says what the topic is about, where its top words only hint at it. The text
+# is shortened to `width` characters at a word boundary so the label fits a
+# table cell or a plot title. A topic with no units keeps a placeholder.
+topic_labels_from_representatives <- function(representatives, n_topics, width = 60L) {
+  vapply(
+    seq_len(n_topics),
+    function(topic_id) {
+      central <- representatives$text[
+        representatives$topic == topic_id & representatives$rank == 1L
+      ]
+      if (length(central) == 0L) {
+        sprintf("topic_%d", topic_id)
+      } else {
+        shorten_topic_label(central[[1L]], width)
+      }
+    },
+    character(1)
+  )
+}
+
+shorten_topic_label <- function(text, width) {
+  text <- gsub("[[:space:]]+", " ", trimws(text))
+  if (nchar(text) <= width) {
+    return(text)
+  }
+  clipped <- substr(text, 1L, width - 3L)
+  # Cut at the last space unless that would drop more than half the label.
+  boundary <- regexpr(" [^ ]*$", clipped)
+  if (boundary > width %/% 2L) {
+    clipped <- substr(clipped, 1L, boundary - 1L)
+  }
+  paste0(clipped, "...")
+}
+
+# `label` is recorded in the model's settings; models saved before the
+# setting existed were labeled by their words.
+topic_labels_for <- function(label, terms, representatives, n_topics) {
+  if (identical(label %||% "terms", "terms")) {
+    topic_labels_from_terms(terms, n_topics)
+  } else {
+    topic_labels_from_representatives(representatives, n_topics)
+  }
+}
+
 topic_labels_from_terms <- function(terms, n_topics) {
   vapply(
     seq_len(n_topics),
@@ -23,7 +68,7 @@ hierarchy_tree <- function(object, method) {
   cosine_distance <- 1 - tcrossprod(centers)
   cosine_distance[cosine_distance < 0] <- 0
   tree <- stats::hclust(stats::as.dist(cosine_distance), method = method)
-  tree$labels <- object$topics$label
+  tree$labels <- topic_title(object$topics$topic, object$topics$label, 40L)
   tree
 }
 
@@ -145,7 +190,9 @@ plot.sbert_topic_hierarchy <- function(
   cex = 0.8,
   ...
 ) {
-  previous <- graphics::par(mar = c(2.2, 4.2, 2.6, 0.6), mgp = c(2.4, 0.6, 0))
+  # The leaf labels hang below the tree, so the bottom margin grows with them.
+  bottom <- 1 + 0.45 * cex * max(nchar(x$tree$labels))
+  previous <- graphics::par(mar = c(bottom, 4.2, 2.6, 0.6), mgp = c(2.4, 0.6, 0))
   on.exit(graphics::par(previous), add = TRUE)
   plot(
     x$tree,
@@ -276,7 +323,15 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
     roman_numerals = if (is.null(settings$roman_numerals)) "keep" else settings$roman_numerals,
     section_numbers = if (is.null(settings$section_numbers)) "keep" else settings$section_numbers
   )
-  labels <- topic_labels_from_terms(term_results$terms, n_topics)
+  settings$n_topics <- n_topics
+  representatives <- topic_representatives(
+    documents,
+    n_topics,
+    settings$n_representatives
+  )
+  labels <- topic_labels_for(
+    settings$label, term_results$terms, representatives, n_topics
+  )
 
   sizes <- tabulate(documents$topic, nbins = n_topics)
   withinss <- vapply(
@@ -310,12 +365,6 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
     stringsAsFactors = FALSE
   )
 
-  settings$n_topics <- n_topics
-  representatives <- topic_representatives(
-    documents,
-    n_topics,
-    settings$n_representatives
-  )
   structure(
     list(
       documents = insert_topic_label(documents, labels),

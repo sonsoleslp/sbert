@@ -1,202 +1,110 @@
 ---
 title: "Topic Modeling COVID-19 Research Abstracts"
-subtitle: "A semantic review of the pandemic education literature, 2020-2024"
-date: "`r format(Sys.time(), '%Y-%m-%d')`"
-output:
-  html_document:
-    self_contained: true
-    toc: true
-    toc_float: true
-    code_folding: show
-    theme: flatly
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = TRUE,
-  warning = FALSE,
-  message = FALSE,
   collapse = TRUE,
   comment = "#>",
+  message = FALSE,
+  warning = FALSE,
   fig.width = 9,
   fig.height = 5.5,
-  dpi = 120,
+  dpi = 110,
   out.width = "100%"
 )
 library(sbert)
 ```
 
-<style>
-body { color: #25364a; font-size: 15px; }
-h1, h2, h3, h4 { color: #153e5c; }
-.kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 12px; margin: 18px 0 24px; }
-.kpi { background: #f3f7fa; border-top: 4px solid #247ba0; border-radius: 6px; padding: 13px 15px; }
-.kpi-value { color: #153e5c; font-size: 24px; font-weight: 700; }
-.kpi-label { color: #526579; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-.caveat { background: #fff7dd; border-left: 6px solid #d99000; border-radius: 5px; padding: 15px 18px; margin: 18px 0 24px; }
-.method-note { background: #edf8f5; border-left: 6px solid #238b78; border-radius: 5px; padding: 15px 18px; margin: 18px 0 24px; }
-.topic-block { border: 1px solid #d6e0e8; border-radius: 7px; padding: 14px 18px; margin: 16px 0; background: #fff; }
-.topic-block h3 { margin-top: 0; }
-.topic-meta { color: #5d6d7e; margin-bottom: 12px; }
-.term-label { background: #f4f7f9; border-left: 4px solid #247ba0; padding: 10px 13px; margin: 10px 0; }
-details { border-top: 1px solid #e3e8ed; padding: 9px 0; }
-summary { color: #153e5c; cursor: pointer; font-weight: 600; }
-.paper-meta { color: #5d6d7e; font-size: 13px; margin: 6px 0; }
-.abstract { white-space: normal; line-height: 1.45; }
-table { font-size: 13px; }
-th { background: #247ba0 !important; color: #fff !important; }
-</style>
+The `covid` dataset that ships with **sbert** holds 4,170 records of research
+on COVID-19 and education, children, schools, and society, published from
+2020 to 2024. This article finds the main themes in their abstracts.
 
-The bundled `covid` dataset holds abstracts of COVID-19 research on education,
-children, schools, and society. This review embeds every abstract with a
-Sentence-BERT model, groups them into semantic topics, and reads the result —
-including how the mix of topics shifted across the pandemic years. Everything
-is deterministic: rerunning reproduces every number and figure.
+**sbert** groups texts by what they mean. Each text becomes an embedding, a
+vector of numbers in which texts with similar meaning lie close together, and
+a topic is a group of texts whose embeddings are close. So we read each
+topic's example texts first and use words only as labels at the end.
 
-# Sixteen topics as a hypergraph
+Abstracts are long. The default model reads at most 256 tokens of a text and
+ignores the rest, and many abstracts are longer than that. So we fit topics
+twice: once on whole abstracts, and once on their sentences, which are short
+enough to be read in full. The two give different answers to different
+questions.
 
-Before the Sentence-BERT model, the same abstracts cut sixteen ways with
-**hypernets**: every abstract is a node of a document-word hypergraph, every
-word a hyperedge binding the abstracts that use it (tf-idf weights), and
-the hypergraph Laplacian's spectral embedding is cut into sixteen groups.
-Whole abstracts, no encoder, nothing truncated. Sixteen is the count of the
-published structural topic model of this literature; the spectrum itself
-supports two or four clean cuts, so read the sixteen as a fine partition
-below those seams rather than as the number the data insists on.
+Unlike the vignette, this article downloads a model and encodes about 3,800
+abstracts and all their sentences. It takes a few minutes.
 
-Almost every abstract ends in a copyright notice ("© 2021 Informa UK
-Limited, trading as Taylor & Francis Group"). Left in, six of the sixteen
-groups are publishers, not research, so the notice is stripped first: from
-the last "©" to the end, whenever that tail is under 300 characters.
+# Preparing the abstracts
 
-`hypernets` is not on CRAN, so install it from GitHub first. This section is
-the only part of the article that needs it; everything below runs on `sbert`
-alone.
+`r sum(covid$Abstract == "[No abstract available]")` records have no abstract,
+only the placeholder `"[No abstract available]"`. We drop them.
 
-```{r hypernets-install, eval = FALSE}
-# install.packages("pak")
-pak::pak("mohsaqr/hypernets")
+```{r data}
+abstracts <- subset(covid, Abstract != "[No abstract available]")
+nrow(abstracts)
 ```
 
-```{r hypernets-hypergraph}
-library(hypernets)
-hg_abstracts <- covid[covid$Abstract != "[No abstract available]", ]
-hg_abstracts <- hg_abstracts[!duplicated(hg_abstracts$Abstract), ]
-had_notice <- grepl("©", hg_abstracts$Abstract)
-hg_abstracts$Abstract <- sub("©[^©]{0,300}$", "", hg_abstracts$Abstract,
-                             perl = TRUE)
-hg_abstracts$doc <- sprintf("abs_%04d", seq_len(nrow(hg_abstracts)))
-c(abstracts = nrow(hg_abstracts), with_notice = sum(had_notice))
-boilerplate <- c("covid", "coronavirus", "sars", "cov", "pandemic",
-                 "disease", "study", "studies", "result", "results",
-                 "conclusion", "conclusions", "background", "method",
-                 "methods", "objective", "aim")
-hg <- text_hypergraph(hg_abstracts, column = "Abstract", id = "doc",
-                      weight = "tfidf",
-                      stop_words = c(stop_words_en(), boilerplate),
-                      min_count = 5L, sparse = TRUE)
-hg
-topics16 <- hg_cluster(hg, k = 16, seed = 1)
-```
+Almost every abstract ends with a copyright notice, such as "© 2021 Informa UK
+Limited, trading as Taylor & Francis Group." Left in, the notices would form
+topics of their own, grouped by publisher rather than by research. The
+`remove` argument of `clean_corpus()` deletes text that matches a regular
+expression. The pattern below deletes a notice at the end of an abstract
+that starts with "©", "Copyright ©", or "Copyright" and a year. It does not
+touch abstracts that mention copyright as a subject.
 
-Each topic is described by the words it *owns*: `sort_by = "share"` ranks
-words by the fraction of their corpus count that falls in the topic, and
-`min_docs = 15` keeps out words a topic owns only because they occur in a
-handful of its abstracts. Ranked by raw frequency instead, all sixteen
-lists would read "learning, students, education, online, teaching".
+`clean_corpus()` also repairs broken characters, removes HTML tags, URLs,
+DOIs, and bracketed citations, and with `min_content = 0.5` drops rows that
+are mostly numbers or symbols rather than words. Given a data frame and a
+`column`, it cleans that column and keeps the other columns.
 
-```{r hypernets-topics}
-knitr::kable(
-  hg_keywords(hg, topics16, n = 8, type = "frequency",
-              sort_by = "share", min_docs = 15, collapse = TRUE),
-  row.names = FALSE
+```{r clean}
+abstracts <- clean_corpus(
+  abstracts,
+  column = "Abstract",
+  remove = "(copyright:?\\s*(©|\\d{4})|©).{0,1000}$",
+  min_content = 0.5
 )
+nrow(abstracts)
 ```
 
-```{r hypernets-plot, fig.width = 11, fig.height = 13}
-plot(hg_keywords(hg, topics16, n = 6, type = "frequency",
-                 sort_by = "share", min_docs = 15),
-     value = "share", ncol = 4)
-```
+# The model
 
-# Building the model
-
-Drop the records indexed without an abstract, then clean the source text before
-encoding. `clean_corpus()` repairs junk characters, strips any list and
-reference numbering, and — with `min_content` — drops whole low-content rows
-such as citation lists. It carries the other columns along, so `Year` stays
-aligned. Sentence-BERT tolerates a little noise, so the goal is fixing broken
-text and removing non-content rows, not scrubbing every token. On a few messy
-examples the effect is easiest to see:
-
-```{r clean-demo, echo=FALSE}
-messy <- c(
-  "1. The programme raised attainment in 2020, see section 3.2.1.",
-  "(3) OJ No L 297, 24.11.1979, p. 1.",
-  "Peer&nbsp;support <b>improved</b> outcomes [12] across schools.",
-  "Full report at https://example.org/study.pdf and doi:10.1/x."
-)
-knitr::kable(
-  data.frame(Before = messy, After = clean_corpus(messy)),
-  caption = "clean_corpus() with defaults: list and reference numbering, HTML tags, bracketed citations, URLs and DOIs removed and characters repaired, while real words are kept."
-)
-```
-
-The citation-only row above scores far below the prose rows on alphabetic
-density, so `min_content = 0.5` drops it entirely rather than embedding it. The
-generic cleaners deliberately stop short of domain-specific reference forms; for
-those, `remove` takes custom patterns — `clean_corpus(text, remove = "OJ No
-L?\\s*\\d+")` strips European Union Official Journal identifiers, for example.
-The same clean text then feeds the encoder, the topic terms, and the
-representative abstracts.
-
-```{r corpus}
-covid_content <- covid[covid$Abstract != "[No abstract available]", ]
-covid_content <- clean_corpus(covid_content, column = "Abstract", min_content = 0.5)
-```
-
-The pinned default model, `all-MiniLM-L6-v2`, turns each abstract into a
-384-dimensional vector. Abstracts longer than its 256-token window are
-truncated to their opening, so the comparison below fits every candidate count
-twice: on whole abstracts, and on their sentences, which are never truncated.
-Both downloads are explicit and happen once:
+Install the ONNX Runtime and download the default model, `all-MiniLM-L6-v2`.
+Both steps happen once per computer.
 
 ```{r runtime}
 install_runtime()
 model_download()
 ```
 
-Every abstract shares a scientific boilerplate — *covid*, *pandemic*, *study*,
-*results* — and the label of *every* topic would otherwise repeat it. Those
-words carry no signal about what separates one topic from another, so they are
-excluded up front; `numbers = "remove"` drops bare years and counts (*2020*,
-*19*) for the same reason. Domain stop words are the standard way to keep
-topic labels informative.
+# Choosing the number of topics
 
-```{r stopwords}
-covid_stops <- stop_words(add = c(
+`compare_topics()` fits one model for each topic count, here on both whole
+abstracts (`"document"`) and sentences (`"sentence"`). `max_tokens = 200`
+splits the rare sentence longer than 200 words at its punctuation, so that no
+sentence is cut off.
+
+Words such as *covid*, *pandemic*, and *study* appear in nearly every
+abstract, so they are added to the standard English stop words, and
+`numbers = "remove"` leaves out bare numbers such as years. Stop words affect
+only the word labels and the word-based measures. The topics themselves are
+computed from the embeddings of the full text.
+
+```{r sweep}
+covid_stop_words <- stop_words(add = c(
   "covid", "coronavirus", "sars", "cov", "pandemic", "disease",
   "study", "studies", "result", "results", "conclusion", "conclusions",
   "background", "method", "methods", "objective", "aim"
 ))
-```
 
-There is no correct topic count, and no self-evident unit either.
-`compare_topics()` fits one model per candidate count on each requested
-`segment` level — here whole abstracts and sentences, with sentences over 200
-words re-split at punctuation — and reports the numbers that justify both
-choices. Passing the data frame with `column` carries `Year` into every fitted
-model.
-
-```{r sweep}
 sweep <- compare_topics(
-  covid_content,
+  abstracts,
   column = "Abstract",
   n_topics = c(4, 6, 8, 10, 12),
   segment = c("document", "sentence"),
   max_tokens = 200,
-  measure = "npmi",
-  stop_words = covid_stops,
+  stop_words = covid_stop_words,
   numbers = "remove"
 )
 sweep
@@ -206,259 +114,152 @@ sweep
 plot(sweep)
 ```
 
-Read the count from the table rather than by habit: coherence rises, peaks, and
-falls as topics multiply, while `explained` keeps climbing regardless. The
-count with the highest coherence on whole abstracts is the granularity this
-corpus best supports — the point after which splitting topics stops buying
-coherence — so the document model is fitted there. `fitted()` takes it straight
-out of the comparison, naming both the count and the level.
+On whole abstracts, coherence jumps from 0.07 at six topics to 0.18 at
+eight. The jump is not what it seems. From eight topics on, one topic holds
+only three abstracts that are not about education at all, and their rare
+words (*ECMO*, *porcine*, *polymers*) always occur together, so that topic
+alone has a coherence of 0.90 and lifts the mean. The other seven topics
+average 0.08, only a little above six topics. We still use eight: the topics
+are a little more coherent and more diverse than at six, and the small topic
+is useful because it isolates papers that do not belong in this corpus.
+
+On sentences, coherence changes little from one count to the next. We use
+eight there too, so that the two models can be compared.
 
 ```{r model}
-by_document <- subset(sweep, segment == "document")
-best_n <- by_document$n_topics[which.max(by_document$coherence)]
-topic_model <- fitted(sweep, n_topics = best_n, segment = "document")
+topic_model <- fitted(sweep, n_topics = 8, segment = "document")
 ```
 
-# Corpus at a glance
+# What the abstracts are about
 
-```{r audit-kpis, results='asis', echo=FALSE}
-kpi <- function(value, label) {
-  sprintf(
-    '<div class="kpi"><div class="kpi-value">%s</div><div class="kpi-label">%s</div></div>',
-    value, label
-  )
-}
-cat(
-  '<div class="kpi-grid">',
-  kpi(format(nrow(covid), big.mark = ","), "Records"),
-  kpi(format(nrow(covid_content), big.mark = ","), "Modeled abstracts"),
-  kpi(format(length(unique(covid_content$Abstract)), big.mark = ","), "Distinct"),
-  kpi("2020-2024", "Years"),
-  kpi(nrow(topic_model$topics), "Topics"),
-  '</div>'
-)
+`representatives()` returns, for each topic, the abstracts closest to that
+topic and clearly farther from every other topic. Here is one per topic, in
+full:
+
+```{r representatives}
+knitr::kable(representatives(topic_model, n = 1), digits = 2)
 ```
 
-<div class="caveat">
-<strong>Read the topics as a lens, not a taxonomy.</strong> The count was chosen
-because coherence peaks there, not because it is uniquely correct. Labels are
-the three most distinctive class-based TF-IDF terms — with corpus boilerplate
-and bare numbers excluded — not validated names. A bibliographic export is never
-perfectly on-theme, so one small cluster collects genuinely off-topic papers
-(veterinary and materials research) — the model isolating them rather than
-contaminating the education topics.
-</div>
+The plot shows the opening of three abstracts per topic:
 
-# The topics
-
-```{r overview, echo=FALSE}
-overview <- topic_model$topics[, c("topic", "label", "n_documents", "proportion")]
-overview$proportion <- sprintf("%.1f%%", 100 * overview$proportion)
-names(overview) <- c("Topic", "Distinctive terms", "Abstracts", "Share")
-knitr::kable(overview, row.names = FALSE)
+```{r plot-representatives, fig.width = 11, fig.height = 12}
+plot(topic_model, type = "representatives", n_representatives = 3)
 ```
 
-`plot(type = "fit")` lays out every topic at once — the three keyword views
-(raw within-topic count, class-based TF-IDF, and generative probability) beside
-each topic's representative abstracts, one row per topic:
+Read together, the examples show eight subjects:
 
-```{r plot-fit, fig.width = 11, fig.height = 15}
-plot(topic_model, type = "fit", n_terms = 8, n_representatives = 8)
+1. Students' acceptance of and satisfaction with online learning, mostly
+   surveys.
+2. Teachers and emergency remote teaching in schools.
+3. Laboratory and hands-on courses moved online, in engineering and
+   chemistry.
+4. Social and political commentary: images on social media, grassroots
+   organizing, community solidarity.
+5. Surgical and medical training.
+6. Universities as institutions: their finances, international students,
+   and private higher education.
+7. Young children, parents, and families during school and daycare closures.
+8. Three papers outside education: a training model for ECMO, marine
+   plastic litter, and anatomy teaching by dissection.
+
+`topic_sizes()` counts the abstracts in each topic. The first three topics,
+on online learning, teachers, and laboratory courses, hold more than half of
+them.
+
+```{r sizes}
+topic_sizes(topic_model)
 ```
 
-# Whole abstracts against sentences
+# What the sentences are about
 
-The comparison fitted the same counts on sentences too. `type = "fit"` on the
-comparison draws the per-topic report for both levels at the chosen count, one
-figure per level, so the two segmentations can be read against each other:
-
-```{r compare-fit, fig.width = 11, fig.height = 15}
-plot(sweep, type = "fit", n_topics = best_n, n_terms = 8, n_representatives = 6)
-```
-
-The sentence model stores every sentence with the abstract it came from, so
-`topic_sizes(by = "document")` counts the abstracts each topic reaches and
-`topic_gamma()` returns each abstract's topic mixture with no further encoding:
+The sentence model was fitted in the same call. `fitted()` returns it. Its
+example sentences are short enough to read in full:
 
 ```{r sentence-model}
-sentence_model <- fitted(sweep, n_topics = best_n, segment = "sentence")
+sentence_model <- fitted(sweep, n_topics = 8, segment = "sentence")
+knitr::kable(representatives(sentence_model, n = 3), digits = 2)
+```
+
+Most sentence topics are not subjects but the jobs that sentences do in an
+abstract:
+
+- Topic 1 opens an abstract by saying what the pandemic did to education.
+- Topic 5 holds general, hedging sentences ("However, the processes involved
+  in making this happen are elusive and complex.").
+- Topic 6 reports samples and response rates ("Of 268 students enrolled, 104
+  responded").
+- Topic 7 describes methods of data collection and analysis.
+- Topic 8 states the pandemic as background ("The WHO has stated the
+  outbreak of COVID-19 as a pandemic issue.").
+
+Only three are subjects: perceptions of online education (topic 2), course
+design with labs, simulations, and hybrid teaching (topic 3), and education
+policy and inequality (topic 4).
+
+`topic_sizes(by = "document")` counts how many abstracts have at least one
+sentence in each topic:
+
+```{r sentence-sizes}
 topic_sizes(sentence_model, by = "document")
-head(topic_gamma(sentence_model), 12)
 ```
 
-The cards below give the same evidence topic by topic, with the full abstracts
-in collapsible panels — the auditable proof that a label means what it claims.
-
-```{r topic-blocks, results='asis', echo=FALSE}
-html_escape <- function(x) {
-  x <- gsub("&", "&amp;", x, fixed = TRUE)
-  x <- gsub("<", "&lt;", x, fixed = TRUE)
-  gsub(">", "&gt;", x, fixed = TRUE)
-}
-compact <- function(x, n = 700L) {
-  x <- trimws(gsub("[[:space:]]+", " ", x))
-  ifelse(nchar(x) > n, paste0(substr(x, 1L, n - 1L), "..."), x)
-}
-
-reps <- representatives(topic_model, n = 3)
-reps$year <- covid_content$Year[match(reps$text, covid_content$Abstract)]
-palette <- topic_palette(nrow(topic_model$topics))
-
-blocks <- vapply(seq_len(nrow(topic_model$topics)), function(i) {
-  tid <- topic_model$topics$topic[[i]]
-  label <- topic_model$topics$label[[i]]
-  terms_i <- utils::head(
-    topic_model$terms$term[topic_model$terms$topic == tid], 8L
-  )
-  tr <- reps[reps$topic == tid, , drop = FALSE]
-  tr <- tr[order(tr$rank), , drop = FALSE]
-  papers <- vapply(seq_len(nrow(tr)), function(j) {
-    sprintf(
-      paste0(
-        '<details%s><summary>Nearest abstract %d - %s (distance %.3f)</summary>',
-        '<p class="abstract">%s</p></details>'
-      ),
-      if (j == 1L) " open" else "",
-      j,
-      ifelse(is.na(tr$year[[j]]), "year n/a", as.character(tr$year[[j]])),
-      tr$distance[[j]],
-      html_escape(compact(tr$text[[j]]))
-    )
-  }, character(1))
-  sprintf(
-    paste0(
-      '<div class="topic-block" style="border-left:6px solid %s">',
-      '<h3>Topic %d &mdash; %s</h3>',
-      '<div class="topic-meta">%s abstracts &middot; %.1f%% of the corpus</div>',
-      '<div class="term-label"><strong>Distinctive terms:</strong> %s</div>%s</div>'
-    ),
-    palette[[i]],
-    tid,
-    html_escape(label),
-    format(topic_model$topics$n_documents[[i]], big.mark = ","),
-    100 * topic_model$topics$proportion[[i]],
-    html_escape(paste(terms_i, collapse = ", ")),
-    paste(papers, collapse = "\n")
-  )
-}, character(1))
-cat(paste(blocks, collapse = "\n"))
-```
-
-# What each paper touches
-
-The document model gives each abstract a single label — its dominant theme. A
-long abstract usually spans several topics, though, and unlike the whole-abstract
-embedding, its individual sentences are short enough to escape the 256-token
-truncation. `segment()` splits a document into sentences, deterministically —
-and `max_tokens` guards against the rare sentence that is itself over the
-window, re-splitting it at punctuation first. The cap counts words here, a
-deterministic offline proxy; 200 words sits comfortably under the 256-token
-limit (pass `model =` to count that model's exact tokens instead):
-
-```{r segment-demo}
-segments <- segment(covid_content$Abstract, level = "sentence", max_tokens = 200)
-head(segments, 3)
-```
-
-`topic_gamma()` takes that segmentation directly — assigning every sentence to
-its nearest topic and returning each abstract's topic *mixture* (`gamma` sums to
-1 within a document). Passing the `segment()` frame keeps the cap and lets a
-single encode be reused rather than segmenting again inside the call:
+`topic_gamma()` gives the mix of topics in each abstract: the share of its
+sentences that fall in each topic. The shares of an abstract add up to 1.
 
 ```{r gamma}
-gamma <- topic_gamma(topic_model, segments)
-head(gamma)
+head(topic_gamma(sentence_model), 16)
 ```
 
-Most abstracts touch several topics. One that spreads across the most, with the
-share of its sentences on each:
+# The words each topic uses
 
-```{r gamma-one, echo=FALSE}
-spread <- tapply(gamma$gamma, gamma$document_id, function(x) sum(x > 0.1))
-mixed_id <- as.integer(names(which.max(spread)))
-mix <- subset(gamma, document_id == mixed_id & gamma > 0.05)
-mix <- mix[order(-mix$gamma), ]
-knitr::kable(
-  data.frame(
-    Topic = topic_model$topics$label[match(mix$topic, topic_model$topics$topic)],
-    `Share of sentences` = sprintf("%.0f%%", 100 * mix$gamma),
-    check.names = FALSE
-  ),
-  row.names = FALSE
-)
+`summary()` lists each topic under its label, the opening of its most
+central abstract or sentence, and reports the coherence of its top words.
+`terms()` lists those words.
+
+```{r summary}
+summary(topic_model)
 ```
 
-Aggregating every sentence gives a second view of prevalence — the share of
-*sentences* on each topic — next to the document-level share. The two agree on
-the big themes but diverge on the secondary ones: a topic that is rarely a
-paper's headline can still run through many papers' sentences.
-
-```{r gamma-prevalence, echo=FALSE, fig.height=5}
-agg <- tapply(gamma$gamma * gamma$n_segments, gamma$topic, sum)
-sent_share <- as.numeric(agg[as.character(topic_model$topics$topic)])
-sent_share <- sent_share / sum(sent_share)
-mat <- rbind(document = topic_model$topics$proportion, sentence = sent_share)
-colnames(mat) <- paste0("T", topic_model$topics$topic)
-old_par <- graphics::par(mar = c(4, 4, 3, 11))
-graphics::barplot(
-  mat, beside = TRUE, border = NA,
-  col = c("#247ba0", "#d99000"),
-  xlab = "Topic", ylab = "Share",
-  main = "Topic prevalence: whole-abstract vs sentence-level"
-)
-graphics::legend(
-  "topright", inset = c(-0.34, 0), xpd = NA, bty = "n", cex = 0.8,
-  fill = c("#247ba0", "#d99000"),
-  legend = c("document (headline)", "sentence (touched)")
-)
-graphics::par(old_par)
+```{r terms}
+terms(topic_model, n = 5)
 ```
 
-A topic model of whole abstracts reports each paper's *headline*; the sentence
-view shows everything it *touches* — and because sentences are never truncated,
-it reaches content the 256-token window cuts off.
+The words say much less than the examples. Topics 1 and 3 have almost the
+same top words (*online*, *learning*, *students*), yet one is about
+students' acceptance of online learning and the other about laboratory
+courses moved online. Words such as *learning*, *students*, and *online* run
+through the whole corpus, so they cannot tell these topics apart. The
+embeddings can, because they capture what each abstract says rather than
+which words it uses.
 
-# Topics across the pandemic
+The sentence topics' words are vaguer still. Only topic 7's top words,
+*data*, *analysis*, and *used*, are clear, because sentences about methods
+reuse the same few words. None of the words shows what most sentence topics
+do: open an abstract, report a sample, or hedge.
 
-Because every abstract carries a publication year, the model doubles as a lens
-on how the research conversation moved. The share of each year's abstracts
-assigned to each topic:
-
-```{r temporal, fig.height=6, echo=FALSE}
-prevalence <- prop.table(
-  table(topic = topic_model$documents$topic, Year = covid_content$Year),
-  margin = 2
-)
-old_par <- graphics::par(mar = c(4, 4, 3, 15))
-graphics::barplot(
-  prevalence,
-  col = palette,
-  border = NA,
-  xlab = "Year",
-  ylab = "Share of abstracts",
-  main = "Topic composition of COVID-19 research by year"
-)
-graphics::legend(
-  "topright",
-  inset = c(-0.44, 0),
-  xpd = NA,
-  bty = "n",
-  cex = 0.75,
-  fill = palette,
-  legend = topic_model$topics$label
-)
-graphics::par(old_par)
+```{r sentence-summary}
+summary(sentence_model)
 ```
 
-Each bar is one year; the coloured segments are the topics' shares that year.
-Reading left to right shows which strands of the education literature grew and
-which faded as the pandemic wore on.
+# Which model to use
 
-<div class="method-note">
-<strong>Reusing the model.</strong> `predict()` assigns new abstracts to these
-topics without refitting — sentence by sentence, with the same segmentation,
-for the sentence model — and `topic_membership()` gives graded probabilities
-when an abstract sits between topics. `blend()` carries a paper's context into
-every sentence's embedding, so a sentence that is ambiguous alone still embeds
-near its subject.
-</div>
+The two models answer different questions. Whole abstracts group papers by
+subject: who was studied and what was taught. Sentences group mainly by what
+a sentence does in an abstract (context, sample, method, hedging), with a few
+subject topics among them. Almost every abstract (79%) has a sentence in
+topic 1, the opening context.
+
+Use whole abstracts to map the research themes of a literature. Use
+sentences to study how abstracts are written, or to reach content beyond the
+first 256 tokens of long abstracts, which the whole-abstract model never
+reads.
+
+# Next steps
+
+- `predict(topic_model, new_abstracts)` assigns new abstracts to these topics
+  without refitting. For the sentence model it splits the new abstracts into
+  sentences in the same way.
+- `reduce_topics(topic_model, n_topics = 4)` merges similar topics, and
+  `topic_hierarchy()` shows which topics are closest to each other.
+- The article *Parallel and High-Throughput Topic Modeling* shows how to
+  encode once and reuse the embeddings across many fits and sessions.

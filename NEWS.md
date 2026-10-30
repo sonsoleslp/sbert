@@ -1,3 +1,27 @@
+# sbert 0.5.9
+
+* Topics are named by sentences, not words. `topics()` gains
+  `label = c("representative", "terms")`: by default each topic's `label` is
+  its most central document or segment, shortened to 60 characters at a word
+  boundary; `label = "terms"` restores the three-word labels
+  (`"box / red / blue"`). The choice is recorded in `$settings`, so
+  `reduce_topics()` relabels the same way; models saved before 0.5.9 keep
+  word labels. Clusters, terms, and representatives are unchanged; the golden
+  test fixture was regenerated for its label columns only.
+* Plots read sentences first. `type = "fit"` puts the representative
+  documents in the first column (or the top row with `per_topic = TRUE`),
+  before the term panels. Representative texts wrap onto two lines instead of
+  being cut after a few words, panel titles are shortened to fit their
+  panel, and the sizes, map, and hierarchy plots show numbered labels.
+* The vignette and both website articles are rewritten in plain language.
+  Every statement about a result now matches the output printed beside it,
+  and the vignette describes what each topic is about from its example
+  messages. The COVID-19 article drops the hypergraph section, which needed
+  the GitHub-only `hypernets` package, and strips copyright notices with
+  `clean_corpus(remove = )` before encoding. The parallel article drops
+  hard-coded benchmark figures that the article itself never computed, and
+  its code now uses one consistent example.
+
 # sbert 0.5.8
 
 * The cross-platform numeric tests now compare at rounding tolerance instead

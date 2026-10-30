@@ -26,9 +26,11 @@ topic_palette <- function(n) {
 
 plot_topic_sizes <- function(x, colors) {
   sizes <- x$topics$n_documents
-  labels <- x$topics$label
+  labels <- topic_title(x$topics$topic, x$topics$label, 45L)
   order_index <- rev(seq_along(sizes))
-  old_par <- graphics::par(mar = c(4.5, 12, 3, 2))
+  # Room for the longest label: about half a line of margin per character.
+  left_margin <- min(24, 1 + 0.42 * max(nchar(labels)))
+  old_par <- graphics::par(mar = c(4.5, left_margin, 3, 2))
   on.exit(graphics::par(old_par), add = TRUE)
   midpoints <- graphics::barplot(
     sizes[order_index],
@@ -87,7 +89,7 @@ draw_topic_bar_panel <- function(
       col = "grey50"
     )
     graphics::title(
-      main = title,
+      main = fit_panel_title(title, cex = 0.9, font = 2),
       adj = 0,
       cex.main = 0.9,
       font.main = 2,
@@ -125,7 +127,7 @@ draw_topic_bar_panel <- function(
     col = "grey30"
   )
   graphics::title(
-    main = title,
+    main = fit_panel_title(title, cex = 0.9, font = 2),
     adj = 0,
     cex.main = 0.9,
     font.main = 2,
@@ -196,7 +198,11 @@ plot_topic_terms <- function(x, colors, n_terms, by, topic_ids) {
       draw_topic_term_panel(
         rows_for(metric, topic_ids[[i]]),
         metric,
-        x$topics$label[[color_index[i]]],
+        topic_title(
+          topic_ids[[i]],
+          x$topics$label[[color_index[i]]],
+          as.integer(84 / grid_columns)
+        ),
         colors[color_index[i]]
       )
     }))
@@ -213,12 +219,16 @@ plot_topic_terms <- function(x, colors, n_terms, by, topic_ids) {
     )
     on.exit(graphics::par(old_par), add = TRUE)
     invisible(lapply(seq_along(topic_ids), function(i) {
-      label <- x$topics$label[[color_index[i]]]
+      title <- topic_title(
+        topic_ids[[i]],
+        x$topics$label[[color_index[i]]],
+        as.integer(70 / length(by))
+      )
       lapply(metrics, function(metric) {
         draw_topic_term_panel(
           rows_for(metric, topic_ids[[i]]),
           metric,
-          paste0(label, " - ", metric$short),
+          paste0(title, " - ", metric$short),
           colors[color_index[i]]
         )
       })
@@ -232,6 +242,40 @@ plot_topic_terms <- function(x, colors, n_terms, by, topic_ids) {
     )
   }
   invisible(x)
+}
+
+# A left-aligned panel title starts at the plot region and may run into the
+# right margin; past that it is clipped by the next panel. Shorten it, at the
+# longest prefix that still fits, so a sentence label never runs off the panel.
+fit_panel_title <- function(title, cex, font) {
+  available <- graphics::par("pin")[[1L]] + graphics::par("mai")[[4L]]
+  width_of <- function(text) {
+    graphics::strwidth(text, units = "inches", cex = cex, font = font)
+  }
+  if (width_of(title) <= available) {
+    return(title)
+  }
+  prefixes <- paste0(substring(title, 1L, seq_len(nchar(title) - 1L)), "...")
+  fits <- which(width_of(prefixes) <= available)
+  if (length(fits) == 0L) "..." else prefixes[[max(fits)]]
+}
+
+# Wrap a representative text onto at most `max_lines` lines of `width`
+# characters, so a sentence is read in full rather than cut after a few words.
+# Only text that still does not fit ends in "...".
+wrap_topic_text <- function(text, width, max_lines = 2L) {
+  lines <- strwrap(gsub("[[:space:]]+", " ", trimws(text)), width = width)
+  if (length(lines) > max_lines) {
+    lines <- lines[seq_len(max_lines)]
+    lines[[max_lines]] <- paste0(strtrim(lines[[max_lines]], width - 3L), "...")
+  }
+  paste(lines, collapse = "\n")
+}
+
+# "3. All the ones between the fly and the cat": the topic number ties a
+# shortened label to its topic in titles, axes, and legends.
+topic_title <- function(topic, label, max_chars) {
+  sprintf("%d. %s", topic, truncate_topic_text(label, max_chars))
 }
 
 # Collapse internal whitespace and clip long representative documents so they
@@ -269,7 +313,7 @@ draw_topic_rep_panel <- function(reps, title, color, max_chars) {
       sprintf(
         '%d. "%s"  (%.2f)',
         j,
-        truncate_topic_text(reps$text[[j]], max_chars),
+        wrap_topic_text(reps$text[[j]], max_chars),
         proximity[[j]]
       ),
       adj = c(0, 0.5),
@@ -331,7 +375,7 @@ plot_topic_representatives <- function(x, colors, n_representatives, topic_ids) 
       reps <- utils::head(reps, n_representatives)
       draw_topic_rep_panel(
         reps,
-        x$topics$label[[color_index[i]]],
+        sprintf("Topic %d", topic_id),
         colors[color_index[i]],
         max_chars
       )
@@ -346,8 +390,8 @@ plot_topic_representatives <- function(x, colors, n_representatives, topic_ids) 
   invisible(x)
 }
 
-# A per-topic fit report: one row per topic with the three term views
-# (within-topic count, TF-IDF, beta) followed by the representative documents.
+# A per-topic fit report: one row per topic with the representative documents
+# followed by the three term views (within-topic count, TF-IDF, beta).
 plot_topic_fit <- function(
   x,
   colors,
@@ -360,7 +404,11 @@ plot_topic_fit <- function(
   metrics <- .sbert_term_metrics[c("frequency", "score", "beta")]
   n <- length(topic_ids)
   # Four cells per topic row; the document column is drawn wider.
-  layout_matrix <- matrix(seq_len(n * 4L), nrow = n, ncol = 4L, byrow = TRUE)
+  # Panels are drawn terms first, then documents, but the documents take the
+  # first column: a topic is read from its texts before its words.
+  layout_matrix <- matrix(
+    seq_len(n * 4L), nrow = n, ncol = 4L, byrow = TRUE
+  )[, c(4L, 1L, 2L, 3L), drop = FALSE]
   old_par <- graphics::par(oma = c(0, 0, 2.6, 0))
   # par(mfrow) discards the layout just like layout(1L) would, but it also
   # works on a device left mid-figure after a failed panel, where layout(1L)
@@ -372,7 +420,7 @@ plot_topic_fit <- function(
     },
     add = TRUE
   )
-  graphics::layout(layout_matrix, widths = c(1, 1, 1, 1.9))
+  graphics::layout(layout_matrix, widths = c(1.9, 1, 1, 1))
 
   sorted <- list(
     score = terms(x, n = n_terms, sort_by = "score"),
@@ -398,7 +446,7 @@ plot_topic_fit <- function(
         graphics::par(mar = c(2.6, 0.5, 2.4, 0.5))
         draw_topic_rep_panel(
           reps,
-          x$topics$label[[color_index[i]]],
+          sprintf("Topic %d", topic_id),
           color,
           48L
         )
@@ -413,8 +461,8 @@ plot_topic_fit <- function(
   graphics::mtext(
     if (is.null(main)) {
       paste(
-        "Model fit per topic (rows). Term columns: count, TF-IDF, beta.",
-        "Last column: representative documents."
+        "Topics (rows): representative documents, then their terms",
+        "by count, TF-IDF, and beta"
       )
     } else {
       main
@@ -426,16 +474,17 @@ plot_topic_fit <- function(
   invisible(x)
 }
 
-# One topic on its own figure: the three term views across the top, the
-# representative documents spanning the full width beneath them. Used for
-# type = "fit" with per_topic = TRUE.
+# One topic on its own figure: the representative documents spanning the full
+# width, the three term views beneath them. Used for type = "fit" with
+# per_topic = TRUE.
 plot_topic_fit_single <- function(x, colors, n_terms, n_representatives, topic_id) {
   color_index <- match(topic_id, x$topics$topic)
   color <- colors[color_index]
-  label <- x$topics$label[[color_index]]
+  label <- topic_title(topic_id, x$topics$label[[color_index]], 90L)
   metrics <- .sbert_term_metrics[c("frequency", "score", "beta")]
-  # Top row: three term panels; bottom row: documents spanning all columns.
-  layout_matrix <- rbind(c(1L, 2L, 3L), c(4L, 4L, 4L))
+  # Top row: documents spanning all columns; bottom row: three term panels.
+  # The term panels are drawn first, so their panel numbers come first.
+  layout_matrix <- rbind(c(4L, 4L, 4L), c(1L, 2L, 3L))
   old_par <- graphics::par(oma = c(0, 0, 2.6, 0))
   # par(mfrow) discards the layout just like layout(1L) would, but it also
   # works on a device left mid-figure after a failed panel, where layout(1L)
@@ -551,7 +600,7 @@ plot_topic_map <- function(x, colors, max_points) {
   distance_matrix[distance_matrix < 0] <- 0
   coordinates <- stats::cmdscale(stats::as.dist(distance_matrix), k = 2L)
 
-  old_par <- graphics::par(mar = c(4, 4, 3, 11))
+  old_par <- graphics::par(mar = c(4, 4, 3, 15))
   on.exit(graphics::par(old_par), add = TRUE)
   graphics::plot(
     coordinates,
@@ -572,15 +621,7 @@ plot_topic_map <- function(x, colors, max_points) {
     font = 2,
     cex = 1.1
   )
-  legend_labels <- sprintf(
-    "%d. %s",
-    x$topics$topic,
-    ifelse(
-      nchar(x$topics$label) > 22L,
-      paste0(strtrim(x$topics$label, 19L), "..."),
-      x$topics$label
-    )
-  )
+  legend_labels <- topic_title(x$topics$topic, x$topics$label, 30L)
   graphics::legend(
     "topright",
     legend = legend_labels,
@@ -589,7 +630,7 @@ plot_topic_map <- function(x, colors, max_points) {
     bty = "n",
     cex = 0.75,
     xpd = NA,
-    inset = c(-0.45, 0)
+    inset = c(-0.62, 0)
   )
   invisible(x)
 }
@@ -602,9 +643,9 @@ plot_topic_map <- function(x, colors, max_points) {
 #' @param x An `sbert_topic_model` returned by [topics()].
 #' @param type One of `"sizes"` (document count per topic), `"terms"` (top
 #'   terms per topic), `"representatives"` (a ranked text list of the
-#'   centroid-nearest documents per topic), `"fit"` (a per-topic report with all
-#'   three term views -- count, TF-IDF, beta -- followed by the representative
-#'   documents, one row per topic), or `"map"` (a two-dimensional classical-MDS
+#'   centroid-nearest documents per topic), `"fit"` (a per-topic report with the
+#'   representative documents followed by all three term views -- count,
+#'   TF-IDF, beta -- one row per topic), or `"map"` (a two-dimensional classical-MDS
 #'   projection of the document embeddings, colored by topic). The `"map"` view
 #'   requires a model fitted with `keep_embeddings = TRUE`.
 #' @param by For `type = "terms"`, one or more of `"score"` (class-based
@@ -724,7 +765,7 @@ plot.sbert_topic_model <- function(
   }
 
   if (per_topic && type %in% c("terms", "representatives", "fit")) {
-    # One standalone figure per topic. For "fit", stack the documents beneath
+    # One standalone figure per topic. For "fit", stack the documents above
     # the three term panels instead of using a fourth column.
     for (topic_id in topic_ids) {
       if (type == "fit") {

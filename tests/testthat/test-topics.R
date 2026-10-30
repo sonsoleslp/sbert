@@ -388,3 +388,70 @@ testthat::test_that("representatives explain a model that kept no embeddings", {
     "kept no embeddings"
   )
 })
+
+testthat::test_that("a topic is named by its most central text by default", {
+  fitted <- topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings())
+  central <- subset(fitted$representatives, rank == 1L)
+  testthat::expect_identical(fitted$topics$label, central$text)
+  testthat::expect_identical(fitted$settings$label, "representative")
+})
+
+testthat::test_that("label = 'terms' names topics by their top three words", {
+  fitted <- topics(
+    topic_test_corpus(), 3,
+    embeddings = topic_test_embeddings(),
+    label = "terms"
+  )
+  top_three <- subset(fitted$terms, rank <= 3L)
+  expected <- vapply(
+    split(top_three$term, top_three$topic),
+    paste, character(1), collapse = " / "
+  )
+  testthat::expect_identical(fitted$topics$label, unname(expected))
+})
+
+testthat::test_that("an unknown label style is refused", {
+  testthat::expect_error(
+    topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings(), label = "words"),
+    "should be one of"
+  )
+})
+
+testthat::test_that("long central texts are shortened at a word boundary", {
+  long_text <- c(
+    paste(rep("alpha beta gamma delta", 10), collapse = " "),
+    "short one",
+    paste(rep("epsilon zeta eta theta", 10), collapse = " "),
+    "short two"
+  )
+  fitted <- topics(
+    long_text, 2,
+    embeddings = rbind(c(1, 0), c(0.8, 0.2), c(0, 1), c(0.2, 0.8))
+  )
+  labels <- fitted$topics$label
+  testthat::expect_true(all(nchar(labels) <= 60L))
+  testthat::expect_true(all(endsWith(labels, "...")))
+  # Every shortened label is a word-aligned prefix of the full text.
+  stems <- sub("\\.\\.\\.$", "", labels)
+  is_prefix <- vapply(
+    stems,
+    function(stem) any(startsWith(paste0(long_text, " "), paste0(stem, " "))),
+    logical(1)
+  )
+  testthat::expect_true(all(is_prefix))
+})
+
+testthat::test_that("reduce_topics keeps the label style of the fit", {
+  sentence_named <- reduce_topics(
+    topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings()),
+    n_topics = 2
+  )
+  central <- subset(sentence_named$representatives, rank == 1L)
+  testthat::expect_identical(sentence_named$topics$label, central$text)
+
+  word_named <- reduce_topics(
+    topics(topic_test_corpus(), 3, embeddings = topic_test_embeddings(), label = "terms"),
+    n_topics = 2
+  )
+  testthat::expect_true(all(grepl(" / ", word_named$topics$label, fixed = TRUE)))
+})

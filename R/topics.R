@@ -1083,8 +1083,12 @@ print.sbert_topic_corpus <- function(x, ...) {
 #' Topics are summarized with representative documents and class-based TF-IDF
 #' terms. This is embedding-based topic discovery, not a probabilistic LDA model.
 #'
-#' @details Topic labels are arbitrary cluster identifiers. Interpret them with
-#'   the ranked `terms` and `representatives` tables. Term scores use the
+#' @details Each topic is named by its most central unit: the document or
+#'   segment nearest the topic's centroid, shortened to 60 characters. The
+#'   topics come from the meaning of whole texts, so a text names a topic
+#'   better than its top words do; `label = "terms"` names topics by their
+#'   three most distinctive words instead. Read more examples per topic with
+#'   [representatives()], and its typical words with [terms()]. Term scores use the
 #'   class-based TF-IDF weighting `tf * log(1 + A / f_x)`, where `tf` is the
 #'   frequency of a term normalized within its topic, `f_x` is the term's
 #'   frequency across all topics, and `A` is the mean topic length (a real
@@ -1186,6 +1190,10 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   neighbor, passed to [segment()]. Only with a segmented fit.
 #' @param min_content Minimum alphabetic-content ratio for a segment to be
 #'   kept, passed to [segment()]. Only with a segmented fit.
+#' @param label How each topic is named in `label` columns and plots.
+#'   `"representative"` (default) uses the topic's most central text,
+#'   shortened to 60 characters; `"terms"` joins its three most distinctive
+#'   words (`"box / red / blue"`). Named `seeds` override either.
 #' @return An object of class `sbert_topic_model` containing unit
 #'   assignments (`$documents`, one row per document or per segment),
 #'   topic summaries, ranked terms, representatives, centers, clustering
@@ -1241,9 +1249,11 @@ topics <- function(
   segment = c("document", "sentence", "clause", "phrase"),
   max_tokens = NULL,
   merge_below = 0L,
-  min_content = 0
+  min_content = 0,
+  label = c("representative", "terms")
 ) {
   weighting <- match.arg(weighting)
+  label <- match.arg(label)
   numbers <- match.arg(numbers)
   roman_numerals <- match.arg(roman_numerals)
   section_numbers <- match.arg(section_numbers)
@@ -1555,19 +1565,13 @@ topics <- function(
     roman_numerals = roman_numerals,
     section_numbers = section_numbers
   )
-  topic_labels <- vapply(
-    seq_len(n_topics),
-    function(topic_id) {
-      label_terms <- term_results$terms$term[
-        term_results$terms$topic == topic_id & term_results$terms$rank <= 3L
-      ]
-      if (length(label_terms) == 0L) {
-        sprintf("topic_%d", topic_id)
-      } else {
-        paste(label_terms, collapse = " / ")
-      }
-    },
-    character(1)
+  representatives <- topic_representatives(
+    documents,
+    as.integer(n_topics),
+    as.integer(n_representatives)
+  )
+  topic_labels <- topic_labels_for(
+    label, term_results$terms, representatives, as.integer(n_topics)
   )
   if (!is.null(seed_labels) && any(nzchar(seed_labels))) {
     named_seeds <- which(nzchar(seed_labels))
@@ -1580,11 +1584,6 @@ topics <- function(
     proportion = clustering$size / length(text),
     withinss = clustering$withinss,
     stringsAsFactors = FALSE
-  )
-  representatives <- topic_representatives(
-    documents,
-    as.integer(n_topics),
-    as.integer(n_representatives)
   )
 
   # The topic label belongs on every table that names a topic, so joining it
@@ -1611,6 +1610,7 @@ topics <- function(
         n_topics = as.integer(n_topics),
         n_terms = as.integer(n_terms),
         n_representatives = as.integer(n_representatives),
+        label = label,
         min_term_frequency = as.integer(min_term_frequency),
         min_token_length = as.integer(min_token_length),
         weighting = weighting,

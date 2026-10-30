@@ -1,13 +1,6 @@
 ---
 title: "Parallel and High-Throughput Topic Modeling"
-subtitle: "Running sbert at full speed without changing a single result"
-date: "`r format(Sys.time(), '%Y-%m-%d')`"
-output:
-  html_document:
-    toc: true
-    toc_float: true
-    code_folding: show
-    theme: flatly
+output: html_document
 ---
 
 ```{r setup, include = FALSE}
@@ -19,421 +12,185 @@ knitr::opts_chunk$set(
 library(sbert)
 ```
 
-<style>
-body { color: #25364a; font-size: 15px; }
-h1, h2, h3 { color: #153e5c; }
-.callout { background: #edf8f5; border-left: 6px solid #238b78; border-radius: 5px; padding: 15px 18px; margin: 20px 0; }
-.warn { background: #fff7dd; border-left: 6px solid #d99000; border-radius: 5px; padding: 15px 18px; margin: 20px 0; }
-table { font-size: 14px; }
-th { background: #247ba0 !important; color: #fff !important; }
-code { color: #14514a; }
-</style>
+A topic model in **sbert** is built in three stages:
 
-A topic model in **sbert** is built in three stages, and each scales
-differently:
+1. **Encode**: each text becomes an embedding, computed by the ONNX model.
+2. **Tokenize**: each text is split into words, which label the topics and
+   measure their coherence.
+3. **Cluster**: the embeddings are grouped into topics by k-means.
 
-1. **Encode** — text becomes Sentence-BERT vectors, through the ONNX model.
-2. **Tokenize** — text becomes terms, for the topic labels and coherence.
-3. **Cluster** — vectors become topics, through deterministic k-means.
+Encoding takes far longer than the other two stages. A large corpus is
+therefore fast to model mainly when it is encoded as few times as possible.
+This article shows how, in order of how much time each step saves:
 
-Encoding dominates everything else. On the bundled `covid` abstracts it costs
-**16.7 ms per document against 0.4 ms for the entire clustering, term-weighting
-and labelling stage** — roughly 97% of the total. Within a batch, ONNX inference
-is 88% and everything R does is the remaining 12%. So the question is never
-"how do I make the topic model faster"; it is "how do I encode less".
+1. Encode a corpus once and reuse the result, within a session and across
+   sessions.
+2. Use several processor cores and threads.
+3. Avoid wasted work when encoding sentences.
 
-There are three answers, in descending order of payoff: **don't encode the same
-text twice** (across sessions, with `cache`; within one, with `topic_corpus()`),
-**don't encode padding** (`sort_by_length`), and **spread the work across cores**
-(`threads`, `cores`). The first is worth two orders of magnitude; the others are
-worth tens of percent.
+None of these steps changes the topics, except three settings that are
+flagged below.
 
-Nothing here changes what you get. `cache`, `cores` and `threads` are exactly
-reproducible; the three knobs that are not are flagged where they appear.
+Only the last code chunk runs when this article is built. The others need a
+downloaded model, so they are shown but not run. They use the `covid`
+abstracts that ship with the package:
 
-# Do the expensive work once
+```{r data}
+abstracts <- subset(covid, Abstract != "[No abstract available]")
+```
 
-Encoding is almost always the most expensive stage, and tokenization is the
-next after it once the corpus is large. Both depend only on the documents, so
-computing them once and reusing them is the single biggest lever when you fit
-more than one model — a topic-count sweep, a comparison of term settings, or any
-loop over `n_topics`.
+# Encode once, fit many times
 
-**Pass precomputed embeddings.** Encode once, then hand the matrix to every fit:
+`topics()` and `compare_topics()` encode the text themselves. If you fit
+several models to the same corpus, encode it once with `encode()` and pass
+the result as `embeddings`:
 
 ```{r embed-once}
-model <- load_model("all-MiniLM-L6-v2", threads = 8)
-embeddings <- encode(corpus$text, model, batch_size = 64)
+embeddings <- encode(abstracts$Abstract)
 
-# topics()/compare_topics() now skip encoding entirely
-m <- topics(corpus$text, n_topics = 8, embeddings = embeddings)
+model_8 <- topics(abstracts$Abstract, n_topics = 8, embeddings = embeddings)
+model_12 <- topics(abstracts$Abstract, n_topics = 12, embeddings = embeddings)
 ```
 
-**Prepare a corpus once, fit many.** `topic_corpus()` goes further: it caches
-*both* the embeddings and the tokenization, so a sweep or loop repeats neither.
+`topic_corpus()` goes one step further. It stores both the embeddings and the
+tokenized words, so later fits repeat neither:
 
 ```{r corpus-once}
-prepared <- topic_corpus(corpus$text, embeddings = embeddings)
+prepared <- topic_corpus(abstracts$Abstract, embeddings = embeddings)
 
-sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12, 15))
-model8 <- fitted(sweep, n_topics = 8)   # chosen without refitting
+sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12))
+model_8 <- fitted(sweep, n_topics = 8)
 ```
 
-`compare_topics()` already shares one prepared corpus across all candidates
-internally, so even `compare_topics(corpus$text, ...)` no longer re-tokenizes per
-candidate. Passing a prepared `topic_corpus` on top lets you reuse it across
-*several* sweeps or manual loops.
+`compare_topics()` already prepares the corpus once for all the counts it
+compares. A `topic_corpus()` object is useful when you run several sweeps, or
+your own loop, on the same text.
 
-# Reuse across sessions: `encode(cache =)`
+# Reuse embeddings across sessions
 
-Everything above reuses work *within* one R session. `cache` reuses it across
-sessions, across scripts, and — crucially — across **edits to the corpus**.
-
-Give `encode()` a file path and each document is stored under a digest of its
-own text plus the model configuration. On the next call, only documents with no
-matching entry are encoded:
+`encode(cache = )` saves embeddings to a file and reads them back the next
+time. Each text is stored under a SHA-256 digest of the text and the model's
+settings, so only texts that are not yet in the file are encoded:
 
 ```{r cache}
-store <- "embeddings/covid.rds"
+store <- file.path(tools::R_user_dir("sbert", "cache"), "covid_embeddings.rds")
 
-embeddings <- encode(covid$Abstract, model, cache = store)   # cold: full price
-embeddings <- encode(covid$Abstract, model, cache = store)   # warm: no encoding
+embeddings <- encode(abstracts$Abstract, cache = store)  # encodes everything
+embeddings <- encode(abstracts$Abstract, cache = store)  # encodes nothing
 ```
 
-Because the key is per document rather than per corpus, an *edited* corpus reuses
-everything that did not change. Correct a few abstracts, append this year's
-records, reorder the rows, or take a subset — only genuinely new text is encoded:
+Because each text has its own entry, the cache also works when the corpus
+changes. If you correct some abstracts, add new ones, reorder the rows, or
+take a subset, only the new or changed texts are encoded. Repeated texts are
+encoded once per call.
 
-```{r cache-edit}
-corrected <- fix_a_few_records(covid$Abstract)
+The digest covers the text exactly as the model sees it (including any
+`prefix`) and the model's name, revision, dimension, maximum length, pooling,
+and `normalize`. Change any of these and the texts are encoded again; a
+different model never reuses another model's embeddings.
 
-# encodes only the records whose text actually changed
-embeddings <- encode(corrected, model, cache = store)
-```
+`batch_size` and `sort_by_length` are not part of the digest. They change
+embeddings only by about 1e-7, and including them would make the cache miss
+every time the batch size changed. A cached embedding is therefore the one
+computed the first time, whatever the batch size of later calls.
 
-Measured on the bundled 3,847-abstract `covid` corpus:
+# Use several threads and cores
 
-| Call | Time | Versus a full encode |
-|---|---:|---:|
-| Cold — builds the cache | 36.59 s | — |
-| Warm — nothing changed | **0.07 s** | **515×** |
-| After editing 38 documents | **0.41 s** | **89×** |
-| Reordered or subset corpus | no encoding at all | — |
+## `threads`: encoding
 
-Repeated documents are also encoded only once per call and expanded by position:
-295 of those 3,847 abstracts are duplicates of another, so a cold run already
-skips 7.7% of the work.
-
-<div class="callout">
-**What is in the key.** The document text as the tokenizer sees it (so any
-`prefix` is included), plus the model id, revision, dimension, maximum length,
-pooling method, and `normalize`. Change any of them and you get a miss, not a
-stale hit — a second model never reuses the first model's rows.
-</div>
-
-<div class="warn">
-**Stable to first computation, not to every batching.** `batch_size` and
-`sort_by_length` are deliberately *not* in the key, because they move embeddings
-only at the ~1e-7 level and including them would destroy reuse whenever you
-changed a batch size. Cached rows therefore reproduce whatever computed them
-first, rather than being bit-identical to a fresh encode under different
-batching. A cache that cannot be read, or that was written for a different
-embedding dimension, is discarded with a warning and rebuilt rather than trusted.
-</div>
-
-# The two parallel knobs
-
-## `threads` — parallel encoding
-
-`load_model(threads = N)` sets the number of ONNX inference threads, and every
-`encode()` call using that model runs multithreaded. Use `"auto"` to get the
-machine's performance-core count:
+`load_model(threads = )` sets how many threads the ONNX model uses to encode.
+`threads = "auto"` uses the number of performance cores on Apple Silicon and
+half the logical cores elsewhere. Encoding speeds up only up to the number of
+performance cores; more threads than that can make it slower.
 
 ```{r threads}
 model <- load_model("all-MiniLM-L6-v2", threads = "auto")
-embeddings <- encode(text, model)
+embeddings <- encode(abstracts$Abstract, model)
 ```
 
-Expect a modest gain, and do not simply raise it to the core count. Inference
-scales with *performance* cores, not logical ones. Median of three repetitions at
-200, 600 and 1,500 documents on an Apple M4 (4 performance + 6 efficiency cores,
-so `detectCores()` reports 10):
+The number of threads never changes the embeddings.
 
-| Threads | Speed-up | |
-|---:|---:|---|
-| 1 | 1.00× | |
-| 2 | 1.22× | |
-| **4** | **1.29×** | best — matches the performance-core count |
-| 6 | 1.22× | efficiency cores add contention |
-| 8 | 1.18× | slower still |
+## `cores`: tokenizing, splitting, and comparing
 
-Past four threads the wall clock gets *worse* while CPU time climbs steeply.
-`threads = "auto"` picks that knee for you.
-
-<div class="callout">
-**Threads never change results.** Output was `identical()` at every thread count
-across all 45 measured runs. Unlike `batch_size`, this knob is numerically free.
-</div>
-
-<div class="warn">
-**Benchmark threaded code with repetition.** Run-to-run spread reached 26% at the
-smallest corpus size, against under 3% single-threaded. A single timing run is
-not evidence.
-</div>
-
-## `cores` — parallel tokenization, segmentation, and sweeps
-
-`cores` is available on `topics()`, `compare_topics()`, `topic_corpus()`,
-`coherence()`, `segment()`, and `topic_gamma()`. Above one it forks worker
-processes to:
-
-- **tokenize** the corpus in parallel (documents split across workers),
-- in `compare_topics()`, **fit the independent candidates** in parallel, and
-- in `segment()` / `topic_gamma()`, and inside `topics(segment = )` and
-  `compare_topics(segment = )`, **split documents** in parallel.
+`cores` is an argument of `topics()`, `compare_topics()`, `topic_corpus()`,
+`coherence()`, `segment()`, and `topic_gamma()`. With more than one core,
+these functions tokenize and split documents in parallel, and
+`compare_topics()` fits its topic counts in parallel.
 
 ```{r cores}
-# tokenization runs in parallel; the corpus is prepared once
-prepared <- topic_corpus(corpus$text, embeddings = embeddings, cores = 8)
-
-# candidates are fitted across cores, tokenization already cached
-sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
+prepared <- topic_corpus(abstracts$Abstract, embeddings = embeddings, cores = 4)
+sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12), cores = 4)
 ```
 
-<div class="warn">
-**Platform notes.** `cores` uses `parallel::mclapply`, which forks — available
-on Linux and macOS, and **falls back to serial on Windows**. Forking has
-overhead, so parallel work only engages for corpora of **2,000 documents or
-more**; smaller inputs run serially by design. A good default is
-`cores = parallel::detectCores() - 1`.
-</div>
+`cores` uses `parallel::mclapply()`, which works on Linux and macOS. On
+Windows, and for inputs of fewer than 2,000 texts, the work runs on one core,
+because starting extra processes would cost more than it saves.
 
-# Sentence-level `topic_gamma()`
+# Encoding sentences efficiently
 
-`topic_gamma()` reports each document's *mixture* of topics by splitting it into
-sentences (or clauses), embedding every segment, and pooling the assignments. It
-has three cost stages, each with its own lever:
+Splitting documents into sentences multiplies the number of texts to encode.
+Two settings reduce that cost.
 
-1. **Segmenting** the documents — parallelize with `cores`.
-2. **Encoding** every segment — the dominant cost; group by length with
-   `sort_by_length`, multithread with `load_model(threads =)`, and optionally
-   deduplicate (below).
-3. **Pooling** into per-document mixtures — already negligible.
+`sort_by_length = TRUE` encodes texts of similar length together. Every text
+in a batch is padded to the length of the longest one, so a batch of mixed
+lengths spends much of its time on padding. The more the lengths vary, as
+they do for sentences and clauses, the more this saves.
 
-Measured at clause level on 300 abstracts, the split is stark: **encoding 91.2%,
-segmenting 8.5%, pooling 0.2%**. `topic_gamma()` is expensive because of fan-out
-— those 300 documents become 3,621 clauses, twelve units to encode for every one
-that `topics()` handles.
+`dedupe_segments = TRUE` in `topic_gamma()` encodes each distinct sentence
+only once. How much it saves depends on how often sentences repeat in your
+corpus.
 
 ```{r gamma}
-model <- load_model("all-MiniLM-L6-v2", threads = "auto")
 gamma <- topic_gamma(
-  topic_model, documents,
+  model_8, abstracts$Abstract,
   model = model,
   level = "sentence",
-  cores = 8               # split documents across cores
+  sort_by_length = TRUE,
+  dedupe_segments = TRUE,
+  cores = 4
 )
 ```
 
-## `sort_by_length` — the single biggest lever here
+Both settings are off by default, because they change which texts share a
+batch and therefore move the embeddings by about 1e-7. That can, rarely,
+move a sentence that lies on the border between two topics.
 
-Every sequence in a batch is padded to the longest member, so a batch costs the
-model its *maximum* length, not its mean. Segments vary enormously in length —
-a three-word clause batched beside a 119-token one pays for 119 tokens. Grouping
-similar lengths together removes most of that waste:
-
-| Ordering | Token work that is pure padding |
-|---|---:|
-| Input order, clause level | **60.1%** |
-| Sorted by length | 1.6% |
-
-```{r gamma-sort}
-gamma <- topic_gamma(
-  topic_model, documents,
-  model = model,
-  level = "clause",
-  sort_by_length = TRUE     # 1.89x measured at clause level
-)
-```
-
-Whole documents gain far less (1.08×) because abstracts are already of similar
-length. This is a segment-level optimization. Row order is always restored, so
-the result lines up with your input regardless.
-
-<div class="warn">
-**Off by default, same ~1e-7 reason.** Regrouping changes batch composition, so
-embeddings move at the 1e-7 level — the same trade-off as `dedupe_segments`. On
-the bundled `covid` corpus that drift changed **no** `gamma` value and **no**
-document's dominant topic, but it is opt-in rather than assumed.
-</div>
-
-## Segment once, reuse everywhere
-
-Encoding is the dominant stage, so the largest — and fully reproducible — win is
-to *not encode twice*. Segment the corpus once, encode those segments, then hand
-both the segments **and** their embeddings to `topic_gamma()`: it uses your
-segmentation as-is and skips encoding entirely, dropping to just pooling.
-
-```{r gamma-reuse}
-# segment and encode once, deterministically
-segments <- segment(documents, level = "sentence", cores = 8)
-segment_embeddings <- encode(segments$text, model)
-
-# pass the segment() frame itself, not raw documents — the rows already align
-gamma <- topic_gamma(topic_model, segments, embeddings = segment_embeddings)
-```
-
-`topic_gamma()` accepts either raw documents (which it segments internally) or
-the data frame `segment()` returns. Passing the frame means there is no second,
-internal segmentation to disagree with your embeddings — the rows line up by
-construction. That matters the moment you segment with anything other than the
-defaults, for example capping segment length so nothing is truncated:
-
-```{r gamma-reuse-cap}
-segments <- segment(documents, level = "sentence", max_tokens = 256, model = model)
-gamma <- topic_gamma(topic_model, segments, embeddings = encode(segments$text, model))
-```
-
-One segmentation, one encode, reused across every sentence-level step — this
-`topic_gamma()`, sentence-level `representatives()`, or a `blend()` that carries
-document context into each sentence.
-
-## Fit on segments once
-
-The fitting verbs take the segmentation directly, which is the cheapest route
-of all. `topics(segment = "sentence")` splits the documents (across `cores`),
-encodes and tokenizes the sentences once, and stores every sentence with its
-parent document. Every later verb reads from that store: `topic_gamma()` is a
-count rather than an encode, `topic_sizes(by = "document")` aggregates back to
-documents, and `predict()` cuts new text the same way.
+The cheapest route is to fit the model on sentences in the first place.
+`topics(segment = "sentence")` splits, encodes, and stores every sentence
+with its abstract, so `topic_gamma()` needs no further encoding:
 
 ```{r fit-segments}
 sentence_model <- topics(
-  documents,
+  abstracts$Abstract,
   n_topics = 8,
   segment = "sentence",
-  max_tokens = 256,           # counted with the model's own tokenizer
   model = model,
-  cores = 8
+  cores = 4
 )
-topic_gamma(sentence_model)                    # stored segments: nothing encoded
-topic_sizes(sentence_model, by = "document")
+topic_gamma(sentence_model)
 ```
 
-`compare_topics(segment = c("document", "sentence", "clause"))` prepares one
-corpus per level and fits every candidate on each, so comparing units costs one
-encode per level rather than one per model.
+# The static model
 
-## Deduplicating repeated segments
-
-A long corpus repeats segments — boilerplate sentences, short stock clauses —
-and `dedupe_segments = TRUE` encodes each *distinct* segment once, expanding the
-result by position. How much this saves depends entirely on how repetitive your
-corpus is, so measure before reaching for it:
-
-```{r gamma-dupe-rate}
-segments <- segment(documents, level = "clause")
-1 - length(unique(segments$text)) / nrow(segments)   # duplicate fraction
-```
-
-The bundled `covid` abstracts are only 15% duplicated at clause level and 8% at
-sentence level, so deduplication adds about 3% there on top of `sort_by_length`.
-A corpus of templated or boilerplate-heavy text will do far better.
-
-```{r gamma-dedupe}
-gamma <- topic_gamma(
-  topic_model, documents,
-  model = model,
-  level = "sentence",
-  cores = 8,
-  dedupe_segments = TRUE
-)
-```
-
-<div class="warn">
-**One-time shift, not free reproducibility.** Deduplication is **off by
-default** because encoding a smaller batched set perturbs the embeddings at the
-~1e-7 level, which can flip a rare borderline segment's assignment — the same
-trade-off as changing `batch_size`. With the static `potion-base-8M` model,
-whose encoding has no batch effect, the result is identical either way.
-</div>
-
-# The maximum-speed recipe
-
-Putting it together for the common case — one corpus, several models:
-
-```{r recipe}
-library(sbert)
-install_runtime()
-
-# 1. Multithreaded encoding, once, cached to disk for every future session
-model <- load_model("all-MiniLM-L6-v2", threads = "auto")
-embeddings <- encode(corpus$text, model, cache = "embeddings/corpus.rds")
-
-# 2. Prepare the corpus once (encode + tokenize cached), tokenizing in parallel
-prepared <- topic_corpus(corpus$text, embeddings = embeddings, cores = 8)
-
-# 3. Sweep across cores, then pick a model with no refit
-sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12, 15), cores = 8)
-model8 <- fitted(sweep, n_topics = 8)
-```
-
-Re-run that script tomorrow, or after editing a handful of records, and step 1
-costs almost nothing.
-
-## The static model
-
-For a corpus so large that encoding dominates, the static `potion-base-8M` model
-embeds with no transformer and no ONNX Runtime at all — measured **45× faster**
-than `all-MiniLM-L6-v2`:
+`potion-base-8M` is a static model: it looks up a vector for each word and
+averages them, without a neural network and without the ONNX Runtime. It
+encodes much faster than `all-MiniLM-L6-v2`, but it ignores word order.
+Whether its topics are as good depends on the corpus, so compare the two with
+`compare_topics()` before you switch.
 
 ```{r static}
-fast <- load_model("potion-base-8M")   # 31 MB, Model2Vec token lookup
-embeddings <- encode(corpus$text, fast)
+fast <- load_model("potion-base-8M")
+embeddings <- encode(abstracts$Abstract, fast)
 ```
 
-<div class="warn">
-**Not simply "faster but worse" — test it on your corpus.** On the `covid`
-abstracts it scored *better* than `all-MiniLM-L6-v2` on NPMI, UMass and topic
-diversity at 4 of 5 topic counts. On the bundled `feedback_translations` it lost
-on 2 of 5, 1 of 5 and 0 of 5 respectively. The advantage is corpus-specific and
-does not generalize, which is exactly why it is not the default. Sweep both with
-`compare_topics()` and compare `coherence()` before committing.
-</div>
+# Results do not depend on cores or threads
 
-# What to expect
-
-Measured on a 10-core Apple Silicon machine (macOS, Accelerate BLAS, R 4.5)
-with precomputed embeddings. Wall-clock carries some machine-load variance;
-the speed-ups grow with the number of models fitted and with document length.
-
-| Workload | Baseline | Serial | 8 cores |
-|---|---:|---:|---:|
-| Sweep, 5 counts, 15k short docs | 163.5 s | 12.2 s (13×) | **6.9 s (24×)** |
-| Sweep, 3 counts, 5k long docs (~8k chars) | 321.1 s | 56.0 s (5.7×) | **10.3 s (31×)** |
-| Tokenization, 15k short docs | — | 11.7 s | **3.1 s (3.8×)** |
-| Tokenization, 5k long docs | — | 52.5 s | **8.6 s (6.1×)** |
-
-The "baseline" column is the pre-reuse path that re-encoded and re-tokenized on
-every model. Two patterns stand out: longer documents make parallel tokenization
-pay off *more* (6.1× vs 3.8×), and the corpus-reuse win scales with the number
-of models — roughly 3.5× at five models and 4× at ten.
-
-Memory improves independently of document length, because clustering works on
-the embeddings, not the raw text: at 40 topics, peak memory for a 40,000-document
-run dropped from about 2,195 MB to 1,053 MB.
-
-# Reproducibility
-
-<div class="callout">
-**`cores` and `threads` change speed, never results.** Tokenization is split by
-document and recombined in order, and sweep candidates are independent and
-deterministic, so the output is identical for any core or thread count. There is
-no random seed anywhere in the topic pipeline.
-</div>
-
-The proof runs offline — the same model, fitted single-threaded and across four
-cores, is byte-identical:
+Tokenization is split by document and put back together in order, and every
+topic count is fitted independently, so `cores` never changes the result.
+The topic model itself uses no random numbers. The chunk below runs when the
+article is built: it fits the same model on one core and on four and
+compares the results. It uses random vectors in place of real embeddings, so
+it needs no download.
 
 ```{r repro, eval = TRUE}
 set.seed(1)
@@ -442,52 +199,30 @@ text <- paste(
   "document", seq_len(n),
   sample(c("alpha beta gamma", "delta epsilon zeta", "eta theta iota"), n, TRUE)
 )
-# clustered stand-in embeddings, so no model download is needed
 centers <- matrix(rnorm(8L * 64L), 8L, 64L)
 embeddings <- centers[sample(8L, n, replace = TRUE), ] +
   matrix(rnorm(n * 64L, sd = 0.6), n, 64L)
 
-serial   <- topics(text, n_topics = 6, embeddings = embeddings, cores = 1)
-parallel <- topics(text, n_topics = 6, embeddings = embeddings, cores = 4)
+one_core <- topics(text, n_topics = 6, embeddings = embeddings, cores = 1)
+four_cores <- topics(text, n_topics = 6, embeddings = embeddings, cores = 4)
 
-identical(
-  serial[c("documents", "topics", "terms", "representatives", "centers")],
-  parallel[c("documents", "topics", "terms", "representatives", "centers")]
-)
+all.equal(terms(one_core), terms(four_cores))
+all.equal(topic_sizes(one_core), topic_sizes(four_cores))
 ```
 
-<div class="warn">
-**Three knobs shift results at the ~1e-7 level:** `batch_size`,
-`sort_by_length`, and `dedupe_segments`. All three work by changing which
-documents share a batch, and batch composition perturbs embeddings slightly.
-Pick your settings and keep them — results are reproducible for a fixed
-combination, just not necessarily across different ones. `cores`, `threads` and
-`cache` are all free of this.
-</div>
+On Windows both fits run on one core, so the comparison is trivially true
+there.
 
-Do not bother tuning `batch_size` for speed. Across 640 and 3,847 documents,
-sizes from 8 to 128 differed by less than the run-to-run noise, and an apparent
-gain at one corpus size did not survive at another.
+# Summary
 
-# Checklist
-
-- **Running the same corpus more than once, ever?** Add
-  `encode(cache = "path.rds")`. Re-runs cost essentially nothing, and edited
-  corpora re-encode only what changed. This is the largest single win available.
-- **Fitting many models on one corpus in a session?** Use `topic_corpus()` (or
-  precompute `embeddings`) so encoding and tokenization happen once.
-- **Encoding is the bottleneck?** Set `load_model(threads = "auto")` — but expect
-  ~1.3×, not linear scaling. For a much larger jump, evaluate the
-  `potion-base-8M` static model on *your* corpus.
-- **Using sentence- or clause-level `topic_gamma()`?** Add
-  `sort_by_length = TRUE`. Nearly 2× at clause level, because 60% of the token
-  work is otherwise padding.
-- **On Linux or macOS with a big corpus (≥ 2,000 docs)?** Add
-  `cores = detectCores() - 1` to `topic_corpus()` / `compare_topics()`.
-- **On Windows, or a small corpus?** `cores` safely no-ops to serial; rely on
-  `cache`, reuse and `threads` instead.
-- **Need exact reproducibility?** `cores`, `threads` and `cache` are safe at any
-  value; fix `batch_size`, `sort_by_length` and `dedupe_segments` once and
-  leave them.
-- **Benchmarking any of this yourself?** Repeat every measurement. Threaded
-  timings vary by up to 26% run to run, and a single sample will mislead you.
+- Fitting several models to one corpus: pass `embeddings`, or use
+  `topic_corpus()`.
+- Running the same corpus again later: use `encode(cache = )`.
+- Encoding is slow: use `load_model(threads = "auto")`, or try the
+  `potion-base-8M` model.
+- Large corpus on Linux or macOS: set `cores`.
+- Sentence-level models: use `sort_by_length = TRUE`, or fit with
+  `segment = "sentence"`.
+- Exact reproducibility: `cores`, `threads`, and `cache` never change
+  results. Keep `batch_size`, `sort_by_length`, and `dedupe_segments` fixed
+  once chosen.

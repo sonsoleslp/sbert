@@ -23,9 +23,9 @@
 
 \item{type}{One of `"sizes"` (document count per topic), `"terms"` (top
 terms per topic), `"representatives"` (a ranked text list of the
-centroid-nearest documents per topic), `"fit"` (a per-topic report with all
-three term views -- count, TF-IDF, beta -- followed by the representative
-documents, one row per topic), or `"map"` (a two-dimensional classical-MDS
+centroid-nearest documents per topic), `"fit"` (a per-topic report with the
+representative documents followed by all three term views -- count,
+TF-IDF, beta -- one row per topic), or `"map"` (a two-dimensional classical-MDS
 projection of the document embeddings, colored by topic). The `"map"` view
 requires a model fitted with `keep_embeddings = TRUE`.}
 
