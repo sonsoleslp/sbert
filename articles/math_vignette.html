@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,11 +71,11 @@
 
     
     
-<p><strong>sbert</strong> computes Sentence-BERT embeddings in R,
-without Python. Sentence-BERT (Reimers and Gurevych, 2019) is a family
-of neural models that turn a whole sentence or short text into an
-embedding: a vector of numbers in which texts with similar meaning lie
-close together, even when they share few words. <strong>sbert</strong>
+<p><strong>sbert</strong> computes Sentence-BERT embeddings natively in
+R. Sentence-BERT (Reimers and Gurevych, 2019) is a family of neural
+models that turn a whole sentence or short text into an embedding: a
+vector of numbers in which texts with similar meaning lie close
+together, even when they share few words. <strong>sbert</strong>
 downloads a pinned, hash-verified model, tokenizes text with the model’s
 own Hugging Face tokenizer, runs the model through ONNX Runtime, and
 pools and normalizes the result in base R. On top of the embeddings it
@@ -329,15 +329,38 @@ between two others, and use the same words. The model still separates
 them, because an instruction, a hint, and a question do different
 things. Topics 3 and 5 both deal with meaning, but one asks the learner
 and the other tells them.</p>
+<p><code><a href="../reference/name_topics.html">name_topics()</a></code> gives the topics these names, one per
+topic in topic order. The names replace the labels in every table and
+plot that follows; nothing is refitted.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/name_topics.html">name_topics</a></span><span class="op">(</span></span>
+<span>  <span class="va">topic_model</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Guiding question and instruction"</span>,</span>
+<span>    <span class="st">"Short hint"</span>,</span>
+<span>    <span class="st">"Question about meaning"</span>,</span>
+<span>    <span class="st">"Correction"</span>,</span>
+<span>    <span class="st">"Definition"</span>,</span>
+<span>    <span class="st">"Negation"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                            label n_documents proportion</span></span>
+<span><span class="co">#&gt; 1     1 Guiding question and instruction         223 0.37166667</span></span>
+<span><span class="co">#&gt; 2     2                       Short hint         133 0.22166667</span></span>
+<span><span class="co">#&gt; 3     3           Question about meaning         131 0.21833333</span></span>
+<span><span class="co">#&gt; 4     4                       Correction          49 0.08166667</span></span>
+<span><span class="co">#&gt; 5     5                       Definition          37 0.06166667</span></span>
+<span><span class="co">#&gt; 6     6                         Negation          27 0.04500000</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="example-messages">Example messages<a class="anchor" aria-label="anchor" href="#example-messages"></a>
 </h2>
-<p>One sentence names a topic; a few more show its range.
+<p>A few messages per topic show its range.
 <code><a href="../reference/representatives.html">representatives()</a></code> returns the messages closest to each
-topic’s center, so the first message of each topic is the one that names
-it:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+topic’s center; the first message of each topic is the one that labeled
+it before we named it:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/representatives.html">representatives</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">3</span>, rank <span class="op">=</span> <span class="st">"distance"</span><span class="op">)</span>,</span>
 <span>  digits <span class="op">=</span> <span class="fl">2</span></span>
@@ -525,7 +548,7 @@ the more clearly it belongs to its own. The default,
 which favors messages that could belong to no other topic.</p>
 <p>The plot shows the same messages, with the similarity to the center
 in parentheses:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"representatives"</span>, n_representatives <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 <p><img src="math_vignette_files/figure-html/plot-representatives-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
@@ -537,26 +560,26 @@ duplicates, a message that was shown 11 times counts once. Passing the
 counts as <code>weights</code> adds <code>n_weighted</code> and
 <code>weighted_share</code>, which count every time a message was
 shown.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span>, weights <span class="op">=</span> <span class="va">corpus</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   topic                                                       label n_documents</span></span>
-<span><span class="co">#&gt; 1     1   Where is the cow and the cake? Choose all the pictures...         223</span></span>
-<span><span class="co">#&gt; 2     2            All the ones between the cat and the strawberry.         133</span></span>
-<span><span class="co">#&gt; 3     3         What does “all the ones between the leaf and the...         131</span></span>
-<span><span class="co">#&gt; 4     4 Are you sure you have fewer pictures in the red box than...          49</span></span>
-<span><span class="co">#&gt; 5     5      In the top middle box, it means something is in the...          37</span></span>
-<span><span class="co">#&gt; 6     6    It is not a person, does not have a hat, and is sitting.          27</span></span>
-<span><span class="co">#&gt;   proportion n_weighted weighted_share</span></span>
-<span><span class="co">#&gt; 1 0.37166667        267     0.36081081</span></span>
-<span><span class="co">#&gt; 2 0.22166667        162     0.21891892</span></span>
-<span><span class="co">#&gt; 3 0.21833333        138     0.18648649</span></span>
-<span><span class="co">#&gt; 4 0.08166667         76     0.10270270</span></span>
-<span><span class="co">#&gt; 5 0.06166667         57     0.07702703</span></span>
-<span><span class="co">#&gt; 6 0.04500000         40     0.05405405</span></span></code></pre></div>
+<span><span class="co">#&gt;   topic                            label n_documents proportion n_weighted</span></span>
+<span><span class="co">#&gt; 1     1 Guiding question and instruction         223 0.37166667        267</span></span>
+<span><span class="co">#&gt; 2     2                       Short hint         133 0.22166667        162</span></span>
+<span><span class="co">#&gt; 3     3           Question about meaning         131 0.21833333        138</span></span>
+<span><span class="co">#&gt; 4     4                       Correction          49 0.08166667         76</span></span>
+<span><span class="co">#&gt; 5     5                       Definition          37 0.06166667         57</span></span>
+<span><span class="co">#&gt; 6     6                         Negation          27 0.04500000         40</span></span>
+<span><span class="co">#&gt;   weighted_share</span></span>
+<span><span class="co">#&gt; 1     0.36081081</span></span>
+<span><span class="co">#&gt; 2     0.21891892</span></span>
+<span><span class="co">#&gt; 3     0.18648649</span></span>
+<span><span class="co">#&gt; 4     0.10270270</span></span>
+<span><span class="co">#&gt; 5     0.07702703</span></span>
+<span><span class="co">#&gt; 6     0.05405405</span></span></code></pre></div>
 <p>Corrections (topic 4) grow from 8.2% of the distinct messages to
 10.3% of all messages shown, so the app repeated its corrections more
 often than its other kinds of feedback.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"sizes"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="math_vignette_files/figure-html/plot-sizes-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
@@ -568,71 +591,71 @@ a topic uses more than the others can be useful, for example to search
 the messages or to see how a topic is phrased. <code><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms()</a></code>
 lists them. The <code>score</code> is class-based TF-IDF: it is high for
 words that are frequent in this topic and rare in the others.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    topic                                                       label       term</span></span>
-<span><span class="co">#&gt; 1      1   Where is the cow and the cake? Choose all the pictures...    picture</span></span>
-<span><span class="co">#&gt; 2      1   Where is the cow and the cake? Choose all the pictures...   pictures</span></span>
-<span><span class="co">#&gt; 3      1   Where is the cow and the cake? Choose all the pictures...     choose</span></span>
-<span><span class="co">#&gt; 4      1   Where is the cow and the cake? Choose all the pictures...       pick</span></span>
-<span><span class="co">#&gt; 5      1   Where is the cow and the cake? Choose all the pictures...     select</span></span>
-<span><span class="co">#&gt; 6      2            All the ones between the cat and the strawberry.       ones</span></span>
-<span><span class="co">#&gt; 7      2            All the ones between the cat and the strawberry.   broccoli</span></span>
-<span><span class="co">#&gt; 8      2            All the ones between the cat and the strawberry.      candy</span></span>
-<span><span class="co">#&gt; 9      2            All the ones between the cat and the strawberry.      hippo</span></span>
-<span><span class="co">#&gt; 10     2            All the ones between the cat and the strawberry.        cat</span></span>
-<span><span class="co">#&gt; 11     3         What does “all the ones between the leaf and the...       mean</span></span>
-<span><span class="co">#&gt; 12     3         What does “all the ones between the leaf and the...       ones</span></span>
-<span><span class="co">#&gt; 13     3         What does “all the ones between the leaf and the... strawberry</span></span>
-<span><span class="co">#&gt; 14     3         What does “all the ones between the leaf and the...       tree</span></span>
-<span><span class="co">#&gt; 15     3         What does “all the ones between the leaf and the...       pine</span></span>
-<span><span class="co">#&gt; 16     4 Are you sure you have fewer pictures in the red box than...        box</span></span>
-<span><span class="co">#&gt; 17     4 Are you sure you have fewer pictures in the red box than...        red</span></span>
-<span><span class="co">#&gt; 18     4 Are you sure you have fewer pictures in the red box than...       blue</span></span>
-<span><span class="co">#&gt; 19     4 Are you sure you have fewer pictures in the red box than...        one</span></span>
-<span><span class="co">#&gt; 20     4 Are you sure you have fewer pictures in the red box than...        two</span></span>
-<span><span class="co">#&gt; 21     5      In the top middle box, it means something is in the...      means</span></span>
-<span><span class="co">#&gt; 22     5      In the top middle box, it means something is in the...     middle</span></span>
-<span><span class="co">#&gt; 23     5      In the top middle box, it means something is in the...      right</span></span>
-<span><span class="co">#&gt; 24     5      In the top middle box, it means something is in the...  something</span></span>
-<span><span class="co">#&gt; 25     5      In the top middle box, it means something is in the...      grass</span></span>
-<span><span class="co">#&gt; 26     6    It is not a person, does not have a hat, and is sitting.       it's</span></span>
-<span><span class="co">#&gt; 27     6    It is not a person, does not have a hat, and is sitting.     person</span></span>
-<span><span class="co">#&gt; 28     6    It is not a person, does not have a hat, and is sitting.     animal</span></span>
-<span><span class="co">#&gt; 29     6    It is not a person, does not have a hat, and is sitting.        hat</span></span>
-<span><span class="co">#&gt; 30     6    It is not a person, does not have a hat, and is sitting.   standing</span></span>
-<span><span class="co">#&gt;    rank      score frequency       beta</span></span>
-<span><span class="co">#&gt; 1     1 0.15812657        99 0.10174717</span></span>
-<span><span class="co">#&gt; 2     2 0.15734447       130 0.13360740</span></span>
-<span><span class="co">#&gt; 3     3 0.15707789        89 0.09146968</span></span>
-<span><span class="co">#&gt; 4     4 0.09026252        35 0.03597122</span></span>
-<span><span class="co">#&gt; 5     5 0.07513736        26 0.02672148</span></span>
-<span><span class="co">#&gt; 6     1 0.30963920        82 0.21025641</span></span>
-<span><span class="co">#&gt; 7     2 0.07420924         9 0.02307692</span></span>
-<span><span class="co">#&gt; 8     3 0.06596377         8 0.02051282</span></span>
-<span><span class="co">#&gt; 9     4 0.06377882         8 0.02051282</span></span>
-<span><span class="co">#&gt; 10    5 0.06277479         8 0.02051282</span></span>
-<span><span class="co">#&gt; 11    1 0.34359216       130 0.26104418</span></span>
-<span><span class="co">#&gt; 12    2 0.11237273        38 0.07630522</span></span>
-<span><span class="co">#&gt; 13    3 0.05446666         9 0.01807229</span></span>
-<span><span class="co">#&gt; 14    4 0.05377455        10 0.02008032</span></span>
-<span><span class="co">#&gt; 15    5 0.05259430         8 0.01606426</span></span>
-<span><span class="co">#&gt; 16    1 0.27236446        32 0.10631229</span></span>
-<span><span class="co">#&gt; 17    2 0.24904937        27 0.08970100</span></span>
-<span><span class="co">#&gt; 18    3 0.23982532        26 0.08637874</span></span>
-<span><span class="co">#&gt; 19    4 0.21204418        30 0.09966777</span></span>
-<span><span class="co">#&gt; 20    5 0.17403296        16 0.05315615</span></span>
-<span><span class="co">#&gt; 21    1 0.31653087        19 0.11111111</span></span>
-<span><span class="co">#&gt; 22    2 0.18182559        10 0.05847953</span></span>
-<span><span class="co">#&gt; 23    3 0.15309964        10 0.05847953</span></span>
-<span><span class="co">#&gt; 24    4 0.14845195         6 0.03508772</span></span>
-<span><span class="co">#&gt; 25    5 0.12897006         5 0.02923977</span></span>
-<span><span class="co">#&gt; 26    1 0.57814172        22 0.20560748</span></span>
-<span><span class="co">#&gt; 27    2 0.55210406        19 0.17757009</span></span>
-<span><span class="co">#&gt; 28    3 0.42837319        14 0.13084112</span></span>
-<span><span class="co">#&gt; 29    4 0.42837319        14 0.13084112</span></span>
-<span><span class="co">#&gt; 30    5 0.24399916         7 0.06542056</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    topic                            label       term rank      score frequency</span></span>
+<span><span class="co">#&gt; 1      1 Guiding question and instruction    picture    1 0.15812657        99</span></span>
+<span><span class="co">#&gt; 2      1 Guiding question and instruction   pictures    2 0.15734447       130</span></span>
+<span><span class="co">#&gt; 3      1 Guiding question and instruction     choose    3 0.15707789        89</span></span>
+<span><span class="co">#&gt; 4      1 Guiding question and instruction       pick    4 0.09026252        35</span></span>
+<span><span class="co">#&gt; 5      1 Guiding question and instruction     select    5 0.07513736        26</span></span>
+<span><span class="co">#&gt; 6      2                       Short hint       ones    1 0.30963920        82</span></span>
+<span><span class="co">#&gt; 7      2                       Short hint   broccoli    2 0.07420924         9</span></span>
+<span><span class="co">#&gt; 8      2                       Short hint      candy    3 0.06596377         8</span></span>
+<span><span class="co">#&gt; 9      2                       Short hint      hippo    4 0.06377882         8</span></span>
+<span><span class="co">#&gt; 10     2                       Short hint        cat    5 0.06277479         8</span></span>
+<span><span class="co">#&gt; 11     3           Question about meaning       mean    1 0.34359216       130</span></span>
+<span><span class="co">#&gt; 12     3           Question about meaning       ones    2 0.11237273        38</span></span>
+<span><span class="co">#&gt; 13     3           Question about meaning strawberry    3 0.05446666         9</span></span>
+<span><span class="co">#&gt; 14     3           Question about meaning       tree    4 0.05377455        10</span></span>
+<span><span class="co">#&gt; 15     3           Question about meaning       pine    5 0.05259430         8</span></span>
+<span><span class="co">#&gt; 16     4                       Correction        box    1 0.27236446        32</span></span>
+<span><span class="co">#&gt; 17     4                       Correction        red    2 0.24904937        27</span></span>
+<span><span class="co">#&gt; 18     4                       Correction       blue    3 0.23982532        26</span></span>
+<span><span class="co">#&gt; 19     4                       Correction        one    4 0.21204418        30</span></span>
+<span><span class="co">#&gt; 20     4                       Correction        two    5 0.17403296        16</span></span>
+<span><span class="co">#&gt; 21     5                       Definition      means    1 0.31653087        19</span></span>
+<span><span class="co">#&gt; 22     5                       Definition     middle    2 0.18182559        10</span></span>
+<span><span class="co">#&gt; 23     5                       Definition      right    3 0.15309964        10</span></span>
+<span><span class="co">#&gt; 24     5                       Definition  something    4 0.14845195         6</span></span>
+<span><span class="co">#&gt; 25     5                       Definition      grass    5 0.12897006         5</span></span>
+<span><span class="co">#&gt; 26     6                         Negation       it's    1 0.57814172        22</span></span>
+<span><span class="co">#&gt; 27     6                         Negation     person    2 0.55210406        19</span></span>
+<span><span class="co">#&gt; 28     6                         Negation     animal    3 0.42837319        14</span></span>
+<span><span class="co">#&gt; 29     6                         Negation        hat    4 0.42837319        14</span></span>
+<span><span class="co">#&gt; 30     6                         Negation   standing    5 0.24399916         7</span></span>
+<span><span class="co">#&gt;          beta</span></span>
+<span><span class="co">#&gt; 1  0.10174717</span></span>
+<span><span class="co">#&gt; 2  0.13360740</span></span>
+<span><span class="co">#&gt; 3  0.09146968</span></span>
+<span><span class="co">#&gt; 4  0.03597122</span></span>
+<span><span class="co">#&gt; 5  0.02672148</span></span>
+<span><span class="co">#&gt; 6  0.21025641</span></span>
+<span><span class="co">#&gt; 7  0.02307692</span></span>
+<span><span class="co">#&gt; 8  0.02051282</span></span>
+<span><span class="co">#&gt; 9  0.02051282</span></span>
+<span><span class="co">#&gt; 10 0.02051282</span></span>
+<span><span class="co">#&gt; 11 0.26104418</span></span>
+<span><span class="co">#&gt; 12 0.07630522</span></span>
+<span><span class="co">#&gt; 13 0.01807229</span></span>
+<span><span class="co">#&gt; 14 0.02008032</span></span>
+<span><span class="co">#&gt; 15 0.01606426</span></span>
+<span><span class="co">#&gt; 16 0.10631229</span></span>
+<span><span class="co">#&gt; 17 0.08970100</span></span>
+<span><span class="co">#&gt; 18 0.08637874</span></span>
+<span><span class="co">#&gt; 19 0.09966777</span></span>
+<span><span class="co">#&gt; 20 0.05315615</span></span>
+<span><span class="co">#&gt; 21 0.11111111</span></span>
+<span><span class="co">#&gt; 22 0.05847953</span></span>
+<span><span class="co">#&gt; 23 0.05847953</span></span>
+<span><span class="co">#&gt; 24 0.03508772</span></span>
+<span><span class="co">#&gt; 25 0.02923977</span></span>
+<span><span class="co">#&gt; 26 0.20560748</span></span>
+<span><span class="co">#&gt; 27 0.17757009</span></span>
+<span><span class="co">#&gt; 28 0.13084112</span></span>
+<span><span class="co">#&gt; 29 0.13084112</span></span>
+<span><span class="co">#&gt; 30 0.06542056</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"terms"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="math_vignette_files/figure-html/plot-terms-1.png" class="r-plt" alt="" width="100%"></p>
 <p>The words show why they make poor names. They describe what the
@@ -647,7 +670,7 @@ question.</p>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds the coherence of each topic’s top words.
 It is lowest for topic 2 and highest for topic 4, whose messages repeat
 the same few words (<em>box</em>, <em>red</em>, <em>blue</em>):</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Semantic topic model summary</span></span>
 <span><span class="co">#&gt;   documents:            600</span></span>
@@ -657,20 +680,13 @@ the same few words (<em>box</em>, <em>red</em>, <em>blue</em>):</p>
 <span><span class="co">#&gt;   mean npmi  coherence:  -0.1044</span></span>
 <span><span class="co">#&gt;   topic topic_diversity:      0.917 (top 10 terms)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  topic                                                       label n_documents</span></span>
-<span><span class="co">#&gt;      1   Where is the cow and the cake? Choose all the pictures...         223</span></span>
-<span><span class="co">#&gt;      2            All the ones between the cat and the strawberry.         133</span></span>
-<span><span class="co">#&gt;      3         What does “all the ones between the leaf and the...         131</span></span>
-<span><span class="co">#&gt;      4 Are you sure you have fewer pictures in the red box than...          49</span></span>
-<span><span class="co">#&gt;      5      In the top middle box, it means something is in the...          37</span></span>
-<span><span class="co">#&gt;      6    It is not a person, does not have a hat, and is sitting.          27</span></span>
-<span><span class="co">#&gt;  proportion coherence</span></span>
-<span><span class="co">#&gt;     0.37167   -0.2368</span></span>
-<span><span class="co">#&gt;     0.22167   -0.4150</span></span>
-<span><span class="co">#&gt;     0.21833   -0.2564</span></span>
-<span><span class="co">#&gt;     0.08167    0.3011</span></span>
-<span><span class="co">#&gt;     0.06167   -0.2043</span></span>
-<span><span class="co">#&gt;     0.04500    0.1849</span></span></code></pre></div>
+<span><span class="co">#&gt;  topic                            label n_documents proportion coherence</span></span>
+<span><span class="co">#&gt;      1 Guiding question and instruction         223    0.37167   -0.2368</span></span>
+<span><span class="co">#&gt;      2                       Short hint         133    0.22167   -0.4150</span></span>
+<span><span class="co">#&gt;      3           Question about meaning         131    0.21833   -0.2564</span></span>
+<span><span class="co">#&gt;      4                       Correction          49    0.08167    0.3011</span></span>
+<span><span class="co">#&gt;      5                       Definition          37    0.06167   -0.2043</span></span>
+<span><span class="co">#&gt;      6                         Negation          27    0.04500    0.1849</span></span></code></pre></div>
 <p>To name topics by their three top words instead of a sentence, fit
 with <code>label = "terms"</code>.</p>
 </div>
@@ -679,7 +695,7 @@ with <code>label = "terms"</code>.</p>
 </h2>
 <p><code>type = "fit"</code> shows each topic’s example messages and,
 beside them, its words, one row per topic:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_terms <span class="op">=</span> <span class="fl">8</span>, n_representatives <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 <p><img src="math_vignette_files/figure-html/plot-fit-1.png" class="r-plt" alt="" width="100%"></p>
 </div>

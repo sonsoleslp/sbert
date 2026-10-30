@@ -1,5 +1,23 @@
 # Changelog
 
+## sbert 0.5.10
+
+- New `name_topics(object, labels)` names the topics of a fitted model,
+  for example by the kind of message each holds, after reading its
+  representatives. The names replace the `label` column of every topic
+  table, so they appear in
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md),
+  [`predict()`](https://rdrr.io/r/stats/predict.html),
+  [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md),
+  and every plot; nothing is refitted. They are recorded in
+  `$settings$topic_names`, and
+  [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
+  drops them because merged topics need new names. Invalid names raise
+  `sbert_bad_topic_names`.
+- The vignette names its six topics with
+  [`name_topics()`](https://sonsoles.me/sbert/reference/name_topics.md).
+
 ## sbert 0.5.9
 
 - Topics are named by sentences, not words.

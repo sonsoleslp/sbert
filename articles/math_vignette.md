@@ -1,15 +1,15 @@
 # Topic Modeling Short Feedback Messages
 
-**sbert** computes Sentence-BERT embeddings in R, without Python.
-Sentence-BERT (Reimers and Gurevych, 2019) is a family of neural models
-that turn a whole sentence or short text into an embedding: a vector of
-numbers in which texts with similar meaning lie close together, even
-when they share few words. **sbert** downloads a pinned, hash-verified
-model, tokenizes text with the model’s own Hugging Face tokenizer, runs
-the model through ONNX Runtime, and pools and normalizes the result in
-base R. On top of the embeddings it fits topic models: texts whose
-embeddings are close are grouped into a topic, so a topic is defined by
-what its texts mean rather than by the words they share.
+**sbert** computes Sentence-BERT embeddings natively in R. Sentence-BERT
+(Reimers and Gurevych, 2019) is a family of neural models that turn a
+whole sentence or short text into an embedding: a vector of numbers in
+which texts with similar meaning lie close together, even when they
+share few words. **sbert** downloads a pinned, hash-verified model,
+tokenizes text with the model’s own Hugging Face tokenizer, runs the
+model through ONNX Runtime, and pools and normalizes the result in base
+R. On top of the embeddings it fits topic models: texts whose embeddings
+are close are grouped into a topic, so a topic is defined by what its
+texts mean rather than by the words they share.
 
 The `feedback_translations` dataset included in the `sbert` package
 comprises 8,757 AI-generated feedback messages originating from a
@@ -267,12 +267,40 @@ them, because an instruction, a hint, and a question do different
 things. Topics 3 and 5 both deal with meaning, but one asks the learner
 and the other tells them.
 
+[`name_topics()`](https://sonsoles.me/sbert/reference/name_topics.md)
+gives the topics these names, one per topic in topic order. The names
+replace the labels in every table and plot that follows; nothing is
+refitted.
+
+``` r
+
+topic_model <- name_topics(
+  topic_model,
+  c(
+    "Guiding question and instruction",
+    "Short hint",
+    "Question about meaning",
+    "Correction",
+    "Definition",
+    "Negation"
+  )
+)
+topic_sizes(topic_model)
+#>   topic                            label n_documents proportion
+#> 1     1 Guiding question and instruction         223 0.37166667
+#> 2     2                       Short hint         133 0.22166667
+#> 3     3           Question about meaning         131 0.21833333
+#> 4     4                       Correction          49 0.08166667
+#> 5     5                       Definition          37 0.06166667
+#> 6     6                         Negation          27 0.04500000
+```
+
 ## Example messages
 
-One sentence names a topic; a few more show its range.
+A few messages per topic show its range.
 [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
-returns the messages closest to each topic’s center, so the first
-message of each topic is the one that names it:
+returns the messages closest to each topic’s center; the first message
+of each topic is the one that labeled it before we named it:
 
 ``` r
 
@@ -329,20 +357,20 @@ a message was shown.
 ``` r
 
 topic_sizes(topic_model, weights = corpus$n)
-#>   topic                                                       label n_documents
-#> 1     1   Where is the cow and the cake? Choose all the pictures...         223
-#> 2     2            All the ones between the cat and the strawberry.         133
-#> 3     3         What does “all the ones between the leaf and the...         131
-#> 4     4 Are you sure you have fewer pictures in the red box than...          49
-#> 5     5      In the top middle box, it means something is in the...          37
-#> 6     6    It is not a person, does not have a hat, and is sitting.          27
-#>   proportion n_weighted weighted_share
-#> 1 0.37166667        267     0.36081081
-#> 2 0.22166667        162     0.21891892
-#> 3 0.21833333        138     0.18648649
-#> 4 0.08166667         76     0.10270270
-#> 5 0.06166667         57     0.07702703
-#> 6 0.04500000         40     0.05405405
+#>   topic                            label n_documents proportion n_weighted
+#> 1     1 Guiding question and instruction         223 0.37166667        267
+#> 2     2                       Short hint         133 0.22166667        162
+#> 3     3           Question about meaning         131 0.21833333        138
+#> 4     4                       Correction          49 0.08166667         76
+#> 5     5                       Definition          37 0.06166667         57
+#> 6     6                         Negation          27 0.04500000         40
+#>   weighted_share
+#> 1     0.36081081
+#> 2     0.21891892
+#> 3     0.18648649
+#> 4     0.10270270
+#> 5     0.07702703
+#> 6     0.05405405
 ```
 
 Corrections (topic 4) grow from 8.2% of the distinct messages to 10.3%
@@ -368,68 +396,68 @@ topic and rare in the others.
 ``` r
 
 terms(topic_model, n = 5)
-#>    topic                                                       label       term
-#> 1      1   Where is the cow and the cake? Choose all the pictures...    picture
-#> 2      1   Where is the cow and the cake? Choose all the pictures...   pictures
-#> 3      1   Where is the cow and the cake? Choose all the pictures...     choose
-#> 4      1   Where is the cow and the cake? Choose all the pictures...       pick
-#> 5      1   Where is the cow and the cake? Choose all the pictures...     select
-#> 6      2            All the ones between the cat and the strawberry.       ones
-#> 7      2            All the ones between the cat and the strawberry.   broccoli
-#> 8      2            All the ones between the cat and the strawberry.      candy
-#> 9      2            All the ones between the cat and the strawberry.      hippo
-#> 10     2            All the ones between the cat and the strawberry.        cat
-#> 11     3         What does “all the ones between the leaf and the...       mean
-#> 12     3         What does “all the ones between the leaf and the...       ones
-#> 13     3         What does “all the ones between the leaf and the... strawberry
-#> 14     3         What does “all the ones between the leaf and the...       tree
-#> 15     3         What does “all the ones between the leaf and the...       pine
-#> 16     4 Are you sure you have fewer pictures in the red box than...        box
-#> 17     4 Are you sure you have fewer pictures in the red box than...        red
-#> 18     4 Are you sure you have fewer pictures in the red box than...       blue
-#> 19     4 Are you sure you have fewer pictures in the red box than...        one
-#> 20     4 Are you sure you have fewer pictures in the red box than...        two
-#> 21     5      In the top middle box, it means something is in the...      means
-#> 22     5      In the top middle box, it means something is in the...     middle
-#> 23     5      In the top middle box, it means something is in the...      right
-#> 24     5      In the top middle box, it means something is in the...  something
-#> 25     5      In the top middle box, it means something is in the...      grass
-#> 26     6    It is not a person, does not have a hat, and is sitting.       it's
-#> 27     6    It is not a person, does not have a hat, and is sitting.     person
-#> 28     6    It is not a person, does not have a hat, and is sitting.     animal
-#> 29     6    It is not a person, does not have a hat, and is sitting.        hat
-#> 30     6    It is not a person, does not have a hat, and is sitting.   standing
-#>    rank      score frequency       beta
-#> 1     1 0.15812657        99 0.10174717
-#> 2     2 0.15734447       130 0.13360740
-#> 3     3 0.15707789        89 0.09146968
-#> 4     4 0.09026252        35 0.03597122
-#> 5     5 0.07513736        26 0.02672148
-#> 6     1 0.30963920        82 0.21025641
-#> 7     2 0.07420924         9 0.02307692
-#> 8     3 0.06596377         8 0.02051282
-#> 9     4 0.06377882         8 0.02051282
-#> 10    5 0.06277479         8 0.02051282
-#> 11    1 0.34359216       130 0.26104418
-#> 12    2 0.11237273        38 0.07630522
-#> 13    3 0.05446666         9 0.01807229
-#> 14    4 0.05377455        10 0.02008032
-#> 15    5 0.05259430         8 0.01606426
-#> 16    1 0.27236446        32 0.10631229
-#> 17    2 0.24904937        27 0.08970100
-#> 18    3 0.23982532        26 0.08637874
-#> 19    4 0.21204418        30 0.09966777
-#> 20    5 0.17403296        16 0.05315615
-#> 21    1 0.31653087        19 0.11111111
-#> 22    2 0.18182559        10 0.05847953
-#> 23    3 0.15309964        10 0.05847953
-#> 24    4 0.14845195         6 0.03508772
-#> 25    5 0.12897006         5 0.02923977
-#> 26    1 0.57814172        22 0.20560748
-#> 27    2 0.55210406        19 0.17757009
-#> 28    3 0.42837319        14 0.13084112
-#> 29    4 0.42837319        14 0.13084112
-#> 30    5 0.24399916         7 0.06542056
+#>    topic                            label       term rank      score frequency
+#> 1      1 Guiding question and instruction    picture    1 0.15812657        99
+#> 2      1 Guiding question and instruction   pictures    2 0.15734447       130
+#> 3      1 Guiding question and instruction     choose    3 0.15707789        89
+#> 4      1 Guiding question and instruction       pick    4 0.09026252        35
+#> 5      1 Guiding question and instruction     select    5 0.07513736        26
+#> 6      2                       Short hint       ones    1 0.30963920        82
+#> 7      2                       Short hint   broccoli    2 0.07420924         9
+#> 8      2                       Short hint      candy    3 0.06596377         8
+#> 9      2                       Short hint      hippo    4 0.06377882         8
+#> 10     2                       Short hint        cat    5 0.06277479         8
+#> 11     3           Question about meaning       mean    1 0.34359216       130
+#> 12     3           Question about meaning       ones    2 0.11237273        38
+#> 13     3           Question about meaning strawberry    3 0.05446666         9
+#> 14     3           Question about meaning       tree    4 0.05377455        10
+#> 15     3           Question about meaning       pine    5 0.05259430         8
+#> 16     4                       Correction        box    1 0.27236446        32
+#> 17     4                       Correction        red    2 0.24904937        27
+#> 18     4                       Correction       blue    3 0.23982532        26
+#> 19     4                       Correction        one    4 0.21204418        30
+#> 20     4                       Correction        two    5 0.17403296        16
+#> 21     5                       Definition      means    1 0.31653087        19
+#> 22     5                       Definition     middle    2 0.18182559        10
+#> 23     5                       Definition      right    3 0.15309964        10
+#> 24     5                       Definition  something    4 0.14845195         6
+#> 25     5                       Definition      grass    5 0.12897006         5
+#> 26     6                         Negation       it's    1 0.57814172        22
+#> 27     6                         Negation     person    2 0.55210406        19
+#> 28     6                         Negation     animal    3 0.42837319        14
+#> 29     6                         Negation        hat    4 0.42837319        14
+#> 30     6                         Negation   standing    5 0.24399916         7
+#>          beta
+#> 1  0.10174717
+#> 2  0.13360740
+#> 3  0.09146968
+#> 4  0.03597122
+#> 5  0.02672148
+#> 6  0.21025641
+#> 7  0.02307692
+#> 8  0.02051282
+#> 9  0.02051282
+#> 10 0.02051282
+#> 11 0.26104418
+#> 12 0.07630522
+#> 13 0.01807229
+#> 14 0.02008032
+#> 15 0.01606426
+#> 16 0.10631229
+#> 17 0.08970100
+#> 18 0.08637874
+#> 19 0.09966777
+#> 20 0.05315615
+#> 21 0.11111111
+#> 22 0.05847953
+#> 23 0.05847953
+#> 24 0.03508772
+#> 25 0.02923977
+#> 26 0.20560748
+#> 27 0.17757009
+#> 28 0.13084112
+#> 29 0.13084112
+#> 30 0.06542056
 ```
 
 ``` r
@@ -463,20 +491,13 @@ summary(topic_model)
 #>   mean npmi  coherence:  -0.1044
 #>   topic topic_diversity:      0.917 (top 10 terms)
 #> 
-#>  topic                                                       label n_documents
-#>      1   Where is the cow and the cake? Choose all the pictures...         223
-#>      2            All the ones between the cat and the strawberry.         133
-#>      3         What does “all the ones between the leaf and the...         131
-#>      4 Are you sure you have fewer pictures in the red box than...          49
-#>      5      In the top middle box, it means something is in the...          37
-#>      6    It is not a person, does not have a hat, and is sitting.          27
-#>  proportion coherence
-#>     0.37167   -0.2368
-#>     0.22167   -0.4150
-#>     0.21833   -0.2564
-#>     0.08167    0.3011
-#>     0.06167   -0.2043
-#>     0.04500    0.1849
+#>  topic                            label n_documents proportion coherence
+#>      1 Guiding question and instruction         223    0.37167   -0.2368
+#>      2                       Short hint         133    0.22167   -0.4150
+#>      3           Question about meaning         131    0.21833   -0.2564
+#>      4                       Correction          49    0.08167    0.3011
+#>      5                       Definition          37    0.06167   -0.2043
+#>      6                         Negation          27    0.04500    0.1849
 ```
 
 To name topics by their three top words instead of a sentence, fit with
