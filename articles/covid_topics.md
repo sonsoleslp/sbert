@@ -1,165 +1,69 @@
 # Topic Modeling COVID-19 Research Abstracts
 
-The bundled `covid` dataset holds abstracts of COVID-19 research on
-education, children, schools, and society. This review embeds every
-abstract with a Sentence-BERT model, groups them into semantic topics,
-and reads the result — including how the mix of topics shifted across
-the pandemic years. Everything is deterministic: rerunning reproduces
-every number and figure.
-
-## Sixteen topics as a hypergraph
-
-Before the Sentence-BERT model, the same abstracts cut sixteen ways with
-**hypernets**: every abstract is a node of a document-word hypergraph,
-every word a hyperedge binding the abstracts that use it (tf-idf
-weights), and the hypergraph Laplacian’s spectral embedding is cut into
-sixteen groups. Whole abstracts, no encoder, nothing truncated. Sixteen
-is the count of the published structural topic model of this literature;
-the spectrum itself supports two or four clean cuts, so read the sixteen
-as a fine partition below those seams rather than as the number the data
-insists on.
-
-Almost every abstract ends in a copyright notice (“© 2021 Informa UK
-Limited, trading as Taylor & Francis Group”). Left in, six of the
-sixteen groups are publishers, not research, so the notice is stripped
-first: from the last “©” to the end, whenever that tail is under 300
-characters.
-
-`hypernets` is not on CRAN, so install it from GitHub first. This
-section is the only part of the article that needs it; everything below
-runs on `sbert` alone.
-
-``` r
-
-# install.packages("pak")
-pak::pak("mohsaqr/hypernets")
-```
-
-``` r
-
-library(hypernets)
-hg_abstracts <- covid[covid$Abstract != "[No abstract available]", ]
-hg_abstracts <- hg_abstracts[!duplicated(hg_abstracts$Abstract), ]
-had_notice <- grepl("©", hg_abstracts$Abstract)
-hg_abstracts$Abstract <- sub("©[^©]{0,300}$", "", hg_abstracts$Abstract,
-                             perl = TRUE)
-hg_abstracts$doc <- sprintf("abs_%04d", seq_len(nrow(hg_abstracts)))
-c(abstracts = nrow(hg_abstracts), with_notice = sum(had_notice))
-#>   abstracts with_notice 
-#>        3670        3655
-boilerplate <- c("covid", "coronavirus", "sars", "cov", "pandemic",
-                 "disease", "study", "studies", "result", "results",
-                 "conclusion", "conclusions", "background", "method",
-                 "methods", "objective", "aim")
-hg <- text_hypergraph(hg_abstracts, column = "Abstract", id = "doc",
-                      weight = "tfidf",
-                      stop_words = c(stop_words_en(), boilerplate),
-                      min_count = 5L, sparse = TRUE)
-hg
-#> Text hypergraph: 3670 documents, 6248 words (documents as nodes, weight = tfidf)
-#> Hyperedges: 6248 (words); sizes 1-2603, median 14
-#>       doc        word count    weight
-#>  abs_0001      access     1  3.275974
-#>  abs_0001 achievement     1  4.917760
-#>  abs_0001       adapt     1  3.890099
-#>  abs_0001   adaptable     1  6.117177
-#>  abs_0001      answer     1  5.165168
-#>  abs_0001      better     1  3.559245
-#>  abs_0001      beyond     1  4.164794
-#>  abs_0001       brief     1  5.424030
-#>  abs_0001        care     3 11.512744
-#>  abs_0001   caribbean     3 21.386334
-#> ... 287948 more rows
-topics16 <- hg_cluster(hg, k = 16, seed = 1)
-```
-
-Each topic is described by the words it *owns*: `sort_by = "share"`
-ranks words by the fraction of their corpus count that falls in the
-topic, and `min_docs = 15` keeps out words a topic owns only because
-they occur in a handful of its abstracts. Ranked by raw frequency
-instead, all sixteen lists would read “learning, students, education,
-online, teaching”.
-
-``` r
-
-knitr::kable(
-  hg_keywords(hg, topics16, n = 8, type = "frequency",
-              sort_by = "share", min_docs = 15, collapse = TRUE),
-  row.names = FALSE
-)
-```
-
-| type | cluster | size | words |
-|:---|:---|---:|:---|
-| frequency | Cluster 1 | 244 | parent, childhood, parental, parents, children’s, child, coping, families |
-| frequency | Cluster 2 | 205 | prevention, original, distribution, behavior, infection, prevent, transmission, virus |
-| frequency | Cluster 3 | 128 | scopus, articles, databases, systematic, review, search, published, reviewed |
-| frequency | Cluster 4 | 249 | sectors, lockdowns, india, down, mode, sector, governments, switch |
-| frequency | Cluster 5 | 234 | my, stories, justice, co, essay, collective, historical, narrative |
-| frequency | Cluster 6 | 264 | library, whatsapp, indonesia, google, interview, users, semi, lecturers |
-| frequency | Cluster 7 | 247 | market, argues, industry, recovery, critically, broader, business, policy |
-| frequency | Cluster 8 | 286 | experiments, laboratories, lab, chemistry, laboratory, semesters, video, conferencing |
-| frequency | Cluster 9 | 324 | agency, notes, grounded, equitable, contexts, reflective, lived, teacher |
-| frequency | Cluster 10 | 232 | alpha, cronbach’s, reliability, validity, anova, statistically, variance, correlation |
-| frequency | Cluster 11 | 265 | methodological, methodologies, sustainable, analyzes, spain, professors, proposed, concept |
-| frequency | Cluster 12 | 157 | tam, pls, expectancy, equation, squares, sem, intention, modelling |
-| frequency | Cluster 13 | 143 | surgery, cohort, p, dental, score, examination, likert, scores |
-| frequency | Cluster 14 | 255 | households, districts, household, disadvantaged, disparities, income, disabilities, fall |
-| frequency | Cluster 15 | 265 | switch, spring, moved, campus, campuses, semester, instruction, taught |
-| frequency | Cluster 16 | 172 | resident, patients, residents, residency, physicians, patient, surgical, hospitals |
-
-``` r
-
-plot(hg_keywords(hg, topics16, n = 6, type = "frequency",
-                 sort_by = "share", min_docs = 15),
-     value = "share", ncol = 4)
-```
-
-![](covid_topics_files/figure-html/hypernets-plot-1.png)
-
-## Building the model
-
-Drop the records indexed without an abstract, then clean the source text
-before encoding.
-[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
-repairs junk characters, strips any list and reference numbering, and —
-with `min_content` — drops whole low-content rows such as citation
-lists. It carries the other columns along, so `Year` stays aligned.
-Sentence-BERT tolerates a little noise, so the goal is fixing broken
-text and removing non-content rows, not scrubbing every token. On a few
-messy examples the effect is easiest to see:
-
-| Before | After |
-|:---|:---|
-| 1\. The programme raised attainment in 2020, see section 3.2.1. | The programme raised attainment in 2020, see section. |
-| \(3\) OJ No L 297, 24.11.1979, p. 1. | OJ No L 297. |
-| Peer support **improved** outcomes \[12\] across schools. | Peer support improved outcomes across schools. |
-| Full report at <https://example.org/study.pdf> and <doi:10.1/x>. | Full report at and |
-
-clean_corpus() with defaults: list and reference numbering, HTML tags,
-bracketed citations, URLs and DOIs removed and characters repaired,
-while real words are kept. {.table}
-
-The citation-only row above scores far below the prose rows on
-alphabetic density, so `min_content = 0.5` drops it entirely rather than
-embedding it. The generic cleaners deliberately stop short of
-domain-specific reference forms; for those, `remove` takes custom
-patterns — `clean_corpus(text, remove = "OJ No L?\\s*\\d+")` strips
-European Union Official Journal identifiers, for example. The same clean
-text then feeds the encoder, the topic terms, and the representative
+The `covid` dataset that ships with **sbert** holds 4,170 records of
+research on COVID-19 and education, children, schools, and society,
+published from 2020 to 2024. This article finds the main themes in their
 abstracts.
 
+**sbert** groups texts by what they mean. Each text becomes an
+embedding, a vector of numbers in which texts with similar meaning lie
+close together, and a topic is a group of texts whose embeddings are
+close. So we read each topic’s example texts first and use words only as
+labels at the end.
+
+Abstracts are long. The default model reads at most 256 tokens of a text
+and ignores the rest, and many abstracts are longer than that. So we fit
+topics twice: once on whole abstracts, and once on their sentences,
+which are short enough to be read in full. The two give different
+answers to different questions.
+
+Unlike the vignette, this article downloads a model and encodes about
+3,800 abstracts and all their sentences. It takes a few minutes.
+
+## Preparing the abstracts
+
+323 records have no abstract, only the placeholder
+`"[No abstract available]"`. We drop them.
+
 ``` r
 
-covid_content <- covid[covid$Abstract != "[No abstract available]", ]
-covid_content <- clean_corpus(covid_content, column = "Abstract", min_content = 0.5)
+abstracts <- subset(covid, Abstract != "[No abstract available]")
+nrow(abstracts)
+#> [1] 3847
 ```
 
-The pinned default model, `all-MiniLM-L6-v2`, turns each abstract into a
-384-dimensional vector. Abstracts longer than its 256-token window are
-truncated to their opening, so the comparison below fits every candidate
-count twice: on whole abstracts, and on their sentences, which are never
-truncated. Both downloads are explicit and happen once:
+Almost every abstract ends with a copyright notice, such as “© 2021
+Informa UK Limited, trading as Taylor & Francis Group.” Left in, the
+notices would form topics of their own, grouped by publisher rather than
+by research. The `remove` argument of
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
+deletes text that matches a regular expression. The pattern below
+deletes a notice at the end of an abstract that starts with “©”,
+“Copyright ©”, or “Copyright” and a year. It does not touch abstracts
+that mention copyright as a subject.
+
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
+also repairs broken characters, removes HTML tags, URLs, DOIs, and
+bracketed citations, and with `min_content = 0.5` drops rows that are
+mostly numbers or symbols rather than words. Given a data frame and a
+`column`, it cleans that column and keeps the other columns.
+
+``` r
+
+abstracts <- clean_corpus(
+  abstracts,
+  column = "Abstract",
+  remove = "(copyright:?\\s*(©|\\d{4})|©).{0,1000}$",
+  min_content = 0.5
+)
+nrow(abstracts)
+#> [1] 3847
+```
+
+## The model
+
+Install the ONNX Runtime and download the default model,
+`all-MiniLM-L6-v2`. Both steps happen once per computer.
 
 ``` r
 
@@ -167,55 +71,50 @@ install_runtime()
 model_download()
 ```
 
-Every abstract shares a scientific boilerplate — *covid*, *pandemic*,
-*study*, *results* — and the label of *every* topic would otherwise
-repeat it. Those words carry no signal about what separates one topic
-from another, so they are excluded up front; `numbers = "remove"` drops
-bare years and counts (*2020*, *19*) for the same reason. Domain stop
-words are the standard way to keep topic labels informative.
+## Choosing the number of topics
+
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+fits one model for each topic count, here on both whole abstracts
+(`"document"`) and sentences (`"sentence"`). `max_tokens = 200` splits
+the rare sentence longer than 200 words at its punctuation, so that no
+sentence is cut off.
+
+Words such as *covid*, *pandemic*, and *study* appear in nearly every
+abstract, so they are added to the standard English stop words, and
+`numbers = "remove"` leaves out bare numbers such as years. Stop words
+affect only the word labels and the word-based measures. The topics
+themselves are computed from the embeddings of the full text.
 
 ``` r
 
-covid_stops <- stop_words(add = c(
+covid_stop_words <- stop_words(add = c(
   "covid", "coronavirus", "sars", "cov", "pandemic", "disease",
   "study", "studies", "result", "results", "conclusion", "conclusions",
   "background", "method", "methods", "objective", "aim"
 ))
-```
-
-There is no correct topic count, and no self-evident unit either.
-[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
-fits one model per candidate count on each requested `segment` level —
-here whole abstracts and sentences, with sentences over 200 words
-re-split at punctuation — and reports the numbers that justify both
-choices. Passing the data frame with `column` carries `Year` into every
-fitted model.
-
-``` r
 
 sweep <- compare_topics(
-  covid_content,
+  abstracts,
   column = "Abstract",
   n_topics = c(4, 6, 8, 10, 12),
   segment = c("document", "sentence"),
   max_tokens = 200,
-  measure = "npmi",
-  stop_words = covid_stops,
+  stop_words = covid_stop_words,
   numbers = "remove"
 )
 sweep
 #> <sbert_topic_sweep> 10 candidates, coherence measure: npmi
-#>   segment n_topics   coherence topic_diversity explained
-#>  document        4  0.05818542       0.6000000 0.0984003
-#>  document        6  0.07303481       0.6166667 0.1213267
-#>  document        8  0.17293698       0.6375000 0.1297750
-#>  document       10  0.15692884       0.5900000 0.1457480
-#>  document       12  0.15765139       0.6000000 0.1577964
-#>  sentence        4 -0.15736079       0.8285714 0.1257798
-#>  sentence        6 -0.11942630       0.7818182 0.1655877
-#>  sentence        8 -0.10159541       0.7848101 0.1828057
-#>  sentence       10 -0.00485953       0.7300000 0.1939574
-#>  sentence       12  0.04974678       0.7641509 0.2137696
+#>   segment n_topics  coherence topic_diversity  explained
+#>  document        4 0.05863244       0.6000000 0.09793182
+#>  document        6 0.07081375       0.5666667 0.12093830
+#>  document        8 0.18496168       0.6625000 0.13103484
+#>  document       10 0.15892319       0.5800000 0.14652464
+#>  document       12 0.15689454       0.5750000 0.15408795
+#>  sentence        4 0.06533172       0.7500000 0.09858943
+#>  sentence        6 0.07032180       0.6833333 0.12698610
+#>  sentence        8 0.07889676       0.6250000 0.14037657
+#>  sentence       10 0.08834204       0.6100000 0.15132116
+#>  sentence       12 0.08397123       0.5916667 0.15587298
 #> 
 #> Fitted models retained: fitted(x, n_topics = 8, segment = "document")
 ```
@@ -227,580 +126,397 @@ plot(sweep)
 
 ![](covid_topics_files/figure-html/sweep-plot-1.png)
 
-Read the count from the table rather than by habit: coherence rises,
-peaks, and falls as topics multiply, while `explained` keeps climbing
-regardless. The count with the highest coherence on whole abstracts is
-the granularity this corpus best supports — the point after which
-splitting topics stops buying coherence — so the document model is
-fitted there. [`fitted()`](https://rdrr.io/r/stats/fitted.values.html)
-takes it straight out of the comparison, naming both the count and the
-level.
+On whole abstracts, coherence jumps from 0.07 at six topics to 0.18 at
+eight. The jump is not what it seems. From eight topics on, one topic
+holds only three abstracts that are not about education at all, and
+their rare words (*ECMO*, *porcine*, *polymers*) always occur together,
+so that topic alone has a coherence of 0.90 and lifts the mean. The
+other seven topics average 0.08, only a little above six topics. We
+still use eight: the topics are a little more coherent and more diverse
+than at six, and the small topic is useful because it isolates papers
+that do not belong in this corpus.
+
+On sentences, coherence changes little from one count to the next. We
+use eight there too, so that the two models can be compared.
 
 ``` r
 
-by_document <- subset(sweep, segment == "document")
-best_n <- by_document$n_topics[which.max(by_document$coherence)]
-topic_model <- fitted(sweep, n_topics = best_n, segment = "document")
+topic_model <- fitted(sweep, n_topics = 8, segment = "document")
 ```
 
-## Corpus at a glance
+## What the abstracts are about
 
-4,170
-
-Records
-
-3,847
-
-Modeled abstracts
-
-3,670
-
-Distinct
-
-2020-2024
-
-Years
-
-8
-
-Topics
-
-**Read the topics as a lens, not a taxonomy.** The count was chosen
-because coherence peaks there, not because it is uniquely correct.
-Labels are the three most distinctive class-based TF-IDF terms — with
-corpus boilerplate and bare numbers excluded — not validated names. A
-bibliographic export is never perfectly on-theme, so one small cluster
-collects genuinely off-topic papers (veterinary and materials research)
-— the model isolating them rather than contaminating the education
-topics.
-
-## The topics
-
-| Topic | Distinctive terms             | Abstracts | Share |
-|------:|:------------------------------|----------:|:------|
-|     1 | online / learning / students  |      1033 | 26.9% |
-|     2 | learning / teaching / online  |       781 | 20.3% |
-|     3 | school / education / children |       477 | 12.4% |
-|     4 | social / education / work     |       444 | 11.5% |
-|     5 | medical / students / clinical |       431 | 11.2% |
-|     6 | education / higher / students |       385 | 10.0% |
-|     7 | health / education / public   |       294 | 7.6%  |
-|     8 | shore / penetration / porcine |         2 | 0.1%  |
-
-`plot(type = "fit")` lays out every topic at once — the three keyword
-views (raw within-topic count, class-based TF-IDF, and generative
-probability) beside each topic’s representative abstracts, one row per
-topic:
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
+returns, for each topic, the abstracts closest to that topic and clearly
+farther from every other topic. Here is one per topic, in full:
 
 ``` r
 
-plot(topic_model, type = "fit", n_terms = 8, n_representatives = 8)
+knitr::kable(representatives(topic_model, n = 1), digits = 2)
 ```
 
-![](covid_topics_files/figure-html/plot-fit-1.png)
+| topic | rank | document_id | text | distance | margin |
+|---:|---:|---:|:---|---:|---:|
+| 1 | 1 | 3305 | This study aims to measure the level of student satisfaction with online learning services in higher education. The research method used is a survey, it is to meet the data needs on a large scale. The study population was students of higher education at the undergraduate level from 26 universities. Samples were taken randomly with due observance of campus representatives from all regions of Indonesia (N=224). The data collection tool used an online learning satisfaction questionnaire that was developed and validated. The questionnaire contains 19 statements. The data analysis used was descriptive statistical analysis techniques. The results of data processing showed a very satisfying level of 19%, 41% satisfied, 30% dissatisfied, and 10% very dissatisfied. Several factors causing dissatisfaction include limited internet access, and low lecturer’s attachment and guidance. The findings are expected to be input to higher education leaders and lecturers in order to improve the quality of online learning services according to the needs of students. | 0.31 | 0.18 |
+| 2 | 1 | 1621 | This paper examines ICT policy in education with a particular focus on teachers’ engagement in emergent remote teaching (ERT) during the initial COVID‐19 school closure in South Korea. It involves a documentary analysis of newspaper articles on “starting school online” from the highest read daily newspapers published in South Korea, through which three issues regarding teachers and teaching are identified: teachers’ digital competency, teachers’ sense of professional identity, and the revalorisation of the teacher role. Discussion of the three issues points to the need to reflect on and rethink the government’s policies for ICT in education. This paper provides an overview of the ICT policies to show their overall inadequacy with respect to providing teachers with the necessary training and framework for technology‐related professional development. It highlights the need to understand the changing nature of teaching and learning in a digital education environment and it suggests a possible redesign of the education and training provisions to teachers to support their professional competency in the digital age. | 0.33 | 0.15 |
+| 3 | 1 | 3118 | Today’s engineering laboratory education often lacks opportunities for students to practice critical thinking through real-world problems. This particular objective is even harder to achieve through online laboratory experiments. In this article, we summarize our innovation in using a real-world challenge, analyze big data, to empower student data analysis skills in remote teaching platform. This approach allows students to collect data, analyze, and evaluate possible solutions continuously through hands-on experimentation with accessible resources around them. Compared to the video-recorded lab, our method achieves a higher level of learning in Bloom’s taxonomy. To further improve our approach, we summarize our lesson learned from transferring six different engineering laboratory courses online, in response to the COVID-19. A thriving 21st-century learning environment has to embrace agility, create flexibility, adapt to technology, and support virtual team collaborations. | 0.35 | 0.17 |
+| 4 | 1 | 2610 | In this article, we take the risk of reading the contemporary world based on images that have been published on social media during the pandemic crisis. By questioning the abyssal lines (SOUSA SANTOS, 2007) imbued and naturalized by the projects of Modernity and Humanism, the article discusses the ways in which nature invaded, in the middle of the pandemic, “this side” of modernity. The following section explores the undemocratic virus by problematizing the abyssal lines of social class differences. Then, in order to further complexify the stark differences between white supremacy and black genocide, the next section demonstrates that we have not overcome this historical crisis of humanity. Section five investigates the abyssal lines between access to education and the perpetuation of a project for education that secures the denial of its existence. In the conclusion, we explain the reasons that make us conceive of these images as procedural micropolitics that have the potential to construct “new modes of subjectivity” (GUATTARI; ROLNIK, 1996, ) and suggest a pedagogy of visual literacy and its micropolitics and an epistemic turn in the notions of “crisis”. | 0.30 | 0.21 |
+| 5 | 1 | 3073 | The COVID-19 pandemic has engendered rapid and significant changes in patient care. Within the realm of surgical training, the resultant reduction in clinical exposure and case volume jeopardizes the quality of surgical training. Thus, our general surgery residency program proceeded to develop a tailored approach to training that mitigates impact on resident surgical education and optimizes clinical exposure without compromising safety. Residents were engaged directly in planning efforts to craft a response to the pandemic. Following the elimination of elective cases, the in-house resident complement was effectively decreased to reduce unnecessary exposure, with a back-up pool to address unanticipated absences and needs. Personal protective equipment availability and supply, the greatest concern to residents, has remained adequate, while being utilized according to current guidelines. Interested residents were given the opportunity to work in designated COVID ICUs on a volunteer basis. With the decrease in operative volume and clinical duties, we shifted our educational focus to an intensive didactic schedule using a teleconferencing platform and targeted areas of weakness on prior in-service exams. We also highlighted critical COVID-19 literature in a weekly journal club to better understand this novel disease and its effect on surgical practice. The long-term impact of the COVID-19 pandemic on resident education remains to be seen. Success may be achieved with commitment to constant needs assessment in the changing landscape of healthcare with the goal of producing a skilled surgical workforce for public service. | 0.26 | 0.25 |
+| 6 | 1 | 1995 | Purpose: This paper aims to outline the impact of the COVID-19 pandemic to universities and how they may react. Design/methodology/approach: A description of the impact of the COVID-19 pandemic to higher education institutions is presented at different levels. Findings: Even though the COVID-19 pandemic affects higher education institutions in many ways, there are some measures which may be undertaken to mitigate its impacts. Practical implications: The measures suggested may assist universities at present, and in future recovery efforts. Originality/value: The value of the paper resides on a multi-perspective analysis of higher education institutions can do, as part of the recovery efforts in face of the pandemic. | 0.16 | 0.22 |
+| 7 | 1 | 1236 | Recent research on the effects of COVID-19 on school closures has mainly focused on primary and secondary education, with extremely limited attention to early childhood education (ECE). To address this gap, we identify the extent to which parents and caregivers with pre-primary school-aged children were engaged in their children’s learning during school closures in Ethiopia. Our focus on Ethiopia is of particular relevance given that ECE provision has expanded dramatically in recent years, aimed at ensuring children are prepared for primary school. Using data collected through a phone survey with 480 parents and caregivers, the results revealed that learning disruption due to COVID-19 school closures is likely to be substantial and will probably widen existing inequalities further. Many poorer households and those where parents or caregivers are not literate, are less likely to have child-oriented learning resources, and home learning activities between parents and children in these households are limited. The study highlights that greater attention needs to be paid to mitigate the threats of COVID-19 on Ethiopia’s recent gains in ECE, to prevent the pandemic from further reinforcing inequalities between children from advantaged and disadvantaged households. | 0.21 | 0.24 |
+| 8 | 1 | 997 | Aim: Patients with cardiogenic shock or ARDS, for example, in COVID-19/SARS-CoV-2, may require extracorporeal membrane oxygenation (ECMO). An ECLS/ECMO model simulating challenging vascular anatomy is desirable for cannula insertion training purposes. We assessed the ability of various 3D-printable materials to mimic the penetration properties of human tissue by using porcine aortae. Methods: A test bench for needle penetration and piercing in sampled porcine aorta and preselected 3D-printable polymers was assembled. The 3D-printable materials had Shore A hardness of 10, 20, and 17G Vygon 1.0 × 1.4 mm × 70 mm needles were used for penetration tests. Results: For the porcine tissue and Shore A 10, Shore A 20, and Shore A 50 polymers, penetration forces of 0.9036 N, 0.9725 N, 1.0386 N, and 1.254 N were needed, respectively. For piercing through the porcine tissue and Shore A 10, Shore A 20, and Shore A 50 polymers, forces of 0.8399 N, 1.244 N, 1.475 N, and 1.482 N were needed, respectively. ANOVA showed different variances among the groups, and pairwise two-tailed t-tests showed significantly different needle penetration and piercing forces, except for penetration of Shore A 10 and 20 polymers (p = 0.234 and p = 0.0857). Significantly higher forces were required for all other materials. Conclusion: Shore A 10 and 20 polymers have similar needle penetration properties compared to the porcine tissue. Significantly more force is needed to pierce through the material fully. The most similar tested material to porcine aorta for needle penetration and piercing in ECMO-implantation is the silicon Shore A 10 polymer. This silicon could be a 3D-printable material in surgical training for ECMO-implantation. | 0.27 | 0.56 |
 
-## Whole abstracts against sentences
-
-The comparison fitted the same counts on sentences too. `type = "fit"`
-on the comparison draws the per-topic report for both levels at the
-chosen count, one figure per level, so the two segmentations can be read
-against each other:
+The plot shows the opening of three abstracts per topic:
 
 ``` r
 
-plot(sweep, type = "fit", n_topics = best_n, n_terms = 8, n_representatives = 6)
+plot(topic_model, type = "representatives", n_representatives = 3)
 ```
 
-![](covid_topics_files/figure-html/compare-fit-1.png)![](covid_topics_files/figure-html/compare-fit-2.png)
+![](covid_topics_files/figure-html/plot-representatives-1.png)
 
-The sentence model stores every sentence with the abstract it came from,
-so `topic_sizes(by = "document")` counts the abstracts each topic
-reaches and
-[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-returns each abstract’s topic mixture with no further encoding:
+Read together, the examples show eight subjects:
+
+1.  Students’ acceptance of and satisfaction with online learning,
+    mostly surveys.
+2.  Teachers and emergency remote teaching in schools.
+3.  Laboratory and hands-on courses moved online, in engineering and
+    chemistry.
+4.  Social and political commentary: images on social media, grassroots
+    organizing, community solidarity.
+5.  Surgical and medical training.
+6.  Universities as institutions: their finances, international
+    students, and private higher education.
+7.  Young children, parents, and families during school and daycare
+    closures.
+8.  Three papers outside education: a training model for ECMO, marine
+    plastic litter, and anatomy teaching by dissection.
+
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
+counts the abstracts in each topic. The first three topics, on online
+learning, teachers, and laboratory courses, hold more than half of them.
 
 ``` r
 
-sentence_model <- fitted(sweep, n_topics = best_n, segment = "sentence")
+topic_sizes(topic_model)
+#>   topic                                                      label n_documents
+#> 1     1    Universities around Indonesia are currently adopting...         803
+#> 2     2     The COVID-19 pandemic has impacted education at all...         699
+#> 3     3 The Covid-19 pandemic has raised significant challenges...         615
+#> 4     4    COVID-19 has illuminated and exacerbated inequities,...         476
+#> 5     5      Background: In December 2019, COVID-19 emerged and...         452
+#> 6     6        Background/purpose - Besides many psychological,...         407
+#> 7     7  This editorial paper presents 11 papers related to the...         392
+#> 8     8       Aim: Patients with cardiogenic shock or ARDS, for...           3
+#>     proportion
+#> 1 0.2087340785
+#> 2 0.1817000260
+#> 3 0.1598648297
+#> 4 0.1237327788
+#> 5 0.1174941513
+#> 6 0.1057967247
+#> 7 0.1018975825
+#> 8 0.0007798284
+```
+
+## What the sentences are about
+
+The sentence model was fitted in the same call.
+[`fitted()`](https://rdrr.io/r/stats/fitted.values.html) returns it. Its
+example sentences are short enough to read in full:
+
+``` r
+
+sentence_model <- fitted(sweep, n_topics = 8, segment = "sentence")
+knitr::kable(representatives(sentence_model, n = 3), digits = 2)
+```
+
+| topic | rank | document_id | segment | text | distance | margin |
+|---:|---:|---:|---:|:---|---:|---:|
+| 1 | 1 | 2580 | 3 | Background The COVID-19 pandemic has significantly affected educational activities and disrupted the traditional norms of education at colleges and universities in the world, and, as a result, teaching and learning have shifted to online. | 0.09 | 0.21 |
+| 1 | 2 | 876 | 1 | Background: The Coronavirus Disease 2019 (COVID-19) pandemic has necessitated a sudden transition to remote learning in medical schools. | 0.20 | 0.21 |
+| 1 | 3 | 2804 | 2 | This paper aims to present and describe a higher education experience with Flipped Learning before and during the transformation of education due to the COVID-19 pandemic. | 0.26 | 0.21 |
+| 2 | 1 | 1612 | 2 | Based on data gathered through a survey (N = 784), this paper analyses students’ perceptions regarding the effectiveness of online education in a period when this type of education is the only available option. | 0.21 | 0.25 |
+| 2 | 2 | 3417 | 3 | Based on the current development of online teaching, this paper analyzes the main existing problems and puts forward some improvement measures in order to give full play to the advantages of online teaching and promote the teaching reform of combining online and offline in colleges and universities. | 0.27 | 0.24 |
+| 2 | 3 | 3426 | 3 | The factors influencing online education adoption are explained in this research with a Structural Equation Model (SEM). | 0.37 | 0.22 |
+| 3 | 1 | 1053 | 6 | The study explores the complements of physical experiments brought in with animations, simulations, and remote laboratory set-ups for providing skill trainings to learners. | 0.37 | 0.18 |
+| 3 | 2 | 1352 | 3 | This design-based syllabus is more acquainted with face to face or physical teaching learning environment. | 0.37 | 0.17 |
+| 3 | 3 | 1649 | 1 | In this paper, a hybrid model for teaching Engineering Mechanics courses is presented. | 0.50 | 0.17 |
+| 4 | 1 | 2145 | 6 | The findings revealed a tension between expectations of producers of policy and enactors of policy within unequal school settings. | 0.41 | 0.23 |
+| 4 | 2 | 2256 | 2 | Despite education being the only viable means towards a better future, the closing of schools set-off to heighten prevailing educational disparities towards academic access, experience and achievement for the vulnerable children of the country. | 0.29 | 0.23 |
+| 4 | 3 | 2617 | 2 | Within this matrix of interdependent relations, schools operate under increasingly hybrid accountability arrangements in which public accountability can both complement and compete with market and social regimes and their associated institutional logics, goals, values and mechanisms. | 0.44 | 0.22 |
+| 5 | 1 | 2547 | 7 | Further findings indicate that, in unprecedented times, policies developed for use in different contexts can be met with innovative collaborative efforts with a focused goal that transcend seemingly insurmountable challenges. | 0.40 | 0.25 |
+| 5 | 2 | 2588 | 3 | The focus of this article is on planning with canonical works to meet the current moment. | 0.48 | 0.25 |
+| 5 | 3 | 279 | 5 | However, the processes involved in making this happen are elusive and complex. | 0.50 | 0.24 |
+| 6 | 1 | 876 | 6 | Results: Of 268 students enrolled, 104 responded (53.7% of first-year students and 23.9% of second-year students). | 0.25 | 0.30 |
+| 6 | 2 | 2378 | 7 | 275 students (80.2% of the expected) enrolled in 17 undergraduate courses (those that are not related to engineering) answered the questionnaire. | 0.35 | 0.28 |
+| 6 | 3 | 616 | 5 | Students in medical fields made up 289 (23.6%). | 0.40 | 0.27 |
+| 7 | 1 | 3106 | 4 | The research utilized a descriptive methodology, with a data collection technique conducted through online surveys. | 0.26 | 0.28 |
+| 7 | 2 | 3655 | 6 | Content analysis technique was used in the analysis of the data obtained. | 0.33 | 0.27 |
+| 7 | 3 | 166 | 8 | The conventional content analysis method was used to analyze the data. | 0.34 | 0.26 |
+| 8 | 1 | 1587 | 1 | In response to the emerging and ever solution to the COVID-19 outbreak. | 0.20 | 0.24 |
+| 8 | 2 | 2143 | 1 | This editorial to the Special Section on COVID-19 emphasises the importance of researching pandemic realities and the value that the findings can bring to the way we shape decisions in the future, for the ‘new normal’. | 0.14 | 0.24 |
+| 8 | 3 | 3544 | 1 | Background: The coronavirus disease (COVID-19) global pandemic has resulted in unprecedented public health measures. | 0.20 | 0.24 |
+
+Most sentence topics are not subjects but the jobs that sentences do in
+an abstract:
+
+- Topic 1 opens an abstract by saying what the pandemic did to
+  education.
+- Topic 5 holds general, hedging sentences (“However, the processes
+  involved in making this happen are elusive and complex.”).
+- Topic 6 reports samples and response rates (“Of 268 students enrolled,
+  104 responded”).
+- Topic 7 describes methods of data collection and analysis.
+- Topic 8 states the pandemic as background (“The WHO has stated the
+  outbreak of COVID-19 as a pandemic issue.”).
+
+Only three are subjects: perceptions of online education (topic 2),
+course design with labs, simulations, and hybrid teaching (topic 3), and
+education policy and inequality (topic 4).
+
+`topic_sizes(by = "document")` counts how many abstracts have at least
+one sentence in each topic:
+
+``` r
+
 topic_sizes(sentence_model, by = "document")
-#>   topic                           label n_documents proportion
-#> 1     1 education / students / learning        3412  0.8869249
-#> 2     2 education / students / learning        2960  0.7694307
-#> 3     3    online / learning / teaching        2380  0.6186639
-#> 4     4      research / social / health        2058  0.5349623
-#> 5     5        data / students / survey        1722  0.4476215
-#> 6     6      limited / taylor / francis        2152  0.5593969
-#> 7     7     author / authors / elsevier        1371  0.3563816
-#> 8     8       reserved / rights / basel        1107  0.2877567
-head(topic_gamma(sentence_model), 12)
-#>    document_id topic     gamma n_segments
-#> 1            1     1 0.3000000         10
-#> 2            1     2 0.6000000         10
-#> 3            1     3 0.0000000         10
-#> 4            1     4 0.0000000         10
-#> 5            1     5 0.0000000         10
-#> 6            1     6 0.1000000         10
-#> 7            1     7 0.0000000         10
-#> 8            1     8 0.0000000         10
-#> 9            2     1 0.2857143          7
-#> 10           2     2 0.0000000          7
-#> 11           2     3 0.2857143          7
-#> 12           2     4 0.2857143          7
-```
-
-The cards below give the same evidence topic by topic, with the full
-abstracts in collapsible panels — the auditable proof that a label means
-what it claims.
-
-#### Topic 1 — online / learning / students
-
-1,033 abstracts · 26.9% of the corpus
-
-**Distinctive terms:** online, learning, students, education, teaching,
-teachers, distance, research
-
-Nearest abstract 1 - 2022 (distance 0.233)
-
-The COVID-19 pandemic has disrupted existing educational systems
-worldwide. Due to lockdowns in several countries, the educational
-institutions have been directed by governments to move towards online
-learning. The challenge for educational institutions and faculty members
-is to assess the influence of various factors that would enable adoption
-of online learning by students in higher education. This study
-investigates the influence of awareness of COVID-19 (AOC19), computer &
-internet self-efficacy (CISE), and online communication self-efficacy
-(OCSE) on perceived net benefits (NB) of the students and their
-intention towards the online learning (INT). The study further analyzes
-the mediati…
-
-Nearest abstract 2 - 2021 (distance 0.254)
-
-Covid-19 has forced educators to switch to online teaching as the only
-viable option, whether through video lecturing or using other online
-teaching tools. Therefore, the study investigates university teachers’
-perceptions towards their continuing intention of using the online
-platforms after Covid19 situations. To answer such questions, the
-present study conducted a survey of 242 faculties engaged in higher
-education teaching at assistant. We have conducted the present study
-using a sample of 242 faculties. Based on the framework of technology
-adoption model (TAM), this study investigates the research questions in
-the context of India. The study has adopted a mixed-method research
-design c…
-
-Nearest abstract 3 - 2022 (distance 0.265)
-
-This study examines the current state of acceptance of online classes
-using the technology acceptance model. The background of the study is
-the turning point in Korean education in response to the COVID-19
-pandemic and speculation about changes in the post-COVID educational
-environment. To measure the acceptance rate of online classes, a survey
-was conducted on a total of 313 university students taking online
-classes. The data were analyzed using structural equation modeling. The
-results of the study are as follows: First, the perceived ease of use of
-online classes showed a positive effect on perceived usefulness. Second,
-both the perceived ease of use and usefulness of online classes show…
-
-#### Topic 2 — learning / teaching / online
-
-781 abstracts · 20.3% of the corpus
-
-**Distinctive terms:** learning, teaching, online, students, education,
-remote, face, teachers
-
-Nearest abstract 1 - 2020 (distance 0.353)
-
-General chemistry, CHE 101, at Hampton University is an undergraduate
-course designed to meet curriculum requirements for nonscience majors.
-The four-credit course consists of a lecture and a laboratory, taken
-concurrently. The lecture consists of three 50 minute or two 75 minute
-sessions, and the laboratory consists of one 3 hour session every week.
-The first 8 weeks of the 2020 spring semester were taught face-To-face
-(F2F), but this changed to remote teaching and learning for the
-remainder of the semester because of COVID-19. The university canceled
-F2F teaching in mid-March, and the students went home with the
-instructions that remote teaching would commence the following week. In
-the m…
-
-Nearest abstract 2 - 2020 (distance 0.326)
-
-The transition to a remote teaching and learning environment was quick
-and painful at times, and yet it was a learning experience for everyone.
-The chemists at Centre College utilized new (to them) technology to
-reimagine the typical face to face interactions with students and
-colleagues. From Slack to Pear Deck to Zoom classrooms, the faculty and
-students engaged with a variety of platforms to continue to learn
-remotely despite the challenges of the global pandemic. The faculty
-learned the value of utilizing different types of technology, and the
-students learned some important skills and content. © 2020 American
-Chemical Society and Division of Chemical Education, Inc.
-
-Nearest abstract 3 - 2020 (distance 0.366)
-
-Today’s engineering laboratory education often lacks opportunities for
-students to practice critical thinking through real-world problems. This
-particular objective is even harder to achieve through online laboratory
-experiments. In this article, we summarize our innovation in using a
-real-world challenge, analyze big data, to empower student data analysis
-skills in remote teaching platform. This approach allows students to
-collect data, analyze, and evaluate possible solutions continuously
-through hands-on experimentation with accessible resources around them.
-Compared to the video-recorded lab, our method achieves a higher level
-of learning in Bloom’s taxonomy. To further improve our appr…
-
-#### Topic 3 — school / education / children
-
-477 abstracts · 12.4% of the corpus
-
-**Distinctive terms:** school, education, children, teachers, parents,
-learning, schools, educational
-
-Nearest abstract 1 - 2021 (distance 0.345)
-
-This study reports the results of a survey conducted with a set of
-“hybrid homeschool”leaders (principals or directors) from around the
-United States who were asked to describe how their families categorize
-themselves (as homeschoolers, or as members of private schools), the
-ways in which their schools operate in terms of scheduling, hiring,
-etc., how their schools are regulated in the various states, and how
-they work within those regulatory frameworks, and how they were affected
-by COVID-19, both in the spring of 2020 and the fall of 2020.
-Respondents provided a variety of names to describe their schools and a
-split in how families see themselves. In terms of staffing, schedules,
-tuition,…
-
-Nearest abstract 2 - 2020 (distance 0.262)
-
-Parents of children with special educational needs and disabilities
-(SEND) took part in an online survey that explored their experiences of
-home-schooling during the coronavirus pandemic. Two hundred and
-thirty-eight parents from the UK responded to 49 questions about the
-resources and support they had received, their management and feelings
-surrounding home-schooling. Chi-square analyses were used to establish
-whether parents’ experiences differed as a result of socio-economic
-status (SES) or the nature of their child’s SEND. Results indicated that
-parents were dissatisfied with the resources and support they had
-received for their child’s educational and psychological needs. Parents
-felt …
-
-Nearest abstract 3 - 2021 (distance 0.412)
-
-The aim of the present study is to describe how parents and primary
-school children dealt with the rapid and significant changes to their
-schooling experience during COVID-19 and how this correlated with
-children’s mental health. A cross-sectional study comprising an online
-survey was completed by 797 parents of children from 4 - 12 years, (M =
-9 years). School variables explored included school expectations for
-schoolwork, how much time per day spent on schoolwork, how able parents
-were to support their child with schoolwork, whether a child had support
-from an adult at school and whether the child had support from a friend.
-Child mental health was measured by the Strengths and Difficultie…
-
-#### Topic 4 — social / education / work
-
-444 abstracts · 11.5% of the corpus
-
-**Distinctive terms:** social, education, work, students, teaching,
-article, learning, research
-
-Nearest abstract 1 - 2021 (distance 0.369)
-
-It took a global pandemic for me to recognize how my social work
-teaching was an act of feminist praxis. I have long identified as a
-feminist and regularly engage efforts to advance equity for women,
-primarily centered on the abolition of prisons which disproportionately
-incarcerate Indigenous and Black women in Canada. Surprisingly, I have
-never considered how my feminism shows up in my teaching. The following
-reflexive essay explores the ways in which the feminist principles of
-centring emotions, rejecting patriarchal hierarchy, and challenging
-white feminism were embedded into the development and delivery of a
-graduate level social work research course that was rapidly adapted to
-being t…
-
-Nearest abstract 2 - 2021 (distance 0.390)
-
-This article frames three individual perspectives on the experience of
-unsettling disciplinary and institutional subjectivities through
-teaching and learning practices in Creative Writing and Literary
-Studies. At the centre of this experience is a common engagement of
-teaching and learning with sovereign knowledges. More specifically, the
-accounts in the article are drawn from experiences in 2020, when the
-forces of extra-academic life - especially lockdown during COVID-19 in
-Victoria - intensified the objectives and the means of challenging the
-boundaries of settler colonial expertise. The authors find that
-collaborative and iterative sharing of teaching experiences and methods
-not only su…
-
-Nearest abstract 3 - 2021 (distance 0.456)
-
-In this chapter, I trace instances of meaning-making through fragments
-of two interviews. Using restorying and the construction of parallel
-stories to interpret resonances across the participants’ stories and my
-own stories of experience, I draw strong personal connections with
-elements of each semi-structured interview. In a revisitation of the
-narrative threads of identity, community, and change, the image of Black
-women as literacy educators who co-construct meaning in and out of the
-classroom is rendered. © 2021 by Emerald Publishing Limited.
-
-#### Topic 5 — medical / students / clinical
-
-431 abstracts · 11.2% of the corpus
-
-**Distinctive terms:** medical, students, clinical, health, education,
-learning, training, care
-
-Nearest abstract 1 - 2021 (distance 0.309)
-
-Objective: Describe the early impact of the COVID-19 pandemic on general
-surgery residency training nationwide. Design: A 31-question electronic
-survey was distributed to general surgery program directors. Qualitative
-data underwent iterative coding analysis. Quantitative data were
-evaluated with summary statistics and bivariate analyses. Participants:
-Eighty-four residency programs (33.6% response rate) with representation
-across US geographic regions, program affiliations, and sizes. Results:
-Widespread changes were observed in the surgical training environment.
-One hundred percent of programs reduced the number of residents on
-rounds and 95.2% reduced the size of their in-hospital reside…
-
-Nearest abstract 2 - 2021 (distance 0.375)
-
-Objective: The COVID-19 pandemic has drastically transformed the
-healthcare community and medical education across the United States. The
-aim of this study was to evaluate the impact of COVID-19 on the surgical
-resident training experience, assess possible sources of stress or
-anxiety among surgery residents, and examine how patterns of anxiety
-vary by resident rank. Design: We developed and disseminated a survey,
-which included the Generalized Anxiety Disorder 7-Item Scale (GAD-7), to
-all general and integrated plastic surgery residents in their clinical
-years of training at the University of California, San Francisco.
-Statistical analysis of the survey responses was performed using the Kr…
-
-Nearest abstract 3 - 2021 (distance 0.215)
-
-Problem Value-added medical education (VAME) has been difficult to
-implement due to student and educator constraints. The COVID-19 pandemic
-caused mass transitions to online learning, removed students from
-clinical settings, and underscored students’ desires for meaningful VAME
-opportunities. The authors introduced the Stanford Frontline COVID-19
-Consult Service (SFCS), through which off-service medical and physician
-assistant (PA) students provided assistance to clinicians in the form of
-rapid research regarding COVID-19 clinical questions. Approach The SFCS,
-a student-derived VAME initiative, was implemented from March to May
-2020 by Stanford University medical students, PA students, and …
-
-#### Topic 6 — education / higher / students
-
-385 abstracts · 10.0% of the corpus
-
-**Distinctive terms:** education, higher, students, universities,
-university, institutions, academic, research
-
-Nearest abstract 1 - 2021 (distance 0.380)
-
-The market shock that accompanied COVID-19 has the potential to
-significantly transform higher education. At the same time, it presents
-an opportunity for higher education to learn from industry and adopt
-successful policies and practices. This paper provides lessons learned
-from the oil industry which may help higher education institutions to
-successfully navigate disruption and improve organizational outcomes. A
-four-phase business cycle model is presented as a strategic corollary
-for industry and higher education to support decision-making and provide
-a mechanism for discussion and policy development. © The Author(s) 2020.
-
-Nearest abstract 2 - 2022 (distance 0.210)
-
-Worldwide, COVID-19 affected higher education, including finance, and
-international mobility. But some systems have been more affected than
-others; notably Anglophone systems that have been a preferred
-destination for a high proportion of international students. Australia
-presents a particularly interesting case. Particularly vulnerable to any
-significant downturn in international enrolments, given its high
-proportion of international students, and heavy dependence on their
-fees, the problem was exacerbated by growing US - China tensions, and
-resultant pressures on Australia and its universities. Culture Wars were
-also evident in the steadfast refusal of the national government to
-offer muc…
-
-Nearest abstract 3 - 2020 (distance 0.247)
-
-COVID-19 has had a major impact on international higher education with
-border closures, cancelled flights, and a shift to online teaching and
-learning. As a result, many international students have decided to
-either abandon or defer their plans to study abroad. If students stay in
-their home countries, many institutions that rely heavily on foreign
-students’ fees will suffer, with potential impacts on national
-economies. Beyond the economic implications, it is also important to
-consider the personal impact of COVID-19 on international students, who
-may face delays or obstacles to program completion, employment and/or
-immigration. Though there are certainly risks and losses in the short
-term…
-
-#### Topic 7 — health / education / public
-
-294 abstracts · 7.6% of the corpus
-
-**Distinctive terms:** health, education, public, social, global,
-research, also, educational
-
-Nearest abstract 1 - 2021 (distance 0.328)
-
-Severe Acute Respiratory Syndrome Coronavirus 2 (SARS-CoV-2) or COVID-19
-has undeniably changed the world forever. Capitalism in the United
-States and Europe can no longer feel immune from the effects of
-epidemics that were at one point in time the concern of minor countries,
-such as the recent (2014-2016) Ebola epidemic in Western Africa. This
-article examines how COVID-19 not only showed that Capitalism has no
-clothes in its inability to respond effectively to this momentous event,
-but shows the burgeoning of the impact on its slow-motion decline. This
-is evident from the still-unresolved healthcare crisis in the United
-States, which allows runaway contagion, sickness, and death due to a …
-
-Nearest abstract 2 - 2021 (distance 0.189)
-
-This editorial to the Special Section on COVID-19 emphasises the
-importance of researching pandemic realities and the value that the
-findings can bring to the way we shape decisions in the future, for the
-‘new normal’. The pandemic, with its rapidly changing timeline, required
-swift action in untrialled circumstances and its consequences have been
-experienced differently by diverse institutions and across national
-contexts. Depending on the roles and responsibilities we may have taken
-on during this time, our capabilities to document our experiences and
-emerging trends have varied. © University of Deusto.
-
-Nearest abstract 3 - 2021 (distance 0.298)
-
-Humanity has been on its way accompanied by epidemics, as man has
-evolved, he has faced different problems that have affected most of
-society. In the last 50 years, more viruses have appeared that have
-affected different regions and multiple countries; but one of the most
-distributed worldwide is COVID-19. The objective is to offer some
-information related to this pandemic and its evolution in different
-countries. The bibliographic review method was used even though some
-bibliographies are very recent, but it has allowed us to know their
-behavior and follow-up. The results of the countries most affected by
-this pandemic are shown, where it could be said that Italy has
-increasingly affected …
-
-#### Topic 8 — shore / penetration / porcine
-
-2 abstracts · 0.1% of the corpus
-
-**Distinctive terms:** shore, penetration, porcine, polymers, ecmo,
-needle, piercing, printable
-
-Nearest abstract 1 - 2021 (distance 0.187)
-
-Aim: Patients with cardiogenic shock or ARDS, for example, in
-COVID-19/SARS-CoV-2, may require extracorporeal membrane oxygenation
-(ECMO). An ECLS/ECMO model simulating challenging vascular anatomy is
-desirable for cannula insertion training purposes. We assessed the
-ability of various 3D-printable materials to mimic the penetration
-properties of human tissue by using porcine aortae. Methods: A test
-bench for needle penetration and piercing in sampled porcine aorta and
-preselected 3D-printable polymers was assembled. The 3D-printable
-materials had Shore A hardness of 10, 20, and 17G Vygon 1.0 × 1.4 mm ×
-70 mm needles were used for penetration tests. Results: For the porcine
-tissue and Shore…
-
-Nearest abstract 2 - 2021 (distance 0.187)
-
-Methods of anatomical education have, as with many facets of normal
-life, been forced to evolve rapidly due to the Covid-19 pandemic. Whilst
-some authors claim that cadaver dissection is now under threat, we
-believe the centuries-old practice can and must be upheld. © 2020 The
-Author(s). Published by Informa UK Limited, trading as Taylor & Francis
-Group.
-
-## What each paper touches
-
-The document model gives each abstract a single label — its dominant
-theme. A long abstract usually spans several topics, though, and unlike
-the whole-abstract embedding, its individual sentences are short enough
-to escape the 256-token truncation.
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md) splits a
-document into sentences, deterministically — and `max_tokens` guards
-against the rare sentence that is itself over the window, re-splitting
-it at punctuation first. The cap counts words here, a deterministic
-offline proxy; 200 words sits comfortably under the 256-token limit
-(pass `model =` to count that model’s exact tokens instead):
-
-``` r
-
-segments <- segment(covid_content$Abstract, level = "sentence", max_tokens = 200)
-head(segments, 3)
-#>   document_id document_name segment
-#> 1           1                     1
-#> 2           1                     2
-#> 3           1                     3
-#>                                                                                                                                                                                                                                                                             text
-#> 1                                                                                        The COVID-19 Pandemic and resulting school closures, present a serious threat to young children's care, learning, and the achievement of their developmental potential (UNESCO, 2020a).
-#> 2                                   Disruptions to normal school functioning worldwide have presented challenges for teachers who were generally unprepared to teach using different methodologies (United Nations in Policy brief: Education during Covid-19 and beyond, 2020).
-#> 3 Since a child's right to care and education extends even during emergencies this study was conceptualized to better understand the professional experiences of early childhood teachers as they navigated the teaching learning process during the COVID-19 school disruption.
+#>   topic                                                       label n_documents
+#> 1     1       Background The COVID-19 pandemic has significantly...        3040
+#> 2     2 The main objective of this study is therefore to explore...        1839
+#> 3     3   The methods used to incorporate this technology can be...        1998
+#> 4     4     It examines the measures which were taken to fix the...        2065
+#> 5     5  We provide implications for researchers and practitioners.        1693
+#> 6     6                    Results: Twenty-seven students enrolled.        1489
+#> 7     7                      A survey design was used in the study.        1335
+#> 8     8      Background: The COVID-19 pandemic has disrupted the...        1320
+#>   proportion
+#> 1  0.7902262
+#> 2  0.4780348
+#> 3  0.5193657
+#> 4  0.5367819
+#> 5  0.4400832
+#> 6  0.3870548
+#> 7  0.3470237
+#> 8  0.3431245
 ```
 
 [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-takes that segmentation directly — assigning every sentence to its
-nearest topic and returning each abstract’s topic *mixture* (`gamma`
-sums to 1 within a document). Passing the
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md) frame
-keeps the cap and lets a single encode be reused rather than segmenting
-again inside the call:
+gives the mix of topics in each abstract: the share of its sentences
+that fall in each topic. The shares of an abstract add up to 1.
 
 ``` r
 
-gamma <- topic_gamma(topic_model, segments)
-head(gamma)
-#>   document_id topic gamma n_segments
-#> 1           1     1   0.0         10
-#> 2           1     2   0.0         10
-#> 3           1     3   0.7         10
-#> 4           1     4   0.2         10
-#> 5           1     5   0.0         10
-#> 6           1     6   0.0         10
+head(topic_gamma(sentence_model), 16)
+#>    document_id topic     gamma n_segments
+#> 1            1     1 0.3333333          9
+#> 2            1     2 0.0000000          9
+#> 3            1     3 0.0000000          9
+#> 4            1     4 0.5555556          9
+#> 5            1     5 0.0000000          9
+#> 6            1     6 0.1111111          9
+#> 7            1     7 0.0000000          9
+#> 8            1     8 0.0000000          9
+#> 9            2     1 0.3333333          6
+#> 10           2     2 0.3333333          6
+#> 11           2     3 0.0000000          6
+#> 12           2     4 0.0000000          6
+#> 13           2     5 0.3333333          6
+#> 14           2     6 0.0000000          6
+#> 15           2     7 0.0000000          6
+#> 16           2     8 0.0000000          6
 ```
 
-Most abstracts touch several topics. One that spreads across the most,
-with the share of its sentences on each:
+## The words each topic uses
 
-| Topic                         | Share of sentences |
-|:------------------------------|:-------------------|
-| learning / teaching / online  | 22%                |
-| social / education / work     | 22%                |
-| online / learning / students  | 11%                |
-| school / education / children | 11%                |
-| medical / students / clinical | 11%                |
-| education / higher / students | 11%                |
-| health / education / public   | 11%                |
+[`summary()`](https://rdrr.io/r/base/summary.html) lists each topic
+under its label, the opening of its most central abstract or sentence,
+and reports the coherence of its top words.
+[`terms()`](https://rdrr.io/r/stats/terms.html) lists those words.
 
-Aggregating every sentence gives a second view of prevalence — the share
-of *sentences* on each topic — next to the document-level share. The two
-agree on the big themes but diverge on the secondary ones: a topic that
-is rarely a paper’s headline can still run through many papers’
-sentences.
+``` r
 
-![](covid_topics_files/figure-html/gamma-prevalence-1.png)
+summary(topic_model)
+#> Semantic topic model summary
+#>   documents:            3847
+#>   topics:               8
+#>   model:                sentence-transformers/all-MiniLM-L6-v2
+#>   between/total SS:      13.1%
+#>   mean npmi  coherence:  0.1850
+#>   topic topic_diversity:      0.662 (top 10 terms)
+#> 
+#>  topic                                                      label n_documents
+#>      1    Universities around Indonesia are currently adopting...         803
+#>      2     The COVID-19 pandemic has impacted education at all...         699
+#>      3 The Covid-19 pandemic has raised significant challenges...         615
+#>      4    COVID-19 has illuminated and exacerbated inequities,...         476
+#>      5      Background: In December 2019, COVID-19 emerged and...         452
+#>      6        Background/purpose - Besides many psychological,...         407
+#>      7  This editorial paper presents 11 papers related to the...         392
+#>      8       Aim: Patients with cardiogenic shock or ARDS, for...           3
+#>  proportion coherence
+#>   0.2087341   0.07733
+#>   0.1817000   0.07523
+#>   0.1598648   0.09003
+#>   0.1237328   0.03543
+#>   0.1174942   0.09903
+#>   0.1057967   0.05638
+#>   0.1018976   0.14200
+#>   0.0007798   0.90427
+```
 
-A topic model of whole abstracts reports each paper’s *headline*; the
-sentence view shows everything it *touches* — and because sentences are
-never truncated, it reaches content the 256-token window cuts off.
+``` r
 
-## Topics across the pandemic
+terms(topic_model, n = 5)
+#>    topic                                                      label
+#> 1      1    Universities around Indonesia are currently adopting...
+#> 2      1    Universities around Indonesia are currently adopting...
+#> 3      1    Universities around Indonesia are currently adopting...
+#> 4      1    Universities around Indonesia are currently adopting...
+#> 5      1    Universities around Indonesia are currently adopting...
+#> 6      2     The COVID-19 pandemic has impacted education at all...
+#> 7      2     The COVID-19 pandemic has impacted education at all...
+#> 8      2     The COVID-19 pandemic has impacted education at all...
+#> 9      2     The COVID-19 pandemic has impacted education at all...
+#> 10     2     The COVID-19 pandemic has impacted education at all...
+#> 11     3 The Covid-19 pandemic has raised significant challenges...
+#> 12     3 The Covid-19 pandemic has raised significant challenges...
+#> 13     3 The Covid-19 pandemic has raised significant challenges...
+#> 14     3 The Covid-19 pandemic has raised significant challenges...
+#> 15     3 The Covid-19 pandemic has raised significant challenges...
+#> 16     4    COVID-19 has illuminated and exacerbated inequities,...
+#> 17     4    COVID-19 has illuminated and exacerbated inequities,...
+#> 18     4    COVID-19 has illuminated and exacerbated inequities,...
+#> 19     4    COVID-19 has illuminated and exacerbated inequities,...
+#> 20     4    COVID-19 has illuminated and exacerbated inequities,...
+#> 21     5      Background: In December 2019, COVID-19 emerged and...
+#> 22     5      Background: In December 2019, COVID-19 emerged and...
+#> 23     5      Background: In December 2019, COVID-19 emerged and...
+#> 24     5      Background: In December 2019, COVID-19 emerged and...
+#> 25     5      Background: In December 2019, COVID-19 emerged and...
+#> 26     6        Background/purpose - Besides many psychological,...
+#> 27     6        Background/purpose - Besides many psychological,...
+#> 28     6        Background/purpose - Besides many psychological,...
+#> 29     6        Background/purpose - Besides many psychological,...
+#> 30     6        Background/purpose - Besides many psychological,...
+#> 31     7  This editorial paper presents 11 papers related to the...
+#> 32     7  This editorial paper presents 11 papers related to the...
+#> 33     7  This editorial paper presents 11 papers related to the...
+#> 34     7  This editorial paper presents 11 papers related to the...
+#> 35     7  This editorial paper presents 11 papers related to the...
+#> 36     8       Aim: Patients with cardiogenic shock or ARDS, for...
+#> 37     8       Aim: Patients with cardiogenic shock or ARDS, for...
+#> 38     8       Aim: Patients with cardiogenic shock or ARDS, for...
+#> 39     8       Aim: Patients with cardiogenic shock or ARDS, for...
+#> 40     8       Aim: Patients with cardiogenic shock or ARDS, for...
+#>            term rank      score frequency        beta
+#> 1        online    1 0.06224614      2677 0.027224929
+#> 2      learning    2 0.06036407      2860 0.029086028
+#> 3      students    3 0.05722093      2726 0.027723256
+#> 4     education    4 0.03941373      1841 0.018722859
+#> 5      teaching    5 0.03157991      1238 0.012590385
+#> 6      teachers    1 0.05779352      1448 0.019390433
+#> 7      teaching    2 0.04893846      1457 0.019510954
+#> 8      learning    3 0.04138165      1489 0.019939472
+#> 9     education    4 0.04014249      1424 0.019069045
+#> 10       online    5 0.03631193      1186 0.015881943
+#> 11     learning    1 0.05079927      1550 0.024477291
+#> 12     students    2 0.04726181      1450 0.022898111
+#> 13       online    3 0.04495176      1245 0.019660792
+#> 14     teaching    4 0.04265984      1077 0.017007770
+#> 15         face    5 0.02615803       476 0.007516897
+#> 16       social    1 0.03887026       510 0.011336608
+#> 17    education    2 0.03692031       789 0.017538400
+#> 18         work    3 0.02611242       300 0.006668593
+#> 19      article    4 0.02126510       234 0.005201503
+#> 20       health    5 0.01936549       237 0.005268189
+#> 21      medical    1 0.05968672       874 0.015339254
+#> 22     students    2 0.04571544      1262 0.022148900
+#> 23     clinical    3 0.03869326       482 0.008459405
+#> 24       health    4 0.03716058       576 0.010109165
+#> 25    education    5 0.02756176       746 0.013092773
+#> 26    education    1 0.04909214       940 0.023320433
+#> 27       higher    2 0.04322329       496 0.012305250
+#> 28     students    3 0.02949456       576 0.014289967
+#> 29 universities    4 0.02285689       230 0.005706063
+#> 30 institutions    5 0.02235797       226 0.005606827
+#> 31       school    1 0.05532799       592 0.015314966
+#> 32     children    2 0.04562050       386 0.009985772
+#> 33    education    3 0.04296815       789 0.020411331
+#> 34      parents    4 0.03653572       304 0.007864442
+#> 35      schools    5 0.02990247       294 0.007605743
+#> 36        shore    1 0.36486584        10 0.043103448
+#> 37  penetration    2 0.29881103         8 0.034482759
+#> 38      porcine    3 0.23459295         6 0.025862069
+#> 39     polymers    4 0.19942306         5 0.021551724
+#> 40         ecmo    5 0.16338542         4 0.017241379
+```
 
-Because every abstract carries a publication year, the model doubles as
-a lens on how the research conversation moved. The share of each year’s
-abstracts assigned to each topic:
+The words say much less than the examples. Topics 1 and 3 have almost
+the same top words (*online*, *learning*, *students*), yet one is about
+students’ acceptance of online learning and the other about laboratory
+courses moved online. Words such as *learning*, *students*, and *online*
+run through the whole corpus, so they cannot tell these topics apart.
+The embeddings can, because they capture what each abstract says rather
+than which words it uses.
 
-![](covid_topics_files/figure-html/temporal-1.png)
+The sentence topics’ words are vaguer still. Only topic 7’s top words,
+*data*, *analysis*, and *used*, are clear, because sentences about
+methods reuse the same few words. None of the words shows what most
+sentence topics do: open an abstract, report a sample, or hedge.
 
-Each bar is one year; the coloured segments are the topics’ shares that
-year. Reading left to right shows which strands of the education
-literature grew and which faded as the pandemic wore on.
+``` r
 
-**Reusing the model.**
-[`predict()`](https://rdrr.io/r/stats/predict.html) assigns new
-abstracts to these topics without refitting — sentence by sentence, with
-the same segmentation, for the sentence model — and
-[`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
-gives graded probabilities when an abstract sits between topics.
-[`blend()`](https://sonsoles.me/sbert/reference/blend.md) carries a
-paper’s context into every sentence’s embedding, so a sentence that is
-ambiguous alone still embeds near its subject.
+summary(sentence_model)
+#> Semantic topic model summary
+#>   documents:            3847
+#>   segments:             29835 (sentence level)
+#>   topics:               8
+#>   model:                sentence-transformers/all-MiniLM-L6-v2
+#>   between/total SS:      14.0%
+#>   mean npmi  coherence:  0.0789
+#>   topic topic_diversity:      0.625 (top 10 terms)
+#> 
+#>  topic                                                       label n_documents
+#>      1       Background The COVID-19 pandemic has significantly...        5760
+#>      2 The main objective of this study is therefore to explore...        4556
+#>      3   The methods used to incorporate this technology can be...        4376
+#>      4     It examines the measures which were taken to fix the...        4149
+#>      5  We provide implications for researchers and practitioners.        3217
+#>      6                    Results: Twenty-seven students enrolled.        2986
+#>      7                      A survey design was used in the study.        2454
+#>      8      Background: The COVID-19 pandemic has disrupted the...        2337
+#>  proportion coherence
+#>     0.19306   0.04651
+#>     0.15271   0.07672
+#>     0.14667   0.05946
+#>     0.13906   0.02686
+#>     0.10783   0.04134
+#>     0.10008   0.06141
+#>     0.08225   0.19613
+#>     0.07833   0.12274
+```
+
+## Which model to use
+
+The two models answer different questions. Whole abstracts group papers
+by subject: who was studied and what was taught. Sentences group mainly
+by what a sentence does in an abstract (context, sample, method,
+hedging), with a few subject topics among them. Almost every abstract
+(79%) has a sentence in topic 1, the opening context.
+
+Use whole abstracts to map the research themes of a literature. Use
+sentences to study how abstracts are written, or to reach content beyond
+the first 256 tokens of long abstracts, which the whole-abstract model
+never reads.
+
+## Next steps
+
+- `predict(topic_model, new_abstracts)` assigns new abstracts to these
+  topics without refitting. For the sentence model it splits the new
+  abstracts into sentences in the same way.
+- `reduce_topics(topic_model, n_topics = 4)` merges similar topics, and
+  [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
+  shows which topics are closest to each other.
+- The article *Parallel and High-Throughput Topic Modeling* shows how to
+  encode once and reuse the embeddings across many fits and sessions.

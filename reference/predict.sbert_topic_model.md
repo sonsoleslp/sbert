@@ -65,6 +65,6 @@ fitted <- topics(text, 2, embeddings = embeddings)
 predict(fitted, "Bulls and bears move markets", embeddings = rbind(c(0.2, 0.8)))
 #>   document_id document_name                         text topic
 #> 1           1               Bulls and bears move markets     2
-#>                     label   distance
-#> 1 bonds / markets / price 0.01792973
+#>                    label   distance
+#> 1 Stocks and bonds trade 0.01792973
 ```

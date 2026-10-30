@@ -125,19 +125,19 @@ fitted <- topics(
   text, n_topics = 2, embeddings = embeddings, min_term_frequency = 1
 )
 terms(fitted, n = 3)
-#>   topic                   label    term rank     score frequency      beta
-#> 1     1     cats / chase / mice    cats    1 0.3788329         2 0.2222222
-#> 2     1     cats / chase / mice   chase    2 0.3788329         2 0.2222222
-#> 3     1     cats / chase / mice    mice    3 0.3788329         2 0.2222222
-#> 4     2 banks / bonds / markets   banks    1 0.2558428         1 0.1111111
-#> 5     2 banks / bonds / markets   bonds    2 0.2558428         1 0.1111111
-#> 6     2 banks / bonds / markets markets    3 0.2558428         1 0.1111111
+#>   topic                  label    term rank     score frequency      beta
+#> 1     1        Cats chase mice    cats    1 0.3788329         2 0.2222222
+#> 2     1        Cats chase mice   chase    2 0.3788329         2 0.2222222
+#> 3     1        Cats chase mice    mice    3 0.3788329         2 0.2222222
+#> 4     2 Stocks and bonds trade   banks    1 0.2558428         1 0.1111111
+#> 5     2 Stocks and bonds trade   bonds    2 0.2558428         1 0.1111111
+#> 6     2 Stocks and bonds trade markets    3 0.2558428         1 0.1111111
 terms(fitted, n = 3, weighting = "bm25")
-#>   topic                   label    term rank     score frequency      beta
-#> 1     1     cats / chase / mice    cats    1 0.3080654         2 0.2222222
-#> 2     1     cats / chase / mice   chase    2 0.3080654         2 0.2222222
-#> 3     1     cats / chase / mice    mice    3 0.3080654         2 0.2222222
-#> 4     2 banks / bonds / markets   banks    1 0.2107911         1 0.1111111
-#> 5     2 banks / bonds / markets   bonds    2 0.2107911         1 0.1111111
-#> 6     2 banks / bonds / markets markets    3 0.2107911         1 0.1111111
+#>   topic                  label    term rank     score frequency      beta
+#> 1     1        Cats chase mice    cats    1 0.3080654         2 0.2222222
+#> 2     1        Cats chase mice   chase    2 0.3080654         2 0.2222222
+#> 3     1        Cats chase mice    mice    3 0.3080654         2 0.2222222
+#> 4     2 Stocks and bonds trade   banks    1 0.2107911         1 0.1111111
+#> 5     2 Stocks and bonds trade   bonds    2 0.2107911         1 0.1111111
+#> 6     2 Stocks and bonds trade markets    3 0.2107911         1 0.1111111
 ```

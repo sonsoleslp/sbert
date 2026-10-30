@@ -36,7 +36,8 @@ topics(
   segment = c("document", "sentence", "clause", "phrase"),
   max_tokens = NULL,
   merge_below = 0L,
-  min_content = 0
+  min_content = 0,
+  label = c("representative", "terms")
 )
 ```
 
@@ -218,6 +219,14 @@ topics(
   Minimum alphabetic-content ratio for a segment to be kept, passed to
   \[segment()\]. Only with a segmented fit.
 
+- label:
+
+  How each topic is named in \`label\` columns and plots.
+  \`"representative"\` (default) uses the topic's most central text,
+  shortened to 60 characters; \`"terms"\` joins its three most
+  distinctive words (\`"box / red / blue"\`). Named \`seeds\` override
+  either.
+
 ## Value
 
 An object of class \`sbert_topic_model\` containing unit assignments
@@ -227,16 +236,21 @@ ranked terms, representatives, centers, clustering diagnostics, and the
 
 ## Details
 
-Topic labels are arbitrary cluster identifiers. Interpret them with the
-ranked \`terms\` and \`representatives\` tables. Term scores use the
-class-based TF-IDF weighting \`tf \* log(1 + A / f_x)\`, where \`tf\` is
-the frequency of a term normalized within its topic, \`f_x\` is the
-term's frequency across all topics, and \`A\` is the mean topic length
-(a real number, matching Mendonca and Figueira (2025), Eq. 1). Set
-\`weighting = "bm25"\` and/or \`reduce_frequent_words = TRUE\` for the
-BM25 and square-root variants (their Eq. 2 to 4). The built-in tokenizer
-preserves Unicode alphanumeric tokens and internal apostrophes, but does
-not perform language-specific word segmentation for unspaced CJK text.
+Each topic is named by its most central unit: the document or segment
+nearest the topic's centroid, shortened to 60 characters. The topics
+come from the meaning of whole texts, so a text names a topic better
+than its top words do; \`label = "terms"\` names topics by their three
+most distinctive words instead. Read more examples per topic with
+\[representatives()\], and its typical words with \[terms()\]. Term
+scores use the class-based TF-IDF weighting \`tf \* log(1 + A / f_x)\`,
+where \`tf\` is the frequency of a term normalized within its topic,
+\`f_x\` is the term's frequency across all topics, and \`A\` is the mean
+topic length (a real number, matching Mendonca and Figueira (2025), Eq.
+1). Set \`weighting = "bm25"\` and/or \`reduce_frequent_words = TRUE\`
+for the BM25 and square-root variants (their Eq. 2 to 4). The built-in
+tokenizer preserves Unicode alphanumeric tokens and internal
+apostrophes, but does not perform language-specific word segmentation
+for unspaced CJK text.
 
 ## Examples
 
@@ -248,9 +262,9 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 topics <- topics(text, 2, embeddings = embeddings)
 topics$topics
-#>   topic                   label n_documents proportion    withinss
-#> 1     1    chase / balls / cats           2        0.5 0.006116265
-#> 2     2 bonds / markets / price           2        0.5 0.006116265
+#>   topic                  label n_documents proportion    withinss
+#> 1     1        Cats chase mice           2        0.5 0.006116265
+#> 2     2 Stocks and bonds trade           2        0.5 0.006116265
 
 # Fit on sentences: each document is split first, and the segments are
 # what the topics are made of (the embeddings here are one row per
@@ -271,12 +285,12 @@ sentence_model$documents
 #> 3           2                     1       Dogs chase balls.     1
 #> 4           2                     2   Markets price shares.     2
 #>                     label    distance
-#> 1    chase / balls / cats 0.001530237
-#> 2 bonds / markets / price 0.001530237
-#> 3    chase / balls / cats 0.001530237
-#> 4 bonds / markets / price 0.001530237
+#> 1        Cats chase mice. 0.001530237
+#> 2 Stocks and bonds trade. 0.001530237
+#> 3        Cats chase mice. 0.001530237
+#> 4 Stocks and bonds trade. 0.001530237
 topic_sizes(sentence_model, by = "document")
 #>   topic                   label n_documents proportion
-#> 1     1    chase / balls / cats           2          1
-#> 2     2 bonds / markets / price           2          1
+#> 1     1        Cats chase mice.           2          1
+#> 2     2 Stocks and bonds trade.           2          1
 ```

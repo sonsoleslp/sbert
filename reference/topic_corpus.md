@@ -182,9 +182,9 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 corpus <- topic_corpus(text, embeddings = embeddings)
 topics(corpus, n_topics = 2)$topics
-#>   topic                   label n_documents proportion    withinss
-#> 1     1    chase / balls / cats           2        0.5 0.006116265
-#> 2     2 bonds / markets / price           2        0.5 0.006116265
+#>   topic                  label n_documents proportion    withinss
+#> 1     1        Cats chase mice           2        0.5 0.006116265
+#> 2     2 Stocks and bonds trade           2        0.5 0.006116265
 compare_topics(corpus, n_topics = 2:3)
 #> <sbert_topic_sweep> 2 candidates, coherence measure: npmi
 #>  n_topics  coherence topic_diversity explained

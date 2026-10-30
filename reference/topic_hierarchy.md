@@ -47,10 +47,10 @@ topics <- topics(text, 3, embeddings = embeddings, n_terms = 3)
 topic_hierarchy(topics)
 #> <sbert_topic_hierarchy> 3 topics, 2 merges (cosine distance)
 #> 
-#>  step      height                              left
-#>     1 0.003556675    topic 2 (chase / balls / cats)
-#>     2 0.877531228 topic 1 (banks / bonds / markets)
-#>                               right
-#>  topic 3 (kittens / nap / sunshine)
-#>                             merge 1
+#>  step      height                           left
+#>     1 0.003556675     topic 2 (Dogs chase balls)
+#>     2 0.877531228 topic 1 (Markets price shares)
+#>                              right
+#>  topic 3 (Kittens nap in sunshine)
+#>                            merge 1
 ```

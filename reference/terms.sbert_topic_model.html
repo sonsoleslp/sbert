@@ -13,7 +13,7 @@ the clustering or the encoding."><meta property="og:image" content="https://sons
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,7 +25,7 @@ the clustering or the encoding."><meta property="og:image" content="https://sons
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/math_vignette.html">Topic Modeling Short Feedback Messages</a></li>
     <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -170,21 +170,21 @@ class-based weight — distinctive words) or `"beta"` (raw \(p(term | topic)\)
 <span class="r-in"><span>  <span class="va">text</span>, n_topics <span class="op">=</span> <span class="fl">2</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, min_term_frequency <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">fitted</span>, n <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                   label    term rank     score frequency      beta</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1     cats / chase / mice    cats    1 0.3788329         2 0.2222222</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2     1     cats / chase / mice   chase    2 0.3788329         2 0.2222222</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3     1     cats / chase / mice    mice    3 0.3788329         2 0.2222222</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4     2 banks / bonds / markets   banks    1 0.2558428         1 0.1111111</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5     2 banks / bonds / markets   bonds    2 0.2558428         1 0.1111111</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6     2 banks / bonds / markets markets    3 0.2558428         1 0.1111111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                  label    term rank     score frequency      beta</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1        Cats chase mice    cats    1 0.3788329         2 0.2222222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     1        Cats chase mice   chase    2 0.3788329         2 0.2222222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     1        Cats chase mice    mice    3 0.3788329         2 0.2222222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     2 Stocks and bonds trade   banks    1 0.2558428         1 0.1111111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     2 Stocks and bonds trade   bonds    2 0.2558428         1 0.1111111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     2 Stocks and bonds trade markets    3 0.2558428         1 0.1111111</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">fitted</span>, n <span class="op">=</span> <span class="fl">3</span>, weighting <span class="op">=</span> <span class="st">"bm25"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                   label    term rank     score frequency      beta</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1     cats / chase / mice    cats    1 0.3080654         2 0.2222222</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2     1     cats / chase / mice   chase    2 0.3080654         2 0.2222222</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3     1     cats / chase / mice    mice    3 0.3080654         2 0.2222222</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4     2 banks / bonds / markets   banks    1 0.2107911         1 0.1111111</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5     2 banks / bonds / markets   bonds    2 0.2107911         1 0.1111111</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6     2 banks / bonds / markets markets    3 0.2107911         1 0.1111111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                  label    term rank     score frequency      beta</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1        Cats chase mice    cats    1 0.3080654         2 0.2222222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     1        Cats chase mice   chase    2 0.3080654         2 0.2222222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     1        Cats chase mice    mice    3 0.3080654         2 0.2222222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     2 Stocks and bonds trade   banks    1 0.2107911         1 0.1111111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     2 Stocks and bonds trade   bonds    2 0.2107911         1 0.1111111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     2 Stocks and bonds trade markets    3 0.2107911         1 0.1111111</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

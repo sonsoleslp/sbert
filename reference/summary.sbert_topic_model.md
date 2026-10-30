@@ -52,7 +52,7 @@ summary(topics)
 #>   mean npmi  coherence:  -0.1667
 #>   topic topic_diversity:      1.000 (top 10 terms)
 #> 
-#>  topic                   label n_documents proportion coherence
-#>      1    chase / balls / cats           2        0.5    0.0000
-#>      2 bonds / markets / price           2        0.5   -0.3333
+#>  topic                  label n_documents proportion coherence
+#>      1        Cats chase mice           2        0.5    0.0000
+#>      2 Stocks and bonds trade           2        0.5   -0.3333
 ```

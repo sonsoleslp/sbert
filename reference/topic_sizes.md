@@ -56,10 +56,7 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 fitted <- topics(text, 2, embeddings = embeddings)
 topic_sizes(fitted, weights = c(10, 1, 1, 1))
-#>   topic                   label n_documents proportion n_weighted
-#> 1     1    chase / balls / cats           2        0.5         11
-#> 2     2 bonds / markets / price           2        0.5          2
-#>   weighted_share
-#> 1      0.8461538
-#> 2      0.1538462
+#>   topic                  label n_documents proportion n_weighted weighted_share
+#> 1     1        Cats chase mice           2        0.5         11      0.8461538
+#> 2     2 Stocks and bonds trade           2        0.5          2      0.1538462
 ```

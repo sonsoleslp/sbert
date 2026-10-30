@@ -17,7 +17,7 @@ object to [topics()] or [compare_topics()] in place of the raw `text`."><meta pr
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,7 +29,7 @@ object to [topics()] or [compare_topics()] in place of the raw `text`."><meta pr
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/math_vignette.html">Topic Modeling Short Feedback Messages</a></li>
     <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -230,9 +230,9 @@ kept, passed to [segment()]. Only with a segmented fit.</p></dd>
 <span class="r-in"><span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.9</span>, <span class="fl">0.1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.9</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">corpus</span> <span class="op">&lt;-</span> <span class="fu">topic_corpus</span><span class="op">(</span><span class="va">text</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="topics.html">topics</a></span><span class="op">(</span><span class="va">corpus</span>, n_topics <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">$</span><span class="va">topics</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                   label n_documents proportion    withinss</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1    chase / balls / cats           2        0.5 0.006116265</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 bonds / markets / price           2        0.5 0.006116265</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                  label n_documents proportion    withinss</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1        Cats chase mice           2        0.5 0.006116265</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 Stocks and bonds trade           2        0.5 0.006116265</span>
 <span class="r-in"><span><span class="fu"><a href="compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">corpus</span>, n_topics <span class="op">=</span> <span class="fl">2</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;sbert_topic_sweep&gt; 2 candidates, coherence measure: npmi</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  n_topics  coherence topic_diversity explained</span>

@@ -13,7 +13,7 @@ terms. This is embedding-based topic discovery, not a probabilistic LDA model.">
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,7 +25,7 @@ terms. This is embedding-based topic discovery, not a probabilistic LDA model.">
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Semantic Topics in AI-Powered Mathematics Feedback</a></li>
+    <li><a class="dropdown-item" href="../articles/math_vignette.html">Topic Modeling Short Feedback Messages</a></li>
     <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -80,7 +80,8 @@ terms. This is embedding-based topic discovery, not a probabilistic LDA model.</
 <span>  segment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"document"</span>, <span class="st">"sentence"</span>, <span class="st">"clause"</span>, <span class="st">"phrase"</span><span class="op">)</span>,</span>
 <span>  max_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  merge_below <span class="op">=</span> <span class="fl">0L</span>,</span>
-<span>  min_content <span class="op">=</span> <span class="fl">0</span></span>
+<span>  min_content <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"representative"</span>, <span class="st">"terms"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -260,6 +261,13 @@ neighbor, passed to [segment()]. Only with a segmented fit.</p></dd>
 <dd><p>Minimum alphabetic-content ratio for a segment to be
 kept, passed to [segment()]. Only with a segmented fit.</p></dd>
 
+
+<dt id="arg-label">label<a class="anchor" aria-label="anchor" href="#arg-label"></a></dt>
+<dd><p>How each topic is named in `label` columns and plots.
+`"representative"` (default) uses the topic's most central text,
+shortened to 60 characters; `"terms"` joins its three most distinctive
+words (`"box / red / blue"`). Named `seeds` override either.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -270,8 +278,12 @@ kept, passed to [segment()]. Only with a segmented fit.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Topic labels are arbitrary cluster identifiers. Interpret them with
-  the ranked `terms` and `representatives` tables. Term scores use the
+    <p>Each topic is named by its most central unit: the document or
+  segment nearest the topic's centroid, shortened to 60 characters. The
+  topics come from the meaning of whole texts, so a text names a topic
+  better than its top words do; `label = "terms"` names topics by their
+  three most distinctive words instead. Read more examples per topic with
+  [representatives()], and its typical words with [terms()]. Term scores use the
   class-based TF-IDF weighting `tf * log(1 + A / f_x)`, where `tf` is the
   frequency of a term normalized within its topic, `f_x` is the term's
   frequency across all topics, and `A` is the mean topic length (a real
@@ -291,9 +303,9 @@ kept, passed to [segment()]. Only with a segmented fit.</p></dd>
 <span class="r-in"><span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.9</span>, <span class="fl">0.1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.9</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">topics</span> <span class="op">&lt;-</span> <span class="fu">topics</span><span class="op">(</span><span class="va">text</span>, <span class="fl">2</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">topics</span><span class="op">$</span><span class="va">topics</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                   label n_documents proportion    withinss</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1    chase / balls / cats           2        0.5 0.006116265</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 bonds / markets / price           2        0.5 0.006116265</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   topic                  label n_documents proportion    withinss</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1        Cats chase mice           2        0.5 0.006116265</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 Stocks and bonds trade           2        0.5 0.006116265</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Fit on sentences: each document is split first, and the segments are</span></span></span>
 <span class="r-in"><span><span class="co"># what the topics are made of (the embeddings here are one row per</span></span></span>
@@ -314,14 +326,14 @@ kept, passed to [segment()]. Only with a segmented fit.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3           2                     1       Dogs chase balls.     1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4           2                     2   Markets price shares.     2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                     label    distance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    chase / balls / cats 0.001530237</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 bonds / markets / price 0.001530237</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    chase / balls / cats 0.001530237</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 bonds / markets / price 0.001530237</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        Cats chase mice. 0.001530237</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 Stocks and bonds trade. 0.001530237</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3        Cats chase mice. 0.001530237</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 Stocks and bonds trade. 0.001530237</span>
 <span class="r-in"><span><span class="fu"><a href="topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">sentence_model</span>, by <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   topic                   label n_documents proportion</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1    chase / balls / cats           2          1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 bonds / markets / price           2          1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1        Cats chase mice.           2          1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 Stocks and bonds trade.           2          1</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -76,7 +76,7 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
 coherence(topics)
-#>   topic                   label measure n_terms  coherence
-#> 1     1    chase / balls / cats    npmi       3  0.0000000
-#> 2     2 bonds / markets / price    npmi       3 -0.3333333
+#>   topic                  label measure n_terms  coherence
+#> 1     1        Cats chase mice    npmi       3  0.0000000
+#> 2     2 Stocks and bonds trade    npmi       3 -0.3333333
 ```
