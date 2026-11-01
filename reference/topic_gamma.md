@@ -1,12 +1,13 @@
 # Document-Topic Distributions from Segment Assignments
 
-Computes \`gamma\`, the distribution of every document over the fitted
-topics, by segmenting each document with \[segment()\], assigning each
-segment to its nearest topic centroid, and normalizing the per-document
-segment counts. This yields parameter-free mixed topic_membership: a
-document that discusses two topics in different sentences receives
-weight on both, which the single-embedding hard assignment cannot
-express.
+Computes `gamma`, the distribution of every document over the fitted
+topics, by segmenting each document with
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md), assigning
+each segment to its nearest topic centroid, and normalizing the
+per-document segment counts. This yields parameter-free mixed
+membership: a document that discusses two topics in different sentences
+receives weight on both, which the single-embedding hard assignment
+cannot express.
 
 ## Usage
 
@@ -28,86 +29,98 @@ topic_gamma(
 
 - object:
 
-  A fitted \[topics()\] model.
+  A fitted [`topics()`](https://sonsoles.me/sbert/reference/topics.md)
+  model.
 
 - text:
 
-  Either \`NULL\`, a character vector of documents (segmented here at
-  \`level\`), or the data frame returned by \[segment()\] (used as-is).
-  \`NULL\` — the default — works for a model fitted with \`segment =
-  "sentence"\`, \`"clause"\`, or \`"phrase"\`: its own segments and
-  their topic assignments are already stored, so the mixture of every
-  fitted document comes back with no encoding at all. Passing your own
-  segmentation keeps every segment option in \[segment()\] and lets you
-  reuse one set of segment embeddings across this and other verbs. A
-  data frame must have \`document_id\` and \`text\` columns; \`gamma\`
-  is then computed per \`document_id\`.
+  Either `NULL`, a character vector of documents (segmented here at
+  `level`), or the data frame returned by
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) (used
+  as-is). `NULL` — the default — works for a model fitted with
+  `segment = "sentence"`, `"clause"`, or `"phrase"`: its own segments
+  and their topic assignments are already stored, so the mixture of
+  every fitted document comes back with no encoding at all. Passing your
+  own segmentation keeps every segment option in
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) and lets
+  you reuse one set of segment embeddings across this and other verbs. A
+  data frame must have `document_id` and `text` columns; `gamma` is then
+  computed per `document_id`.
 
 - model:
 
-  A loaded \[sbert_model\]\[load_model()\], a pinned model name, or
-  \`NULL\` for the default model, used to embed the segments; ignored
-  when \`embeddings\` are supplied.
+  A loaded
+  [sbert_model](https://sonsoles.me/sbert/reference/load_model.md), a
+  pinned model name, or `NULL` for the default model, used to embed the
+  segments; ignored when `embeddings` are supplied.
 
 - embeddings:
 
   Optional precomputed numeric matrix of segment embeddings, one row per
-  segment. When \`text\` is raw documents the rows must align with
-  \`segment(text, level = level)\`; when \`text\` is a \[segment()\]
-  data frame they must align with its rows — which is automatic, since
-  no re-segmentation happens.
+  segment. When `text` is raw documents the rows must align with
+  `segment(text, level = level)`; when `text` is a
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
+  frame they must align with its rows — which is automatic, since no
+  re-segmentation happens.
 
 - level:
 
-  Segmentation granularity passed to \[segment()\] when \`text\` is a
-  character vector: \`"clause"\`, \`"sentence"\`, or \`"phrase"\`.
-  \`NULL\` (the default) uses the fitted segmentation — level,
-  \`max_tokens\`, \`merge_below\`, and \`min_content\` — for a segmented
+  Segmentation granularity passed to
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) when
+  `text` is a character vector: `"clause"`, `"sentence"`, or `"phrase"`.
+  `NULL` (the default) uses the fitted segmentation — level,
+  `max_tokens`, `merge_below`, and `min_content` — for a segmented
   model, so new documents are cut exactly as the fitted ones were, and
-  \`"clause"\` for a document-level model. Ignored when \`text\` is
-  already a \[segment()\] data frame.
+  `"clause"` for a document-level model. Ignored when `text` is already
+  a [`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
+  frame.
 
 - batch_size:
 
-  Batch size passed to \[encode()\] when \`model\` is used.
+  Batch size passed to
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) when
+  `model` is used.
 
 - cores:
 
   Number of forked worker processes used to split documents into
-  segments (passed to \[segment()\]). Default \`1\`. Segmenting a large
-  corpus dominates the non-encoding cost, so \`cores \> 1\` can
-  noticeably speed up sentence- and clause-level gamma; the result is
-  identical for any count. Encoding itself is parallelized separately,
-  via \`load_model(threads =)\`. Ignored when \`text\` is already a
-  \[segment()\] data frame.
+  segments (passed to
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md)).
+  Default `1`. Segmenting a large corpus dominates the non-encoding
+  cost, so `cores > 1` can noticeably speed up sentence- and
+  clause-level gamma; the result is identical for any count. Encoding
+  itself is parallelized separately, via `load_model(threads =)`.
+  Ignored when `text` is already a
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
+  frame.
 
 - dedupe_segments:
 
-  When \`TRUE\`, encode each distinct segment only once and expand the
+  When `TRUE`, encode each distinct segment only once and expand the
   embeddings back by position, rather than encoding every occurrence.
   Real corpora are often close to half duplicate segments, so this can
   roughly halve encoding time (the dominant cost). Only applies when
-  \`embeddings\` are not supplied. Assignments match encoding every
+  `embeddings` are not supplied. Assignments match encoding every
   occurrence up to the ~1e-7 floating-point effect of encoding a smaller
   batched set, which can flip a rare borderline segment; it is therefore
-  opt-in and off by default. With the static \`potion-base-8M\` model,
+  opt-in and off by default. With the static `potion-base-8M` model,
   encoding has no batch effect and the result is identical.
 
 - sort_by_length:
 
-  Passed to \[encode()\]. Groups segments of similar length into the
-  same batch so the model computes over less padding. Segment lengths
-  vary far more than document lengths — at clause level 60.1 token work
-  is padding in input order against 1.6 the single largest saving
-  available on this verb, measured at 1.9x. Off by default for the same
-  ~1e-7 reason as \`dedupe_segments\`.
+  Passed to [`encode()`](https://sonsoles.me/sbert/reference/encode.md).
+  Groups segments of similar length into the same batch so the model
+  computes over less padding. Segment lengths vary far more than
+  document lengths — at clause level 60.1% of token work is padding in
+  input order against 1.6% when sorted — so this is the single largest
+  saving available on this verb, measured at 1.9x. Off by default for
+  the same ~1e-7 reason as `dedupe_segments`.
 
 ## Value
 
 A base data frame with one row per document-topic pair and columns
-\`document_id\`, \`topic\`, \`gamma\`, and \`n_segments\`. \`gamma\`
-sums to 1 within each document; documents with no segments contribute no
-rows.
+`document_id`, `topic`, `gamma`, and `n_segments`. `gamma` sums to 1
+within each document; documents with no segments contribute no rows.
 
 ## Examples
 

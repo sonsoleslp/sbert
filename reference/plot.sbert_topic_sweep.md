@@ -1,6 +1,6 @@
 # Plot a Topic-Count Comparison
 
-\`type = "metrics"\` (the default) draws coherence, topic diversity, and
+`type = "metrics"` (the default) draws coherence, topic diversity, and
 between-topic variance against the candidate topic counts, marking the
 count with the highest coherence. A comparison over several segment
 levels draws one line per level in each panel, told apart by color,
@@ -28,29 +28,31 @@ plot(
 
 - x:
 
-  A comparison returned by \[compare_topics()\].
+  A comparison returned by
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
 
 - type:
 
-  \`"metrics"\` (default) or \`"fit"\`.
+  `"metrics"` (default) or `"fit"`.
 
 - main:
 
-  Overall title for \`type = "metrics"\`.
+  Overall title for `type = "metrics"`.
 
 - n_topics:
 
-  For \`type = "fit"\`, the candidate count whose models are drawn.
+  For `type = "fit"`, the candidate count whose models are drawn.
   Required when the comparison holds several candidates.
 
 - segment:
 
-  For \`type = "fit"\`, the segment levels to draw; defaults to every
+  For `type = "fit"`, the segment levels to draw; defaults to every
   level in the comparison.
 
 - n_terms, n_representatives:
 
-  For \`type = "fit"\`, passed to \[plot.sbert_topic_model()\].
+  For `type = "fit"`, passed to
+  [`plot.sbert_topic_model()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md).
 
 - ...:
 
@@ -58,14 +60,14 @@ plot(
 
 ## Value
 
-\`x\`, invisibly.
+`x`, invisibly.
 
 ## Details
 
-\`type = "fit"\` draws the per-topic fit report of
-\[plot.sbert_topic_model()\] for the retained model at \`n_topics\`, one
-figure per segment level, so the same topic count can be read across
-segmentations side by side.
+`type = "fit"` draws the per-topic fit report of
+[`plot.sbert_topic_model()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
+for the retained model at `n_topics`, one figure per segment level, so
+the same topic count can be read across segmentations side by side.
 
 ## Examples
 

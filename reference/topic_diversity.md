@@ -15,7 +15,8 @@ topic_diversity(object, n_terms = 10L)
 
 - object:
 
-  An \`sbert_topic_model\` returned by \[topics()\].
+  An `sbert_topic_model` returned by
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - n_terms:
 
@@ -24,12 +25,14 @@ topic_diversity(object, n_terms = 10L)
 
 ## Value
 
-A single proportion in \`(0, 1\]\`.
+A single proportion in `(0, 1]`.
 
 ## References
 
 Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic modeling in
-embedding spaces. TACL.
+embedding spaces. *Transactions of the Association for Computational
+Linguistics*, 8, 439–453.
+[doi:10.1162/tacl_a_00325](https://doi.org/10.1162/tacl_a_00325)
 
 ## Examples
 
@@ -39,7 +42,7 @@ text <- c(
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-topic_diversity(topics)
+topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+topic_diversity(topic_model)
 #> [1] 1
 ```

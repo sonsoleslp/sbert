@@ -1,8 +1,9 @@
 # Extract One Fitted Model from a Topic-Count Comparison
 
-Returns the model \[compare_topics()\] already fitted for a given topic
-count, so choosing a granularity from the comparison table costs no
-refitting.
+Returns the model
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+already fitted for a given topic count, so choosing a granularity from
+the comparison table costs no refitting.
 
 ## Usage
 
@@ -15,8 +16,9 @@ fitted(object, n_topics, segment = NULL, ...)
 
 - object:
 
-  A comparison returned by \[compare_topics()\] with \`keep_models =
-  TRUE\` (the default).
+  A comparison returned by
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+  with `keep_models = TRUE` (the default).
 
 - n_topics:
 
@@ -26,8 +28,8 @@ fitted(object, n_topics, segment = NULL, ...)
 - segment:
 
   The segment level to extract when the comparison spans several
-  (\`compare_topics(segment = c(...))\`); one of its levels. Leave
-  \`NULL\` for a single-level comparison.
+  (`compare_topics(segment = c(...))`); one of its levels. Leave `NULL`
+  for a single-level comparison.
 
 - ...:
 
@@ -35,7 +37,7 @@ fitted(object, n_topics, segment = NULL, ...)
 
 ## Value
 
-The \`sbert_topic_model\` fitted for that candidate.
+The `sbert_topic_model` fitted for that candidate.
 
 ## Examples
 

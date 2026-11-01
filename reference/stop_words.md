@@ -1,10 +1,10 @@
 # Obtain and Adjust the Topic Stop-Word List
 
 Returns the stop words excluded from term extraction and keyword
-candidates. \`add\` extends the list — the standard way to remove a
+candidates. `add` extends the list — the standard way to remove a
 corpus-wide vocabulary from topic labels (words every document shares
-carry no discriminative information). \`remove\` un-lists built-in
-entries whose surface form is meaningful in a specific corpus.
+carry no discriminative information). `remove` un-lists built-in entries
+whose surface form is meaningful in a specific corpus.
 
 ## Usage
 
@@ -16,7 +16,7 @@ stop_words(language = "en", add = NULL, remove = NULL)
 
 - language:
 
-  Currently only \`"en"\` is supported.
+  Currently only `"en"` is supported.
 
 - add:
 
@@ -34,11 +34,15 @@ A sorted character vector of lowercase stop words.
 ## Details
 
 For a fully custom list, pass any character vector straight to the
-\`stop_words\` argument of \[topics()\], \[compare_topics()\],
-\[topic_corpus()\], or \[keywords()\] — for example \`stop_words(add =
-c("covid", "patient"))\` to keep the defaults plus domain terms, a bare
-\`c("covid", "patient")\` to replace the list entirely, or
-\`character()\` to disable stop-word filtering.
+`stop_words` argument of
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md),
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+or [`keywords()`](https://sonsoles.me/sbert/reference/keywords.md) — for
+example `stop_words(add = c("covid", "patient"))` to keep the defaults
+plus domain terms, a bare `c("covid", "patient")` to replace the list
+entirely, or [`character()`](https://rdrr.io/r/base/character.html) to
+disable stop-word filtering.
 
 ## Examples
 

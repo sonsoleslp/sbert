@@ -14,7 +14,7 @@ print(x, ...)
 
 - x:
 
-  An \`sbert_topic_hierarchy\` object.
+  An `sbert_topic_hierarchy` object.
 
 - ...:
 

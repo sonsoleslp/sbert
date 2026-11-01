@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -718,7 +718,7 @@ topics in each message.</li>
 <code><a href="../reference/topic_corpus.html">topic_corpus()</a></code> encodes the text once so that you can
 fit many models without encoding again.</li>
 <li>To model the original messages in their ten source languages, use
-<code>topics(feedback_translations$feedback, n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")</code>.</li>
+<code>topics(feedback_translations, column = "feedback", n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")</code>.</li>
 </ul>
 <p>The article <em>Topic Modeling COVID-19 Research Abstracts</em> on
 the package website works through a larger corpus of long research

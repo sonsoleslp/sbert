@@ -1,6 +1,13 @@
-# Qualitative Colour Palette for Topics
+# Qualitative Color Palette for Topics
 
-A color-blind-friendly qualitative palette used by the package plots.
+The qualitative palette the package plots use to tell topics apart: `n`
+colors from the qualitative HCL palette `"Dark 3"`
+([`grDevices::hcl.colors()`](https://rdrr.io/r/grDevices/palettes.html)),
+which vary only in hue at fixed lightness and chroma, so no topic looks
+more prominent than another. Pass your own vector to the `colors`
+argument of
+[`plot.sbert_topic_model()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
+to override it.
 
 ## Usage
 
@@ -16,7 +23,7 @@ topic_palette(n)
 
 ## Value
 
-A character vector of \`n\` hex colors.
+A character vector of `n` hex colors.
 
 ## Examples
 

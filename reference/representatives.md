@@ -2,14 +2,14 @@
 
 Selects, for each fitted topic, the text units (documents, sentences, or
 clause segments) that best evidence it. The default ranking is by
-\*distinctiveness margin\* — the unit's cosine distance to its
-second-best centroid minus the distance to its own — rather than by raw
-closeness. Raw closeness systematically favors long units, because topic
-centroids are averages of whole-document embeddings and long units
-resemble whole documents; the margin instead rewards units that are
-unambiguously about one topic and no other, which are naturally short
-and pointed. Ties break toward the shorter unit, then alphabetically, so
-the selection is fully deterministic.
+*distinctiveness margin* — the unit's cosine distance to its second-best
+centroid minus the distance to its own — rather than by raw closeness.
+Raw closeness systematically favors long units, because topic centroids
+are averages of whole-document embeddings and long units resemble whole
+documents; the margin instead rewards units that are unambiguously about
+one topic and no other, which are naturally short and pointed. Ties
+break toward the shorter unit, then alphabetically, so the selection is
+fully deterministic.
 
 ## Usage
 
@@ -29,20 +29,23 @@ representatives(
 
 - object:
 
-  A fitted \[topics()\] model.
+  A fitted [`topics()`](https://sonsoles.me/sbert/reference/topics.md)
+  model.
 
 - text:
 
-  Character vector of candidate units, for example the \`text\` column
-  of \[segment()\]. \`NULL\` (the default) ranks the units the model was
-  fitted on — its documents, or its segments for a model fitted with
-  \`segment =\` — from their stored embeddings, with no encoding.
+  Character vector of candidate units, for example the `text` column of
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). `NULL`
+  (the default) ranks the units the model was fitted on — its documents,
+  or its segments for a model fitted with `segment =` — from their
+  stored embeddings, with no encoding.
 
 - model:
 
-  A loaded \[sbert_model\]\[load_model()\], a pinned model name, or
-  \`NULL\` for the default model; ignored when \`embeddings\` are
-  supplied.
+  A loaded
+  [sbert_model](https://sonsoles.me/sbert/reference/load_model.md), a
+  pinned model name, or `NULL` for the default model; ignored when
+  `embeddings` are supplied.
 
 - embeddings:
 
@@ -54,21 +57,23 @@ representatives(
 
 - rank:
 
-  \`"margin"\` (default) or \`"distance"\` (raw closeness to the topic
+  `"margin"` (default) or `"distance"` (raw closeness to the topic
   centroid).
 
 - batch_size:
 
-  Batch size passed to \[encode()\] when \`model\` is used.
+  Batch size passed to
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) when
+  `model` is used.
 
 ## Value
 
-A base data frame with columns \`topic\`, \`rank\`, \`text\`,
-\`distance\` (to the unit's own centroid), and \`margin\`, ordered by
-topic and rank. When the fitted units are ranked (\`text = NULL\`),
-\`document_id\` — and \`segment\`, for a segmented model — sit between
-\`rank\` and \`text\` so every example can be traced to its source.
-Topics to which no unit is assigned contribute no rows.
+A base data frame with columns `topic`, `rank`, `text`, `distance` (to
+the unit's own centroid), and `margin`, ordered by topic and rank. When
+the fitted units are ranked (`text = NULL`), `document_id` — and
+`segment`, for a segmented model — sit between `rank` and `text` so
+every example can be traced to its source. Topics to which no unit is
+assigned contribute no rows.
 
 ## Examples
 

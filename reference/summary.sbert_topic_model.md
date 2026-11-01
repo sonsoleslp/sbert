@@ -1,7 +1,7 @@
 # Summarize a Semantic Topic Model
 
 Prints a compact scientific report – corpus size, cluster separation,
-coherence, and topic_diversity – and returns a tidy per-topic quality
+coherence, and topic diversity – and returns a tidy per-topic quality
 table.
 
 ## Usage
@@ -15,15 +15,17 @@ summary(object, measure = c("npmi", "umass"), n_terms = 10L, ...)
 
 - object:
 
-  An \`sbert_topic_model\` returned by \[topics()\].
+  An `sbert_topic_model` returned by
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - measure:
 
-  Coherence measure passed to \[coherence()\].
+  Coherence measure passed to
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md).
 
 - n_terms:
 
-  Number of top terms per topic used for coherence and topic_diversity.
+  Number of top terms per topic used for coherence and topic diversity.
 
 - ...:
 
@@ -31,8 +33,8 @@ summary(object, measure = c("npmi", "umass"), n_terms = 10L, ...)
 
 ## Value
 
-Invisibly, a data frame with one row per topic containing \`topic\`,
-\`label\`, \`n_documents\`, \`proportion\`, and \`coherence\`.
+Invisibly, a data frame with one row per topic containing `topic`,
+`label`, `n_documents`, `proportion`, and `coherence`.
 
 ## Examples
 
@@ -42,8 +44,8 @@ text <- c(
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-summary(topics)
+topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+summary(topic_model)
 #> Semantic topic model summary
 #>   documents:            4
 #>   topics:               2

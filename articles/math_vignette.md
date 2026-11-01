@@ -531,7 +531,7 @@ plot(topic_model, type = "fit", n_terms = 8, n_representatives = 3)
   encodes the text once so that you can fit many models without encoding
   again.
 - To model the original messages in their ten source languages, use
-  `topics(feedback_translations$feedback, n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")`.
+  `topics(feedback_translations, column = "feedback", n_topics = 6, model = "paraphrase-multilingual-MiniLM-L12-v2")`.
 
 The article *Topic Modeling COVID-19 Research Abstracts* on the package
 website works through a larger corpus of long research abstracts.

@@ -1,6 +1,9 @@
 # Locate the sbert Model Cache
 
-Locate the sbert Model Cache
+The directory under which downloaded and custom models are stored, from
+[`tools::R_user_dir()`](https://rdrr.io/r/tools/userdir.html) with
+`which = "cache"`. It is only a path: calling this function creates
+nothing.
 
 ## Usage
 

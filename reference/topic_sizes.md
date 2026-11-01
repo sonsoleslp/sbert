@@ -1,9 +1,10 @@
 # Topic Sizes on the Distinct and Weighted Scales
 
 Returns the size of every topic as fitted (distinct units) and, when
-\`weights\` are supplied, on the weighted scale — for example the
-original row frequencies from \[dedupe()\]. The gap between
-\`proportion\` and \`weighted_share\` measures how template-driven a
+`weights` are supplied, on the weighted scale — for example the original
+row frequencies from
+[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md). The gap
+between `proportion` and `weighted_share` measures how template-driven a
 topic is: a topic whose weighted share far exceeds its distinct share is
 a small repertoire of heavily repeated texts.
 
@@ -17,31 +18,33 @@ topic_sizes(object, weights = NULL, by = c("segment", "document"))
 
 - object:
 
-  A fitted \[topics()\] model.
+  A fitted [`topics()`](https://sonsoles.me/sbert/reference/topics.md)
+  model.
 
 - weights:
 
   Optional numeric vector with one non-negative weight per unit on the
   chosen scale — per fitted document (in document order), typically the
-  \`n\` column of \[dedupe()\], or per segment when \`by = "segment"\`
-  on a segmented model.
+  `n` column of
+  [`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md), or per
+  segment when `by = "segment"` on a segmented model.
 
 - by:
 
-  \`"segment"\` (default; every fitted unit) or \`"document"\` (the
-  distinct source documents).
+  `"segment"` (default; every fitted unit) or `"document"` (the distinct
+  source documents).
 
 ## Value
 
-A base data frame with one row per topic and columns \`topic\`,
-\`label\`, \`n_documents\`, and \`proportion\`, plus \`n_weighted\` and
-\`weighted_share\` when \`weights\` are supplied.
+A base data frame with one row per topic and columns `topic`, `label`,
+`n_documents`, and `proportion`, plus `n_weighted` and `weighted_share`
+when `weights` are supplied.
 
 ## Details
 
-For a model fitted with \`segment = "sentence"\`, \`"clause"\`, or
-\`"phrase"\`, \`by\` picks the scale: \`"segment"\` counts the fitted
-segments, \`"document"\` counts the source documents that have at least
+For a model fitted with `segment = "sentence"`, `"clause"`, or
+`"phrase"`, `by` picks the scale: `"segment"` counts the fitted
+segments, `"document"` counts the source documents that have at least
 one segment in the topic. A document that spans several topics is
 counted in each, so document proportions need not sum to one. On a
 document-level model the two scales coincide.

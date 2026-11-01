@@ -31,18 +31,20 @@ terms(
 
 - x:
 
-  A fitted model from \[topics()\].
+  A fitted model from
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - n:
 
-  Terms returned per topic, or \`NULL\` for the whole vocabulary (useful
-  together with \`smoothing\` to obtain a full \\p(term \| topic)\\
-  distribution). Defaults to the model's fitted \`n_terms\`.
+  Terms returned per topic, or `NULL` for the whole vocabulary (useful
+  together with `smoothing` to obtain a full \\p(term \| topic)\\
+  distribution). Defaults to the model's fitted `n_terms`.
 
 - stop_words:
 
   Character vector excluded from terms. Defaults to the model's fitted
-  list; see \[stop_words()\].
+  list; see
+  [`stop_words()`](https://sonsoles.me/sbert/reference/stop_words.md).
 
 - min_term_frequency:
 
@@ -54,7 +56,7 @@ terms(
 
 - weighting:
 
-  Class-based term weighting, \`"ctfidf"\` or \`"bm25"\`.
+  Class-based term weighting, `"ctfidf"` or `"bm25"`.
 
 - reduce_frequent_words:
 
@@ -64,40 +66,39 @@ terms(
 - stem:
 
   Collapse inflected forms onto a shared Porter stem, displaying the
-  most frequent surface form. Requires \`SnowballC\`.
+  most frequent surface form. Requires `SnowballC`.
 
 - numbers:
 
-  How to treat purely numeric tokens: \`"keep"\` or \`"remove"\` (drop
+  How to treat purely numeric tokens: `"keep"` or `"remove"` (drop
   digit-only tokens such as years and counts). Defaults to the model's
   fitted setting.
 
 - roman_numerals:
 
-  How to treat Roman-numeral tokens: \`"keep"\` or \`"remove"\` (drop
-  chapter/section markers such as \`ii\`, \`iv\`, up to 100). Defaults
-  to the model's fitted setting.
+  How to treat Roman-numeral tokens: `"keep"` or `"remove"` (drop
+  chapter/section markers such as `ii`, `iv`, up to 100). Defaults to
+  the model's fitted setting.
 
 - section_numbers:
 
   How to treat section, reference, and list numbering — multi-level
-  indices such as \`1.2.3\` and enumeration markers such as \`1.\`,
-  \`2.\`: \`"keep"\` or \`"remove"\`. Defaults to the model's fitted
-  setting.
+  indices such as `1.2.3` and enumeration markers such as `1.`, `2.`:
+  `"keep"` or `"remove"`. Defaults to the model's fitted setting.
 
 - smoothing:
 
-  Additive (Dirichlet) smoothing for the \`beta\` column. Only terms a
-  topic actually used are returned, so with \`smoothing = 0\` (default)
-  each topic's \`beta\` sums to one, while any positive value reserves
+  Additive (Dirichlet) smoothing for the `beta` column. Only terms a
+  topic actually used are returned, so with `smoothing = 0` (default)
+  each topic's `beta` sums to one, while any positive value reserves
   mass for the zero-count vocabulary and the returned rows sum to less
   than one.
 
 - sort_by:
 
-  Order terms within each topic by \`"score"\` (default, the class-based
-  weight — distinctive words) or \`"beta"\` (raw \\p(term \| topic)\\ —
-  the words the topic uses most). \`n\` is applied after ordering.
+  Order terms within each topic by `"score"` (default, the class-based
+  weight — distinctive words) or `"beta"` (raw \\p(term \| topic)\\ —
+  the words the topic uses most). `n` is applied after ordering.
 
 - ...:
 
@@ -105,10 +106,9 @@ terms(
 
 ## Value
 
-A base data frame with one row per topic and term: \`topic\`, \`label\`,
-\`term\`, \`rank\`, \`score\` (the class-based weight), \`frequency\`
-(within-topic count), and \`beta\`, the multinomial \\p(term \|
-topic)\\.
+A base data frame with one row per topic and term: `topic`, `label`,
+`term`, `rank`, `score` (the class-based weight), `frequency`
+(within-topic count), and `beta`, the multinomial \\p(term \| topic)\\.
 
 ## Examples
 

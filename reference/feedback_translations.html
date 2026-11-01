@@ -25,7 +25,7 @@ their original language, and a few are identical to their translation."><meta pr
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -79,7 +79,7 @@ their original language, and a few are identical to their translation.</p>
     <p>A data frame with 8,757 rows and 2 character columns:</p><dl><dt>feedback</dt>
 <dd><p>The original feedback message in the source language.</p></dd>
 
-  <dt>translation</dt>
+<dt>translation</dt>
 <dd><p>The English translation of the message.</p></dd>
 
 
@@ -89,9 +89,9 @@ long.</p>
     <div class="section level2">
     <h2 id="source">Source<a class="anchor" aria-label="anchor" href="#source"></a></h2>
     <p>Anonymized export of the AI mathematics feedback of the Levebee
-  educational application (&lt;https://www.levebee.com/&gt;), December 2025. The
-  messages address learners generically and contain no personal names or
-  identifiers.</p>
+educational application (<a href="https://www.levebee.com/" class="external-link">https://www.levebee.com/</a>), December 2025. The
+messages address learners generically and contain no personal names or
+identifiers.</p>
     </div>
 
     <div class="section level2">
@@ -112,10 +112,17 @@ long.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5 There are five pictures in the gray box. Where is there one picture less?</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6                                            How do the pictures alternate?</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu"><a href="segment.html">segment</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">$</span><span class="va">translation</span>, <span class="fl">5</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  level <span class="op">=</span> <span class="st">"sentence"</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Repeated messages collapse to one row with their count.</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">with</a></span><span class="op">(</span><span class="va">feedback_translations</span>, <span class="fu"><a href="dedupe.html">dedupe</a></span><span class="op">(</span><span class="va">translation</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                                                        text n</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                                        Do you know what “one more” means? 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                     There should be two more in the red than in the blue. 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                                   If it’s not a person, what could it be? 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                            What does “everyone after the first one” mean? 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 There are five pictures in the gray box. Where is there one picture less? 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                                            How do the pictures alternate? 1</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">with</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="segment.html">segment</a></span><span class="op">(</span><span class="va">translation</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   document_id document_name segment</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1           1                     1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2           2                     1</span>

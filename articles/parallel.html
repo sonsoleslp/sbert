@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -110,12 +110,12 @@ once with <code><a href="../reference/encode.html">encode()</a></code> and pass 
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/encode.html">encode</a></span><span class="op">(</span><span class="va">abstracts</span><span class="op">$</span><span class="va">Abstract</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">model_8</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span><span class="va">abstracts</span><span class="op">$</span><span class="va">Abstract</span>, n_topics <span class="op">=</span> <span class="fl">8</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
-<span><span class="va">model_12</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span><span class="va">abstracts</span><span class="op">$</span><span class="va">Abstract</span>, n_topics <span class="op">=</span> <span class="fl">12</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">model_8</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span><span class="va">abstracts</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, n_topics <span class="op">=</span> <span class="fl">8</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
+<span><span class="va">model_12</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span><span class="va">abstracts</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, n_topics <span class="op">=</span> <span class="fl">12</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/topic_corpus.html">topic_corpus()</a></code> goes one step further. It stores both the
 embeddings and the tokenized words, so later fits repeat neither:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span><span class="va">abstracts</span><span class="op">$</span><span class="va">Abstract</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span><span class="va">abstracts</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">model_8</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
@@ -179,7 +179,9 @@ threads than that can make it slower.</p>
 tokenize and split documents in parallel, and
 <code><a href="../reference/compare_topics.html">compare_topics()</a></code> fits its topic counts in parallel.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span><span class="va">abstracts</span><span class="op">$</span><span class="va">Abstract</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">prepared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topic_corpus.html">topic_corpus</a></span><span class="op">(</span></span>
+<span>  <span class="va">abstracts</span>, column <span class="op">=</span> <span class="st">"Abstract"</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, cores <span class="op">=</span> <span class="fl">4</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">prepared</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 <p><code>cores</code> uses <code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply()</a></code>, which
 works on Linux and macOS. On Windows, and for inputs of fewer than 2,000
@@ -218,7 +220,8 @@ stores every sentence with its abstract, so <code><a href="../reference/topic_ga
 needs no further encoding:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sentence_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/topics.html">topics</a></span><span class="op">(</span></span>
-<span>  <span class="va">abstracts</span><span class="op">$</span><span class="va">Abstract</span>,</span>
+<span>  <span class="va">abstracts</span>,</span>
+<span>  column <span class="op">=</span> <span class="st">"Abstract"</span>,</span>
 <span>  n_topics <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>  segment <span class="op">=</span> <span class="st">"sentence"</span>,</span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>

@@ -36,9 +36,9 @@ characters long.
 ## Source
 
 Anonymized export of the AI mathematics feedback of the Levebee
-educational application (\<https://www.levebee.com/\>), December 2025.
-The messages address learners generically and contain no personal names
-or identifiers.
+educational application (<https://www.levebee.com/>), December 2025. The
+messages address learners generically and contain no personal names or
+identifiers.
 
 ## Examples
 
@@ -59,10 +59,17 @@ head(feedback_translations)
 #> 5 There are five pictures in the gray box. Where is there one picture less?
 #> 6                                            How do the pictures alternate?
 
-segment(
-  head(feedback_translations$translation, 5),
-  level = "sentence"
-)
+# Repeated messages collapse to one row with their count.
+head(with(feedback_translations, dedupe(translation)))
+#>                                                                        text n
+#> 1                                        Do you know what “one more” means? 2
+#> 2                     There should be two more in the red than in the blue. 3
+#> 3                                   If it’s not a person, what could it be? 2
+#> 4                            What does “everyone after the first one” mean? 1
+#> 5 There are five pictures in the gray box. Where is there one picture less? 2
+#> 6                                            How do the pictures alternate? 1
+
+with(head(feedback_translations, 5), segment(translation, level = "sentence"))
 #>   document_id document_name segment
 #> 1           1                     1
 #> 2           2                     1

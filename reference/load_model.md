@@ -1,8 +1,9 @@
 # Load a Pinned Sentence-BERT Model
 
 Loads already-downloaded model artifacts. The function never downloads
-model files or native libraries. See \[models()\] for the available
-pinned models.
+model files or native libraries. See
+[`models()`](https://sonsoles.me/sbert/reference/models.md) for the
+available pinned models.
 
 ## Usage
 
@@ -20,35 +21,42 @@ load_model(
 
 - model:
 
-  Name of a pinned model listed by \[models()\].
+  Name of a pinned model listed by
+  [`models()`](https://sonsoles.me/sbert/reference/models.md).
 
 - cache_dir:
 
-  Cache root returned by \[cache_dir()\].
+  Cache root returned by
+  [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md).
 
 - backend:
 
-  ONNX execution backend accepted by \[onnxr::onnx_model()\].
+  ONNX execution backend accepted by
+  [`onnxr::onnx_model()`](http://corymccartan.com/onnxr/reference/onnx_model.md).
 
 - threads:
 
-  Positive number of inference threads, or \`"auto"\` to use the
-  machine's performance-core count. Inference is the dominant cost of
-  \[encode()\] — about 88 that threads. The default \`1\` is deliberate:
-  it keeps runs reproducible across machines and keeps the package
-  within the two-core limit that check environments impose.
+  Positive number of inference threads, or `"auto"` to use the machine's
+  performance-core count. Inference is the dominant cost of
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) — about
+  88% of a batch — and it is the only part of the package that threads.
+  The default `1` is deliberate: it keeps runs reproducible across
+  machines and keeps the package within the two-core limit that check
+  environments impose.
 
   Raising it is free of numerical consequence — output was
-  \`identical()\` at 1, 2, 4, 6 and 8 threads across all 45 measured
-  runs — but expect a modest gain, bounded by \*performance\* cores
-  rather than logical ones. Over three repetitions at 200, 600 and 1,500
-  documents on an Apple M4 (4 performance + 6 efficiency), median
-  speedups against a single thread were 1.22x at two threads, 1.29x at
-  four, 1.22x at six and 1.18x at eight. Four threads was fastest at the
-  two larger sizes (1.34x at 1,500 documents); beyond that the
-  efficiency cores add contention rather than throughput. Threaded
-  timings are also noisy — run-to-run spread reached 26 under 3 Set
-  \`threads = "auto"\` for the knee of that curve, or an integer to pin
+  [`identical()`](https://rdrr.io/r/base/identical.html) at 1, 2, 4, 6
+  and 8 threads across all 45 measured runs — but expect a modest gain,
+  bounded by *performance* cores rather than logical ones. Over three
+  repetitions at 200, 600 and 1,500 documents on an Apple M4 (4
+  performance + 6 efficiency), median speedups against a single thread
+  were 1.22x at two threads, 1.29x at four, 1.22x at six and 1.18x at
+  eight. Four threads was fastest at the two larger sizes (1.34x at
+  1,500 documents); beyond that the efficiency cores add contention
+  rather than throughput. Threaded timings are also noisy — run-to-run
+  spread reached 26% at the smallest size against under 3%
+  single-threaded — so benchmark with repetition before tuning. Set
+  `threads = "auto"` for the knee of that curve, or an integer to pin
   it.
 
 - verify:
@@ -57,7 +65,14 @@ load_model(
 
 ## Value
 
-An object of class \`sbert_model\`.
+An object of class `sbert_model` (class
+`c("sbert_static_model", "sbert_model")` for `potion-base-8M`): a list
+holding the model's identity (`id`, `short_name`, `revision`), its
+encoding settings (`dimension`, `max_length`, `pooling`, `prefix`), the
+`backend` and `threads` it runs with, and the loaded tokenizer and
+model. Pass it to the `model` argument of
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) and the
+topic verbs.
 
 ## Examples
 

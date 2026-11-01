@@ -1,8 +1,9 @@
 # Deprecated: Compare Topic Counts
 
-\`select_topics()\` is the former name of \[compare_topics()\]. It never
-selected a count, it compared them, so it was renamed in sbert 0.5.4.
-This alias forwards every argument and warns once per session.
+`select_topics()` is the former name of
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
+It never selected a count, it compared them, so it was renamed in sbert
+0.5.4. This alias forwards every argument and warns once per session.
 
 ## Usage
 
@@ -14,11 +15,13 @@ select_topics(...)
 
 - ...:
 
-  Passed to \[compare_topics()\].
+  Passed to
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
 
 ## Value
 
-See \[compare_topics()\].
+See
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
 
 ## Examples
 

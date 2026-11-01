@@ -1,7 +1,7 @@
 # Print a Loaded Model
 
 Shows the model's identity and the settings inference will run under:
-pinned revision, embedding dimensions, backend, and thread count.
+Hugging Face id, pinned revision, embedding dimensions, and backend.
 
 ## Usage
 
@@ -14,7 +14,7 @@ print(x, ...)
 
 - x:
 
-  An \`sbert_model\` object.
+  An `sbert_model` object.
 
 - ...:
 

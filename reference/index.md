@@ -122,7 +122,7 @@ Deterministic base-graphics plots, hierarchies, and reports.
 - [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
   : Compute Cosine Similarity
 - [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md)
-  : Qualitative Colour Palette for Topics
+  : Qualitative Color Palette for Topics
 
 ## Printing and conversion
 

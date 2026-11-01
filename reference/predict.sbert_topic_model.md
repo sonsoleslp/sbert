@@ -2,9 +2,8 @@
 
 Predicts the topic of unseen documents by embedding them and assigning
 each to the nearest stored topic centroid under cosine distance. The
-fitted model is not modified. Supply either a loaded \`model\` (to embed
-\`text\`) or a precomputed embedding matrix whose rows align with
-\`text\`.
+fitted model is not modified. Supply either a loaded `model` (to embed
+`text`) or a precomputed embedding matrix whose rows align with `text`.
 
 ## Usage
 
@@ -17,20 +16,23 @@ predict(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 
 - object:
 
-  A fitted \[topics()\] model.
+  A fitted [`topics()`](https://sonsoles.me/sbert/reference/topics.md)
+  model.
 
 - text:
 
-  Character vector of new documents. A model fitted with \`segment =
-  "sentence"\`, \`"clause"\`, or \`"phrase"\` splits them the same way
-  first (with the fitted \`max_tokens\`, \`merge_below\`, and
-  \`min_content\`) and assigns every segment.
+  Character vector of new documents. A model fitted with
+  `segment = "sentence"`, `"clause"`, or `"phrase"` splits them the same
+  way first (with the fitted `max_tokens`, `merge_below`, and
+  `min_content`) and assigns every segment.
 
 - model:
 
-  A loaded \[sbert_model\]\[load_model()\], a pinned model name, or
-  \`NULL\` for the default model; ignored when \`embeddings\` are
-  supplied. The embedding dimension must match the fitted model.
+  A loaded
+  [sbert_model](https://sonsoles.me/sbert/reference/load_model.md), a
+  pinned model name, or `NULL` for the default model; ignored when
+  `embeddings` are supplied. The embedding dimension must match the
+  fitted model.
 
 - embeddings:
 
@@ -39,7 +41,9 @@ predict(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 
 - batch_size:
 
-  Batch size passed to \[encode()\] when \`model\` is used.
+  Batch size passed to
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) when
+  `model` is used.
 
 - ...:
 
@@ -47,11 +51,11 @@ predict(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 
 ## Value
 
-A base data frame with one row per document and columns \`document_id\`,
-\`document_name\`, \`text\`, \`topic\`, \`label\` (the fitted topic
-label), and \`distance\` (cosine distance to the assigned centroid). For
-a segmented model, one row per segment, with \`document_id\` naming the
-source document and \`segment\` its position within it.
+A base data frame with one row per document and columns `document_id`,
+`document_name`, `text`, `topic`, `label` (the fitted topic label), and
+`distance` (cosine distance to the assigned centroid). For a segmented
+model, one row per segment, with `document_id` naming the source
+document and `segment` its position within it.
 
 ## Examples
 

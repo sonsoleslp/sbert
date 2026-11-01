@@ -15,7 +15,7 @@ plot(x, main = "Topic hierarchy", cex = 0.8, ...)
 
 - x:
 
-  An \`sbert_topic_hierarchy\` object.
+  An `sbert_topic_hierarchy` object.
 
 - main:
 
@@ -27,7 +27,8 @@ plot(x, main = "Topic hierarchy", cex = 0.8, ...)
 
 - ...:
 
-  Passed to \[plot.dendrogram()\].
+  Passed to
+  [`plot.dendrogram()`](https://rdrr.io/r/stats/dendrogram.html).
 
 ## Value
 

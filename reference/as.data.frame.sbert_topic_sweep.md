@@ -1,7 +1,7 @@
 # Coerce a Topic-Count Comparison to a Data Frame
 
-Drops the retained models and the sweep attributes, leaving the plain
-table of candidates and their measures for further manipulation.
+Drops the retained models and the sweep class, leaving the plain table
+of candidates and their measures.
 
 ## Usage
 
@@ -14,7 +14,7 @@ as.data.frame(x, ...)
 
 - x:
 
-  An \`sbert_topic_sweep\` object.
+  An `sbert_topic_sweep` object.
 
 - ...:
 
@@ -22,7 +22,10 @@ as.data.frame(x, ...)
 
 ## Value
 
-A plain data frame without the attached models or sweep attributes.
+A base data frame with one row per candidate and columns `n_topics`,
+`coherence`, `topic_diversity`, and `explained`, preceded by `segment`
+when several levels were compared. The coherence measure stays in the
+`measure` attribute; the fitted models are dropped.
 
 ## Examples
 

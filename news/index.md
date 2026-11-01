@@ -1,5 +1,60 @@
 # Changelog
 
+## sbert 0.5.11
+
+- Documentation revision. roxygen markdown is now switched on
+  (`Roxygen: list(markdown = TRUE)`): the help pages had shown raw
+  backticks and `[topic()]` brackets instead of code and links, and
+  every `%` silently cut the rest of its line (for example the padding
+  and cache-cost figures in
+  [`?encode`](https://sonsoles.me/sbert/reference/encode.md) and
+  [`?load_model`](https://sonsoles.me/sbert/reference/load_model.md)).
+  Links to the generics now point at this package’s methods
+  ([`terms()`](https://rdrr.io/r/stats/terms.html),
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`predict()`](https://rdrr.io/r/stats/predict.html),
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html),
+  [`fitted()`](https://rdrr.io/r/stats/fitted.values.html)).
+- [`?topics`](https://sonsoles.me/sbert/reference/topics.md) describes
+  the fields of a fitted model and the verbs that read them, its error
+  conditions, and its references (Reimers and Gurevych 2019;
+  Grootendorst 2022; Mendonca and Figueira 2025; Lloyd 1982). References
+  were added to
+  [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
+  (Bezdek 1981),
+  [`keywords()`](https://sonsoles.me/sbert/reference/keywords.md)
+  (Carbonell and Goldstein 1998; KeyBERT), and
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+  (Bouma 2009 for NPMI).
+- Corrected statements: [`print()`](https://rdrr.io/r/base/print.html)
+  of a topic model and of a loaded model list what they actually show;
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
+  says that [`topics()`](https://sonsoles.me/sbert/reference/topics.md)
+  takes the tokenization settings from the corpus;
+  [`?covid`](https://sonsoles.me/sbert/reference/covid.md) gives 3,670
+  distinct abstracts and
+  [`?encode`](https://sonsoles.me/sbert/reference/encode.md) 177
+  repeated ones;
+  [`?topic_palette`](https://sonsoles.me/sbert/reference/topic_palette.md)
+  names the HCL palette it returns;
+  [`?as.data.frame.sbert_topic_sweep`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md)
+  keeps the `measure` attribute;
+  [`?topic_membership`](https://sonsoles.me/sbert/reference/topic_membership.md)
+  and
+  [`?topic_gamma`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  no longer say “topic_membership” where they mean membership.
+- Examples, the README, and the articles use the package’s verbs instead
+  of reaching into results:
+  [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md),
+  [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
+  and
+  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  replace `$topics` and `$documents`, and
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
+  take `column =` instead of `df$column`. The README now shows sentence
+  labels, matching 0.5.9.
+
 ## sbert 0.5.10
 
 - New `name_topics(object, labels)` names the topics of a fitted model,

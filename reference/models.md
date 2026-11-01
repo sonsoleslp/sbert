@@ -1,9 +1,9 @@
 # List the Available Pinned Sentence-BERT Models
 
 Every supported model is locked to an immutable Hugging Face revision
-and verified by byte size and SHA-256 before use. Pass the \`model\`
-column value to any verb that takes a model, for example \`encode(text,
-model = "bge-small-en-v1.5")\`.
+and verified by byte size and SHA-256 before use. Pass the `model`
+column value to any verb that takes a model, for example
+`encode(text, model = "bge-small-en-v1.5")`.
 
 ## Usage
 
@@ -15,16 +15,17 @@ models(detail = FALSE)
 
 - detail:
 
-  Whether to include the technical columns. The default \`FALSE\`
-  returns the menu (\`model\`, \`dimensions\`, \`max_tokens\`,
-  \`languages\`, \`size_mb\`); \`TRUE\` adds \`pooling\` (\`"mean"\` or
-  \`"cls"\`), \`prefix\` (text automatically prepended by \[encode()\]),
-  \`engine\` (\`"onnx"\` or \`"static"\`), \`license\`, \`id\`, and
-  \`revision\`.
+  Whether to include the technical columns. The default `FALSE` returns
+  the menu (`model`, `dimensions`, `max_tokens`, `languages`,
+  `size_mb`); `TRUE` adds `pooling` (`"mean"` or `"cls"`), `prefix`
+  (text automatically prepended by
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md)), `engine`
+  (`"onnx"` or `"static"`), `license`, `id`, and `revision`.
 
 ## Value
 
-A data frame with one row per model.
+A base data frame with one row per pinned model and the columns
+described under `detail`.
 
 ## Examples
 

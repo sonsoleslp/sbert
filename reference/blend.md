@@ -2,11 +2,11 @@
 
 Computes context-aware embeddings for text segments: each segment vector
 is decomposed against its parent document embedding, and the blend keeps
-\`alpha\` of the segment's context-orthogonal residual plus \`1 -
-alpha\` of the document direction, renormalized to unit length: \$\$m =
-normalize(\alpha (u - (u \cdot d) d) + (1 - \alpha) d)\$\$ with \`u\`
-the unit-normalized segment embedding and \`d\` the unit-normalized
-parent document embedding.
+`alpha` of the segment's context-orthogonal residual plus `1 - alpha` of
+the document direction, renormalized to unit length: \$\$m =
+normalize(\alpha (u - (u \cdot d) d) + (1 - \alpha) d)\$\$ with `u` the
+unit-normalized segment embedding and `d` the unit-normalized parent
+document embedding.
 
 ## Usage
 
@@ -26,46 +26,53 @@ blend(
 
 - segments:
 
-  A data frame from \[segment()\] (or any data frame with integer
-  \`document_id\` and character \`text\` columns), one row per segment.
+  A data frame from
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) (or any
+  data frame with integer `document_id` and character `text` columns),
+  one row per segment.
 
 - documents:
 
   The character vector of documents that was segmented;
-  \`segments\$document_id\` indexes into it. Required unless both
-  embedding matrices are supplied.
+  `segments$document_id` indexes into it. Required unless both embedding
+  matrices are supplied.
 
 - model:
 
-  A loaded sbert model, a pinned model name, or \`NULL\` for the session
-  default (see \[load_model()\]). Ignored when embeddings are supplied.
+  A loaded sbert model, a pinned model name, or `NULL` for the session
+  default (see
+  [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)).
+  Ignored when embeddings are supplied.
 
 - alpha:
 
-  Blend weight in \`\[0, 1\]\` for the segment's context-orthogonal
-  residual. Default \`0.5\`.
+  Blend weight in `[0, 1]` for the segment's context-orthogonal
+  residual. Default `0.5`.
 
 - embeddings:
 
   Optional precomputed segment embeddings (one row per row of
-  \`segments\`). Supply together with \`document_embeddings\` to skip
+  `segments`). Supply together with `document_embeddings` to skip
   encoding.
 
 - document_embeddings:
 
   Optional precomputed document embeddings (one row per document;
-  \`segments\$document_id\` indexes its rows).
+  `segments$document_id` indexes its rows).
 
 - batch_size:
 
   Number of texts encoded per model call when encoding is needed.
-  Default \`32\`.
+  Default `32`.
 
 ## Value
 
 A numeric matrix with one L2-normalized row per segment, suitable for
-the \`embeddings\` argument of \[topics()\], \[representatives()\], and
-\[predict.sbert_topic_model()\].
+the `embeddings` argument of
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md),
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
+and
+[`predict.sbert_topic_model()`](https://sonsoles.me/sbert/reference/predict.sbert_topic_model.md).
 
 ## Details
 
@@ -78,8 +85,8 @@ segment texts from different documents get different blended vectors,
 which keeps repeated boilerplate from collapsing into a single
 artificial topic.
 
-\`alpha = 0\` returns the parent document embedding; \`alpha = 1\` keeps
-only what the segment says beyond its document; the default \`0.5\`
+`alpha = 0` returns the parent document embedding; `alpha = 1` keeps
+only what the segment says beyond its document; the default `0.5`
 balances the two. A segment exactly collinear with its document falls
 back to the document vector.
 

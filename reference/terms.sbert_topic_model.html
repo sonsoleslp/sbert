@@ -13,7 +13,7 @@ the clustering or the encoding."><meta property="og:image" content="https://sons
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -77,18 +77,18 @@ the clustering or the encoding.</p>
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>A fitted model from [topics()].</p></dd>
+<dd><p>A fitted model from <code><a href="topics.html">topics()</a></code>.</p></dd>
 
 
 <dt id="arg-n">n<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
-<dd><p>Terms returned per topic, or `NULL` for the whole vocabulary
-(useful together with `smoothing` to obtain a full \(p(term | topic)\)
-distribution). Defaults to the model's fitted `n_terms`.</p></dd>
+<dd><p>Terms returned per topic, or <code>NULL</code> for the whole vocabulary
+(useful together with <code>smoothing</code> to obtain a full \(p(term | topic)\)
+distribution). Defaults to the model's fitted <code>n_terms</code>.</p></dd>
 
 
 <dt id="arg-stop-words">stop_words<a class="anchor" aria-label="anchor" href="#arg-stop-words"></a></dt>
 <dd><p>Character vector excluded from terms. Defaults to the
-model's fitted list; see [stop_words()].</p></dd>
+model's fitted list; see <code><a href="stop_words.html">stop_words()</a></code>.</p></dd>
 
 
 <dt id="arg-min-term-frequency">min_term_frequency<a class="anchor" aria-label="anchor" href="#arg-min-term-frequency"></a></dt>
@@ -100,7 +100,7 @@ model's fitted list; see [stop_words()].</p></dd>
 
 
 <dt id="arg-weighting">weighting<a class="anchor" aria-label="anchor" href="#arg-weighting"></a></dt>
-<dd><p>Class-based term weighting, `"ctfidf"` or `"bm25"`.</p></dd>
+<dd><p>Class-based term weighting, <code>"ctfidf"</code> or <code>"bm25"</code>.</p></dd>
 
 
 <dt id="arg-reduce-frequent-words">reduce_frequent_words<a class="anchor" aria-label="anchor" href="#arg-reduce-frequent-words"></a></dt>
@@ -110,39 +110,39 @@ weighting, damping very frequent words.</p></dd>
 
 <dt id="arg-stem">stem<a class="anchor" aria-label="anchor" href="#arg-stem"></a></dt>
 <dd><p>Collapse inflected forms onto a shared Porter stem, displaying
-the most frequent surface form. Requires `SnowballC`.</p></dd>
+the most frequent surface form. Requires <code>SnowballC</code>.</p></dd>
 
 
 <dt id="arg-numbers">numbers<a class="anchor" aria-label="anchor" href="#arg-numbers"></a></dt>
-<dd><p>How to treat purely numeric tokens: `"keep"` or `"remove"`
+<dd><p>How to treat purely numeric tokens: <code>"keep"</code> or <code>"remove"</code>
 (drop digit-only tokens such as years and counts). Defaults to the model's
 fitted setting.</p></dd>
 
 
 <dt id="arg-roman-numerals">roman_numerals<a class="anchor" aria-label="anchor" href="#arg-roman-numerals"></a></dt>
-<dd><p>How to treat Roman-numeral tokens: `"keep"` or
-`"remove"` (drop chapter/section markers such as `ii`, `iv`, up to 100).
+<dd><p>How to treat Roman-numeral tokens: <code>"keep"</code> or
+<code>"remove"</code> (drop chapter/section markers such as <code>ii</code>, <code>iv</code>, up to 100).
 Defaults to the model's fitted setting.</p></dd>
 
 
 <dt id="arg-section-numbers">section_numbers<a class="anchor" aria-label="anchor" href="#arg-section-numbers"></a></dt>
 <dd><p>How to treat section, reference, and list numbering —
-multi-level indices such as `1.2.3` and enumeration markers such as `1.`,
-`2.`: `"keep"` or `"remove"`. Defaults to the model's fitted setting.</p></dd>
+multi-level indices such as <code>1.2.3</code> and enumeration markers such as <code>1.</code>,
+<code>2.</code>: <code>"keep"</code> or <code>"remove"</code>. Defaults to the model's fitted setting.</p></dd>
 
 
 <dt id="arg-smoothing">smoothing<a class="anchor" aria-label="anchor" href="#arg-smoothing"></a></dt>
-<dd><p>Additive (Dirichlet) smoothing for the `beta` column. Only
-terms a topic actually used are returned, so with `smoothing = 0`
-(default) each topic's `beta` sums to one, while any positive value
+<dd><p>Additive (Dirichlet) smoothing for the <code>beta</code> column. Only
+terms a topic actually used are returned, so with <code>smoothing = 0</code>
+(default) each topic's <code>beta</code> sums to one, while any positive value
 reserves mass for the zero-count vocabulary and the returned rows sum to
 less than one.</p></dd>
 
 
 <dt id="arg-sort-by">sort_by<a class="anchor" aria-label="anchor" href="#arg-sort-by"></a></dt>
-<dd><p>Order terms within each topic by `"score"` (default, the
-class-based weight — distinctive words) or `"beta"` (raw \(p(term | topic)\)
-— the words the topic uses most). `n` is applied after ordering.</p></dd>
+<dd><p>Order terms within each topic by <code>"score"</code> (default, the
+class-based weight — distinctive words) or <code>"beta"</code> (raw \(p(term | topic)\)
+— the words the topic uses most). <code>n</code> is applied after ordering.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -151,9 +151,9 @@ class-based weight — distinctive words) or `"beta"` (raw \(p(term | topic)\)
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A base data frame with one row per topic and term: `topic`,
-  `label`, `term`, `rank`, `score` (the class-based weight), `frequency`
-  (within-topic count), and `beta`, the multinomial \(p(term | topic)\).</p>
+    <p>A base data frame with one row per topic and term: <code>topic</code>,
+<code>label</code>, <code>term</code>, <code>rank</code>, <code>score</code> (the class-based weight), <code>frequency</code>
+(within-topic count), and <code>beta</code>, the multinomial \(p(term | topic)\).</p>
     </div>
 
     <div class="section level2">

@@ -4,8 +4,10 @@ The fraction of a string's non-space characters that are letters. A
 domain-agnostic measure of how much of a unit is prose rather than
 numbers, punctuation, or symbols: real sentences score near 1, while
 citation fragments, reference lists, number tables, and identifiers
-(\`"OJ No L 297, 24.11.1979, p. 1."\`, \`"doi:10.1007/..."\`) score low.
-Used by the \`min_content\` filters of \[segment()\] and \[topics()\].
+(`"OJ No L 297, 24.11.1979, p. 1."`, `"doi:10.1007/..."`) score low.
+Used by the `min_content` filters of
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) and
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 ## Usage
 
@@ -21,8 +23,7 @@ content_ratio(text)
 
 ## Value
 
-A numeric vector in \`\[0, 1\]\`; empty or space-only elements score
-\`0\`.
+A numeric vector in `[0, 1]`; empty or space-only elements score `0`.
 
 ## Examples
 

@@ -3,8 +3,8 @@
 Downloads the official ONNX graph and tokenizer of a pinned model only
 after this function is called. Files are locked to an immutable
 repository revision and checked against package-controlled SHA-256
-values. See \[models()\] for the available models; the default remains
-\`all-MiniLM-L6-v2\`.
+values. See [`models()`](https://sonsoles.me/sbert/reference/models.md)
+for the available models; the default remains `all-MiniLM-L6-v2`.
 
 ## Usage
 
@@ -21,11 +21,13 @@ model_download(
 
 - model:
 
-  Name of a pinned model listed by \[models()\].
+  Name of a pinned model listed by
+  [`models()`](https://sonsoles.me/sbert/reference/models.md).
 
 - cache_dir:
 
-  Cache root returned by \[cache_dir()\].
+  Cache root returned by
+  [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md).
 
 - quiet:
 
@@ -48,8 +50,8 @@ model_status(tempdir())
 #> 1     model.onnx
 #> 2 tokenizer.json
 #>                                                                                       path
-#> 1     /tmp/RtmpWNpw9t/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/model.onnx
-#> 2 /tmp/RtmpWNpw9t/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/tokenizer.json
+#> 1     /tmp/RtmpfQXKr3/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/model.onnx
+#> 2 /tmp/RtmpfQXKr3/all-MiniLM-L6-v2/1110a243fdf4706b3f48f1d95db1a4f5529b4d41/tokenizer.json
 #>   exists valid expected_bytes actual_bytes
 #> 1  FALSE FALSE       90405214           NA
 #> 2  FALSE FALSE         466247           NA

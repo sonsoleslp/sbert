@@ -58,12 +58,12 @@ topic_model <- topics(
   n_terms = 8
 )
 
-topic_model$topics
+topic_sizes(topic_model)
 ```
 
 You can run the whole thing with no download by passing a precomputed
 embedding matrix. Here two clearly separated groups — cooking and
-astronomy — fall out, each labeled by its most distinctive terms:
+astronomy — fall out, each labeled by its most central sentence:
 
 ``` r
 
@@ -83,28 +83,28 @@ embeddings <- rbind(
   c(0.05, 0.98), c(0.08, 0.95), c(0.10, 0.92), c(0.03, 0.97)
 )
 topic_model <- topics(sentences, n_topics = 2, embeddings = embeddings)
-topic_model$topics
-#>   topic                     label n_documents proportion    withinss
-#> 1     1 carrots / onions / recipe           4        0.5 0.004327763
-#> 2     2   sky / night / telescope           4        0.5 0.003540644
+topic_sizes(topic_model)
+#>   topic                                      label n_documents proportion
+#> 1     1       Chop the carrots and dice the onions           4        0.5
+#> 2     2 Astronomers aimed the telescope at the sky           4        0.5
 ```
 
 `plot(type = "fit")` lays the whole model out at a glance — one row per
-topic, its three keyword views (raw count, class-based TF-IDF, and
-generative probability) beside its representative documents:
+topic, its representative documents first, then its three keyword views
+(raw count, class-based TF-IDF, and generative probability):
 
 ``` r
 
 plot(topic_model, type = "fit")
 ```
 
-![Topic fit plot: two rows, one per topic, each showing count, TF-IDF,
-and beta term bars next to representative
-documents.](reference/figures/README-topics-fit-1.png)
+![Topic fit plot: two rows, one per topic, each showing its
+representative documents followed by count, TF-IDF, and beta term
+bars.](reference/figures/README-topics-fit-1.png)
 
 Pass a data frame instead and name the text column: every other column
-rides along into `$documents`, and rows whose text is missing, blank, or
-a bibliographic placeholder are dropped once rather than by you.
+rides along with each document, and rows whose text is missing, blank,
+or a bibliographic placeholder are dropped once rather than by you.
 
 ``` r
 
@@ -271,7 +271,7 @@ with the same pinning, verification, and verbs as every other model:
 
 ``` r
 
-model_download("potion-base-8M")   # 30 MB
+model_download("potion-base-8M")   # 31 MB
 fast <- load_model("potion-base-8M")
 embeddings <- encode(text, model = fast)
 ```
@@ -391,9 +391,10 @@ artifact is verified by byte size and SHA-256 before it is used.
 ## Tutorial
 
 A full worked tutorial ships with the package and runs offline on the
-bundled `feedback_translations` data — building a six-topic model,
-checking its coherence and diversity, reading each topic through two
-keyword views, and confirming the labels with representative messages:
+bundled `feedback_translations` data — choosing the topic count,
+building a six-topic model, reading and naming each topic from its
+representative messages, weighting topic sizes by how often messages
+repeat, and comparing the words each topic uses:
 
 ``` r
 
@@ -438,5 +439,7 @@ vignette("math_vignette", package = "sbert")
   MDS document map
 - Backends: those exposed by `onnxr`, with CPU as the portable default
 
-Arbitrary unpinned Hugging Face models and training/fine-tuning are
-intentionally out of scope.
+Training and fine-tuning are intentionally out of scope. Models outside
+the pinned registry load through
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md),
+which pins them locally but makes no numerical-parity claim.

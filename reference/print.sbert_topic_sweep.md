@@ -14,7 +14,7 @@ print(x, ...)
 
 - x:
 
-  An \`sbert_topic_sweep\` object.
+  An `sbert_topic_sweep` object.
 
 - ...:
 

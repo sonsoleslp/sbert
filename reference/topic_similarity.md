@@ -1,6 +1,8 @@
 # Compute Cosine Similarity
 
-Compute Cosine Similarity
+Cosine similarity between embedding rows, for example to check how close
+two texts are in meaning before or after topic modeling. Rows are
+L2-normalized first, so unnormalized embeddings give the same result.
 
 ## Usage
 
@@ -17,11 +19,13 @@ topic_similarity(x, y = NULL)
 - y:
 
   Optional second embedding matrix or vector. When omitted, computes all
-  pairwise similarities among rows of \`x\`.
+  pairwise similarities among rows of `x`.
 
 ## Value
 
-A numeric similarity matrix.
+A numeric matrix of cosine similarities in `[-1, 1]` with one row per
+row of `x` and one column per row of `y` (or of `x` when `y` is
+omitted). A vector counts as a one-row matrix.
 
 ## Examples
 

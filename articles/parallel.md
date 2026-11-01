@@ -43,8 +43,8 @@ result as `embeddings`:
 
 embeddings <- encode(abstracts$Abstract)
 
-model_8 <- topics(abstracts$Abstract, n_topics = 8, embeddings = embeddings)
-model_12 <- topics(abstracts$Abstract, n_topics = 12, embeddings = embeddings)
+model_8 <- topics(abstracts, column = "Abstract", n_topics = 8, embeddings = embeddings)
+model_12 <- topics(abstracts, column = "Abstract", n_topics = 12, embeddings = embeddings)
 ```
 
 [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
@@ -53,7 +53,7 @@ words, so later fits repeat neither:
 
 ``` r
 
-prepared <- topic_corpus(abstracts$Abstract, embeddings = embeddings)
+prepared <- topic_corpus(abstracts, column = "Abstract", embeddings = embeddings)
 
 sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12))
 model_8 <- fitted(sweep, n_topics = 8)
@@ -130,7 +130,9 @@ fits its topic counts in parallel.
 
 ``` r
 
-prepared <- topic_corpus(abstracts$Abstract, embeddings = embeddings, cores = 4)
+prepared <- topic_corpus(
+  abstracts, column = "Abstract", embeddings = embeddings, cores = 4
+)
 sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12), cores = 4)
 ```
 
@@ -180,7 +182,8 @@ needs no further encoding:
 ``` r
 
 sentence_model <- topics(
-  abstracts$Abstract,
+  abstracts,
+  column = "Abstract",
   n_topics = 8,
   segment = "sentence",
   model = model,

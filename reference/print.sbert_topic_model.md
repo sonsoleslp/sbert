@@ -1,7 +1,12 @@
 # Print a Semantic Topic Model
 
-Shows the fit at a glance: how many documents and topics, the variance
-explained, and each topic with its size and its most distinctive terms.
+Shows the fit at a glance: the number of documents and topics, the
+embedding source, the clustering algorithm, the size of every topic, and
+the share of the embedding variance that lies between topics. Use
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
+for coherence per topic and
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
+for the labeled size table.
 
 ## Usage
 
@@ -14,7 +19,7 @@ print(x, ...)
 
 - x:
 
-  An \`sbert_topic_model\` object.
+  An `sbert_topic_model` object.
 
 - ...:
 

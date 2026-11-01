@@ -15,7 +15,7 @@ topic models (Mimno et al. 2011)."><meta property="og:image" content="https://so
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,13 +71,13 @@ topic models (Mimno et al. 2011).</p>
 
 
 <dl><dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
-<dd><p>An `sbert_topic_model` returned by [topics()].</p></dd>
+<dd><p>An <code>sbert_topic_model</code> returned by <code><a href="topics.html">topics()</a></code>.</p></dd>
 
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
-<dd><p>Either `"umass"` (Mimno et al. 2011; larger, i.e. closer to
-zero, is more coherent) or `"npmi"` (normalized pointwise mutual
-information, bounded in `[-1, 1]`; larger is more coherent).</p></dd>
+<dd><p>Either <code>"umass"</code> (Mimno et al. 2011; larger, i.e. closer to
+zero, is more coherent) or <code>"npmi"</code> (normalized pointwise mutual
+information, bounded in <code>[-1, 1]</code>; larger is more coherent).</p></dd>
 
 
 <dt id="arg-n-terms">n_terms<a class="anchor" aria-label="anchor" href="#arg-n-terms"></a></dt>
@@ -90,30 +90,33 @@ of terms actually available for each topic.</p></dd>
 
 
 <dt id="arg-token-lists">token_lists<a class="anchor" aria-label="anchor" href="#arg-token-lists"></a></dt>
-<dd><p>Optional precomputed per-document token lists, aligned to
-`object$documents`, that skip re-tokenizing the corpus (as produced by
-[topic_corpus()]). Leave `NULL` to tokenize internally; the score is
-identical either way.</p></dd>
+<dd><p>Optional precomputed per-unit token lists, one per
+fitted document or segment in model order, that skip re-tokenizing the
+corpus (as produced by <code><a href="topic_corpus.html">topic_corpus()</a></code>). Leave <code>NULL</code> to tokenize
+internally; the score is identical either way.</p></dd>
 
 
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
 <dd><p>Number of forked worker processes for tokenization when it is
-not already cached. Default `1` (serial). Values above one use
-`parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
+not already cached. Default <code>1</code> (serial). Values above one use
+<code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply</a></code> on Unix-alikes and fall back to serial elsewhere; the
 result is identical regardless of the count.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A data frame with one row per topic and columns `topic`, `label`,
-  `measure`, `n_terms`, and `coherence`. The corpus-level mean is attached as
-  the `"mean_coherence"` attribute. Topics with fewer than two scorable terms
-  yield `NA`.</p>
+    <p>A data frame with one row per topic and columns <code>topic</code>, <code>label</code>,
+<code>measure</code>, <code>n_terms</code>, and <code>coherence</code>. The corpus-level mean is attached as
+the <code>"mean_coherence"</code> attribute. Topics with fewer than two scorable terms
+yield <code>NA</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Mimno, D., Wallach, H. M., Talley, E., Leenders, M., and
-  McCallum, A. (2011). Optimizing semantic coherence in topic models. EMNLP.</p>
+McCallum, A. (2011). Optimizing semantic coherence in topic models.
+<em>Proceedings of EMNLP 2011</em>, 262–272.</p>
+<p>Bouma, G. (2009). Normalized (pointwise) mutual information in collocation
+extraction. <em>Proceedings of GSCL</em>, 31–40.</p>
     </div>
 
     <div class="section level2">
@@ -123,8 +126,8 @@ result is identical regardless of the count.</p></dd>
 <span class="r-in"><span>  <span class="st">"Stocks and bonds trade"</span>, <span class="st">"Markets price shares"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.9</span>, <span class="fl">0.1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.9</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">topics</span> <span class="op">&lt;-</span> <span class="fu"><a href="topics.html">topics</a></span><span class="op">(</span><span class="va">text</span>, <span class="fl">2</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, n_terms <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">coherence</span><span class="op">(</span><span class="va">topics</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="topics.html">topics</a></span><span class="op">(</span><span class="va">text</span>, <span class="fl">2</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>, n_terms <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">coherence</span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   topic                  label measure n_terms  coherence</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1     1        Cats chase mice    npmi       3  0.0000000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2     2 Stocks and bonds trade    npmi       3 -0.3333333</span>

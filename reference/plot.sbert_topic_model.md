@@ -26,67 +26,70 @@ plot(
 
 - x:
 
-  An \`sbert_topic_model\` returned by \[topics()\].
+  An `sbert_topic_model` returned by
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - type:
 
-  One of \`"sizes"\` (document count per topic), \`"terms"\` (top terms
-  per topic), \`"representatives"\` (a ranked text list of the
-  centroid-nearest documents per topic), \`"fit"\` (a per-topic report
+  One of `"sizes"` (document count per topic), `"terms"` (top terms per
+  topic), `"representatives"` (a ranked text list of the
+  centroid-nearest documents per topic), `"fit"` (a per-topic report
   with the representative documents followed by all three term views –
-  count, TF-IDF, beta – one row per topic), or \`"map"\` (a
+  count, TF-IDF, beta – one row per topic), or `"map"` (a
   two-dimensional classical-MDS projection of the document embeddings,
-  colored by topic). The \`"map"\` view requires a model fitted with
-  \`keep_embeddings = TRUE\`.
+  colored by topic). The `"map"` view requires a model fitted with
+  `keep_embeddings = TRUE`.
 
 - by:
 
-  For \`type = "terms"\`, one or more of \`"score"\` (class-based
-  TF-IDF, the default and most distinctive terms), \`"beta"\` (the
-  generative within-topic word probability), and \`"frequency"\` (the
-  raw within-topic count). A single value draws one panel per topic;
-  several values draw one row per topic with a column for each metric.
+  For `type = "terms"`, one or more of `"score"` (class-based TF-IDF,
+  the default and most distinctive terms), `"beta"` (the generative
+  within-topic word probability), and `"frequency"` (the raw
+  within-topic count). A single value draws one panel per topic; several
+  values draw one row per topic with a column for each metric.
 
 - topics:
 
-  For \`type\` \`"terms"\`, \`"representatives"\`, or \`"fit"\`, an
-  optional vector of topic numbers to restrict the plot to. Defaults to
-  all topics.
+  For `type` `"terms"`, `"representatives"`, or `"fit"`, an optional
+  vector of topic numbers to restrict the plot to. Defaults to all
+  topics.
 
 - per_topic:
 
-  For \`type\` \`"terms"\`, \`"representatives"\`, or \`"fit"\`, draw a
-  separate figure for each topic instead of arranging all topics into
-  one gridded figure. Most useful with a device or \`knitr\` chunk that
-  keeps every figure (each topic then becomes its own image).
+  For `type` `"terms"`, `"representatives"`, or `"fit"`, draw a separate
+  figure for each topic instead of arranging all topics into one gridded
+  figure. Most useful with a device or `knitr` chunk that keeps every
+  figure (each topic then becomes its own image).
 
 - n_terms:
 
-  Number of top terms shown per panel when \`type\` is \`"terms"\` or
-  \`"fit"\`.
+  Number of top terms shown per panel when `type` is `"terms"` or
+  `"fit"`.
 
 - n_representatives:
 
-  Number of representative documents shown per panel when \`type\` is
-  \`"representatives"\` or \`"fit"\`. When more are requested than the
-  model stored at fit time, they are recomputed from the retained
-  embeddings; if the model was fitted with \`keep_embeddings = FALSE\`,
-  the stored set is used and a warning is issued.
+  Number of representative documents shown per panel when `type` is
+  `"representatives"` or `"fit"`. When more are requested than the model
+  stored at fit time, they are recomputed from the retained embeddings;
+  if the model was fitted with `keep_embeddings = FALSE`, the stored set
+  is used and a warning is issued.
 
 - colors:
 
-  Optional vector of topic colors; defaults to \[topic_palette()\].
+  Optional vector of topic colors; defaults to
+  [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md).
 
 - max_points:
 
-  Maximum documents drawn when \`type = "map"\`. Larger corpora are
+  Maximum documents drawn when `type = "map"`. Larger corpora are
   thinned to a deterministic stratified subsample so the classical-MDS
   projection stays tractable.
 
 - main:
 
-  Optional figure title for \`type = "fit"\`. The default names the
-  layout (term columns and representative documents).
+  Optional figure title for `type = "fit"` drawn as one figure (it is
+  not used with `per_topic = TRUE`). The default names the layout (term
+  columns and representative documents).
 
 - ...:
 
@@ -94,7 +97,7 @@ plot(
 
 ## Value
 
-Invisibly, \`x\`.
+Invisibly, `x`.
 
 ## Examples
 
@@ -109,22 +112,22 @@ embeddings <- rbind(
   c(0, 1, 0), c(0.1, 0.9, 0),
   c(0, 0, 1), c(0.05, 0, 0.95)
 )
-topics <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
-plot(topics, type = "sizes")
+topic_model <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
+plot(topic_model, type = "sizes")
 
-plot(topics, type = "terms")
+plot(topic_model, type = "terms")
 
-plot(topics, type = "terms", by = "frequency")
+plot(topic_model, type = "terms", by = "frequency")
 
-plot(topics, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
+plot(topic_model, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
 
-plot(topics, type = "representatives")
+plot(topic_model, type = "representatives")
 
-plot(topics, type = "fit")
+plot(topic_model, type = "fit")
 
-plot(topics, type = "fit", per_topic = TRUE)
+plot(topic_model, type = "fit", per_topic = TRUE)
 
 
 
-plot(topics, type = "map")
+plot(topic_model, type = "map")
 ```

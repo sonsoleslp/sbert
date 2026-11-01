@@ -107,7 +107,7 @@ sweep
 #>   segment n_topics  coherence topic_diversity  explained
 #>  document        4 0.05863244       0.6000000 0.09793182
 #>  document        6 0.07081375       0.5666667 0.12093830
-#>  document        8 0.18496168       0.6625000 0.13103483
+#>  document        8 0.18496168       0.6625000 0.13103484
 #>  document       10 0.15892319       0.5800000 0.14652464
 #>  document       12 0.15689454       0.5750000 0.15408795
 #>  sentence        4 0.06533172       0.7500000 0.09858943

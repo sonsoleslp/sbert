@@ -31,7 +31,7 @@ pool(
 
 - method:
 
-  \`"mean"\` (default) or \`"cls"\` (first token).
+  `"mean"` (default) or `"cls"` (first token).
 
 ## Value
 
