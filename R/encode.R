@@ -321,6 +321,16 @@ run_sbert_onnx <- function(onnx_model, inputs, token_type_ids = TRUE) {
 
 #' Encode Text with Sentence-BERT
 #'
+#' Turns each text into one embedding: a vector in which texts with similar
+#' meaning lie close together. Encoding is the step every topic workflow
+#' starts from and by far its most expensive one, so encode once and pass the
+#' matrix to the `embeddings` argument of [topics()], [compare_topics()],
+#' [topic_corpus()], and the inference verbs. Each text is tokenized with the
+#' model's own tokenizer, truncated to the model's maximum length, run
+#' through the ONNX graph, pooled with [pool()], and by default
+#' L2-normalized. The static `potion-base-8M` model instead averages
+#' looked-up token vectors, with no ONNX Runtime involved.
+#'
 #' @param text Character vector of sentences. Empty strings are supported;
 #'   missing values are rejected.
 #' @param model A loaded [sbert_model][load_model()], the name of a
@@ -353,7 +363,8 @@ run_sbert_onnx <- function(onnx_model, inputs, token_type_ids = TRUE) {
 #'   reordered — and encoding is about 97% of the cost of a topic workflow, so
 #'   reuse dominates. Changing 38 documents of 3,847 cost 0.59 s against 57 s to
 #'   re-encode the corpus. Repeated documents within a single call are also
-#'   encoded once (295 of the 3,847 bundled `covid` abstracts are duplicates).
+#'   encoded once (177 of the 3,847 bundled `covid` abstracts repeat an
+#'   earlier one).
 #'
 #'   The key deliberately excludes `batch_size` and `sort_by_length`, which shift
 #'   embeddings by around 1e-7 through batch composition alone. Cached values are
@@ -362,8 +373,9 @@ run_sbert_onnx <- function(onnx_model, inputs, token_type_ids = TRUE) {
 #'   `sort_by_length` itself. A cache that cannot be read, or that was written
 #'   for a different embedding dimension, is discarded with a warning and rebuilt
 #'   rather than trusted.
-#' @return A numeric matrix with one row per input and one column per
-#'   embedding dimension of the loaded model.
+#' @return A numeric matrix with one row per input, in input order, and one
+#'   column per embedding dimension of the model (for example 384 for
+#'   `all-MiniLM-L6-v2`; see `models()`).
 #' @export
 #' @examples
 #' # Embeddings need a downloaded model, so the full workflow is in the
@@ -376,14 +388,15 @@ run_sbert_onnx <- function(onnx_model, inputs, token_type_ids = TRUE) {
 #'   embeddings <- encode(c("A short sentence.", "Another sentence."), model)
 #'
 #'   # Segment-level work benefits most, because segment lengths vary widely.
-#'   segments <- segment(covid$Abstract[1:50], level = "clause")
-#'   embeddings <- encode(segments$text, model, sort_by_length = TRUE)
+#'   segments <- with(head(covid, 50), segment(Abstract, level = "clause"))
+#'   embeddings <- with(segments, encode(text, model, sort_by_length = TRUE))
 #'
 #'   # Encode once, then re-run after editing the corpus: only changed rows cost
 #'   # anything the second time.
 #'   store <- file.path(tempdir(), "covid-embeddings.rds")
-#'   embeddings <- encode(covid$Abstract, model, cache = store)
-#'   embeddings <- encode(covid$Abstract, model, cache = store)
+#'   embeddings <- with(covid, encode(Abstract, model, cache = store))
+#'   embeddings <- with(covid, encode(Abstract, model, cache = store))
+#'   unlink(store)
 #' }
 #' }
 encode <- function(

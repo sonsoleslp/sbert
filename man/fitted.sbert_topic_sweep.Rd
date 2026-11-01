@@ -7,23 +7,23 @@
 \method{fitted}{sbert_topic_sweep}(object, n_topics, segment = NULL, ...)
 }
 \arguments{
-\item{object}{A comparison returned by [compare_topics()] with
-`keep_models = TRUE` (the default).}
+\item{object}{A comparison returned by \code{\link[=compare_topics]{compare_topics()}} with
+\code{keep_models = TRUE} (the default).}
 
 \item{n_topics}{The topic count to extract. Must be one of the candidates
 in the comparison.}
 
 \item{segment}{The segment level to extract when the comparison spans
-several (`compare_topics(segment = c(...))`); one of its levels. Leave
-`NULL` for a single-level comparison.}
+several (\code{compare_topics(segment = c(...))}); one of its levels. Leave
+\code{NULL} for a single-level comparison.}
 
 \item{...}{Unused, present for generic consistency.}
 }
 \value{
-The `sbert_topic_model` fitted for that candidate.
+The \code{sbert_topic_model} fitted for that candidate.
 }
 \description{
-Returns the model [compare_topics()] already fitted for a given topic
+Returns the model \code{\link[=compare_topics]{compare_topics()}} already fitted for a given topic
 count, so choosing a granularity from the comparison table costs no
 refitting.
 }

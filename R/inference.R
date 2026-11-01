@@ -190,12 +190,12 @@ predict.sbert_topic_model <- function(
 
 #' Soft Topic Membership Probabilities
 #'
-#' Computes fuzzy-c-means-style topic_membership of every document in every topic
+#' Computes fuzzy-c-means-style membership of every document in every topic
 #' from cosine distances to the stored centroids, without changing the
 #' deterministic hard clustering. In high-dimensional embedding spaces
 #' distances concentrate, so the textbook fuzzifier `sharpness = 2` collapses
 #' memberships toward the uniform `1/k`; the default `sharpness = 1.15`
-#' preserves contrast. The topic_membership ranking of topics within a document is
+#' preserves contrast. The membership ranking of topics within a document is
 #' invariant to `sharpness`; the probability magnitudes are not, and should be
 #' interpreted relative to the chosen value.
 #'
@@ -208,6 +208,9 @@ predict.sbert_topic_model <- function(
 #' @return A base data frame with one row per document-topic pair and columns
 #'   `document_id`, `topic`, `probability`, and `rank` (1 is the strongest
 #'   topic of the document). Probabilities sum to 1 within each document.
+#' @references Bezdek, J. C. (1981). *Pattern Recognition with Fuzzy
+#'   Objective Function Algorithms*. Plenum Press, New York.
+#'   \doi{10.1007/978-1-4757-0450-1}
 #' @export
 #' @examples
 #' text <- c(
@@ -268,7 +271,7 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' Computes `gamma`, the distribution of every document over the fitted
 #' topics, by segmenting each document with [segment()], assigning each
 #' segment to its nearest topic centroid, and normalizing the per-document
-#' segment counts. This yields parameter-free mixed topic_membership: a document
+#' segment counts. This yields parameter-free mixed membership: a document
 #' that discusses two topics in different sentences receives weight on both,
 #' which the single-embedding hard assignment cannot express.
 #'

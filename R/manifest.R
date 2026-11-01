@@ -386,7 +386,8 @@ resolve_sbert_manifest <- function(model = .sbert_default_model) {
 #'   `languages`, `size_mb`); `TRUE` adds `pooling` (`"mean"` or `"cls"`),
 #'   `prefix` (text automatically prepended by [encode()]), `engine`
 #'   (`"onnx"` or `"static"`), `license`, `id`, and `revision`.
-#' @return A data frame with one row per model.
+#' @return A base data frame with one row per pinned model and the columns
+#'   described under `detail`.
 #' @export
 #' @examples
 #' models()

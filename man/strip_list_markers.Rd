@@ -10,36 +10,36 @@ strip_list_markers(text)
 \item{text}{A character vector.}
 }
 \value{
-`text` with markers removed and runs of whitespace collapsed to a
-  single space; each element trimmed.
+\code{text} with markers removed and runs of whitespace collapsed to a
+single space; each element trimmed.
 }
 \description{
-Removes list and enumeration markers — `"1."`, `"2."`, `"(i)"`, `"(a)"`,
-`"(iv)"`, `"IV."`, `"V."` — from each document. The `numbers`,
-`roman_numerals`, and `section_numbers` arguments of [topics()] clean only the
-extracted *terms*; this cleans the source *text*, so markers no longer
-over-fragment [segment()], skew the embeddings, or surface in
-[representatives()][representatives]. Run it once, before embedding or
-segmentation, as a companion to [dedupe()].
+Removes list and enumeration markers — \code{"1."}, \code{"2."}, \code{"(i)"}, \code{"(a)"},
+\code{"(iv)"}, \code{"IV."}, \code{"V."} — from each document. The \code{numbers},
+\code{roman_numerals}, and \code{section_numbers} arguments of \code{\link[=topics]{topics()}} clean only the
+extracted \emph{terms}; this cleans the source \emph{text}, so markers no longer
+over-fragment \code{\link[=segment]{segment()}}, skew the embeddings, or surface in
+\link[=representatives]{representatives()}. Run it once, before embedding or
+segmentation, as a companion to \code{\link[=dedupe]{dedupe()}}.
 }
 \details{
 A marker must stand alone — whitespace or a string boundary on both sides —
-so real words in parentheses (`"(civil)"`), four-digit years (`"(2020)"`),
-counts (`"(n=100)"`), multi-word parentheticals (`"(see Fig 1)"`), and
-decimals (`"1.5"`) are left untouched. Removed forms are a standalone one- or
-two-digit number followed by a period (`"1."`, `"12."`); a parenthesized
-one- or two-digit number, single letter, or Roman numeral up to 39 (`"(1)"`,
-`"(a)"`, `"(iv)"`); and a bare upper-case Roman-numeral section marker with a
-period (`"II."`, `"IV."`). A multi-letter numeral is removed anywhere; a
-single-letter one (`"V."`, `"X."`) only at the start of the text, so a
-mid-sentence initial (`"by V. Nabokov"`), unit (`"5 V."`), and lower-case
-`"v."` (versus) are kept.
+so real words in parentheses (\code{"(civil)"}), four-digit years (\code{"(2020)"}),
+counts (\code{"(n=100)"}), multi-word parentheticals (\code{"(see Fig 1)"}), and
+decimals (\code{"1.5"}) are left untouched. Removed forms are a standalone one- or
+two-digit number followed by a period (\code{"1."}, \code{"12."}); a parenthesized
+one- or two-digit number, single letter, or Roman numeral up to 39 (\code{"(1)"},
+\code{"(a)"}, \code{"(iv)"}); and a bare upper-case Roman-numeral section marker with a
+period (\code{"II."}, \code{"IV."}). A multi-letter numeral is removed anywhere; a
+single-letter one (\code{"V."}, \code{"X."}) only at the start of the text, so a
+mid-sentence initial (\code{"by V. Nabokov"}), unit (\code{"5 V."}), and lower-case
+\code{"v."} (versus) are kept.
 }
 \examples{
 strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
 strip_list_markers("the concept of (civil) society in (2020)")
 }
 \seealso{
-[dedupe()], and the `numbers` / `roman_numerals` / `section_numbers`
-  arguments of [topics()] for cleaning the terms rather than the text.
+\code{\link[=dedupe]{dedupe()}}, and the \code{numbers} / \code{roman_numerals} / \code{section_numbers}
+arguments of \code{\link[=topics]{topics()}} for cleaning the terms rather than the text.
 }

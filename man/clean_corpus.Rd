@@ -16,43 +16,43 @@ clean_corpus(
 )
 }
 \arguments{
-\item{text}{A character vector, or a data frame together with `column`.}
+\item{text}{A character vector, or a data frame together with \code{column}.}
 
-\item{column}{When `text` is a data frame, the name of the text column to
+\item{column}{When \code{text} is a data frame, the name of the text column to
 clean. Every other column rides along and is filtered in step.}
 
-\item{list_markers}{Remove enumeration and list markers (`1.`, `(i)`,
-`(a)`); default `TRUE`. See [strip_list_markers()].}
+\item{list_markers}{Remove enumeration and list markers (\code{1.}, \code{(i)},
+\code{(a)}); default \code{TRUE}. See \code{\link[=strip_list_markers]{strip_list_markers()}}.}
 
-\item{section_numbers}{Remove multi-level indices (`1.2.3`) and enumeration
-markers; default `TRUE`.}
+\item{section_numbers}{Remove multi-level indices (\verb{1.2.3}) and enumeration
+markers; default \code{TRUE}.}
 
 \item{numbers}{Remove stand-alone numeric tokens (years, counts) while
-keeping alphanumerics such as `covid19`; default `FALSE`.}
+keeping alphanumerics such as \code{covid19}; default \code{FALSE}.}
 
-\item{roman_numerals}{Remove stand-alone Roman-numeral tokens (`ii`, `iv`,
-up to 100); default `FALSE`. A few numerals that are also words (`iv`,
-`vi`) go too.}
+\item{roman_numerals}{Remove stand-alone Roman-numeral tokens (\code{ii}, \code{iv},
+up to 100); default \code{FALSE}. A few numerals that are also words (\code{iv},
+\code{vi}) go too.}
 
 \item{remove}{Optional character vector of custom Perl-compatible regular
 expressions. Each match is replaced with a space, before the other steps.
 The extension point for domain-specific noise the generic cleaners leave —
-for example `remove = "OJ No L?\\s*\\d+"` for European Union Official
+for example \code{remove = "OJ No L?\\\\s*\\\\d+"} for European Union Official
 Journal references, or a journal-citation pattern. Matching is
 case-insensitive.}
 
-\item{min_content}{Minimum alphabetic-content ratio, in `[0, 1]`, for a
-document to be kept (see [content_ratio()]). Documents below the floor —
-citation lists, reference footnotes, number tables — are dropped. `0`
+\item{min_content}{Minimum alphabetic-content ratio, in \verb{[0, 1]}, for a
+document to be kept (see \code{\link[=content_ratio]{content_ratio()}}). Documents below the floor —
+citation lists, reference footnotes, number tables — are dropped. \code{0}
 (default) keeps every non-empty document.}
 }
 \value{
-If `text` is a character vector, the cleaned vector with dropped
-  documents removed. If a data frame, the surviving rows with the `column`
-  cleaned in place.
+If \code{text} is a character vector, the cleaned vector with dropped
+documents removed. If a data frame, the surviving rows with the \code{column}
+cleaned in place.
 }
 \description{
-One place for the text-level cleaning that should happen *before* embedding,
+One place for the text-level cleaning that should happen \emph{before} embedding,
 so the same clean text feeds the encoder, the topic terms, and the
 representative examples. Junk characters are always repaired; the structured
 removals are opt-in. Because cleaning happens up front, encode the result and
@@ -61,13 +61,13 @@ pass those embeddings on — nothing downstream needs to re-clean.
 \details{
 The operations, in order: repair junk and strip non-content markup (decode
 HTML entities and tags; remove URLs, DOIs, emails, and bracketed numeric
-citations such as `[12]`; normalize curly quotes, dashes, and bullets; drop
+citations such as \verb{[12]}; normalize curly quotes, dashes, and bullets; drop
 control, zero-width, BOM, and replacement characters; normalize whitespace);
 strip list and section numbering; optionally remove numeric and Roman-numeral
-tokens; then drop documents that fall below `min_content` (see
-[content_ratio()]) or are left empty. Content-bearing text — real words,
+tokens; then drop documents that fall below \code{min_content} (see
+\code{\link[=content_ratio]{content_ratio()}}) or are left empty. Content-bearing text — real words,
 author citations, dates, decimals, inline numbers — is left intact. When
-`text` is a data frame the surviving rows are returned whole, so metadata
+\code{text} is a data frame the surviving rows are returned whole, so metadata
 stays aligned.
 }
 \examples{
@@ -81,5 +81,5 @@ clean_corpus("as set out in OJ No L 313 it applies.",
              remove = "OJ No L?\\\\s*\\\\d+")
 }
 \seealso{
-[strip_list_markers()], [content_ratio()], [dedupe()].
+\code{\link[=strip_list_markers]{strip_list_markers()}}, \code{\link[=content_ratio]{content_ratio()}}, \code{\link[=dedupe]{dedupe()}}.
 }

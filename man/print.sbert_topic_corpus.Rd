@@ -7,7 +7,7 @@
 \method{print}{sbert_topic_corpus}(x, ...)
 }
 \arguments{
-\item{x}{An `sbert_topic_corpus` object.}
+\item{x}{An \code{sbert_topic_corpus} object.}
 
 \item{...}{Ignored.}
 }

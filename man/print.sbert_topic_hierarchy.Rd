@@ -7,7 +7,7 @@
 \method{print}{sbert_topic_hierarchy}(x, ...)
 }
 \arguments{
-\item{x}{An `sbert_topic_hierarchy` object.}
+\item{x}{An \code{sbert_topic_hierarchy} object.}
 
 \item{...}{Ignored.}
 }

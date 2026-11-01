@@ -10,15 +10,14 @@ content_ratio(text)
 \item{text}{A character vector.}
 }
 \value{
-A numeric vector in `[0, 1]`; empty or space-only elements score `0`.
+A numeric vector in \verb{[0, 1]}; empty or space-only elements score \code{0}.
 }
 \description{
 The fraction of a string's non-space characters that are letters. A
 domain-agnostic measure of how much of a unit is prose rather than numbers,
 punctuation, or symbols: real sentences score near 1, while citation
-fragments, reference lists, number tables, and identifiers (`"OJ No L 297,
-24.11.1979, p. 1."`, `"doi:10.1007/..."`) score low. Used by the
-`min_content` filters of [segment()] and [topics()].
+fragments, reference lists, number tables, and identifiers (\code{"OJ No L 297, 24.11.1979, p. 1."}, \code{"doi:10.1007/..."}) score low. Used by the
+\code{min_content} filters of \code{\link[=segment]{segment()}} and \code{\link[=topics]{topics()}}.
 }
 \examples{
 content_ratio(c("A real sentence here.", "OJ No L 297, 24.11.1979, p. 1."))

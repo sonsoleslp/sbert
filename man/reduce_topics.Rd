@@ -7,29 +7,31 @@
 reduce_topics(object, n_topics, embeddings = NULL, method = "average")
 }
 \arguments{
-\item{object}{An `sbert_topic_model` returned by [topics()].}
+\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
 
 \item{n_topics}{Target number of topics, at least 2 and below the
 current count.}
 
-\item{embeddings}{The document embedding matrix used to fit `object`.
-Only needed when the model was fitted with `keep_embeddings = FALSE`;
-models fitted with `keep_embeddings = TRUE` carry their embeddings.}
+\item{embeddings}{The document embedding matrix used to fit \code{object}.
+Only needed when the model was fitted with \code{keep_embeddings = FALSE};
+models fitted with \code{keep_embeddings = TRUE} carry their embeddings.}
 
-\item{method}{Agglomeration method passed to [stats::hclust()]. Default
-`"average"`.}
+\item{method}{Agglomeration method passed to \code{\link[stats:hclust]{stats::hclust()}}. Default
+\code{"average"}.}
 }
 \value{
-An `sbert_topic_model` with `n_topics` topics.
+An \code{sbert_topic_model} with \code{n_topics} topics and the same
+structure as a \code{\link[=topics]{topics()}} fit. Names given with \code{\link[=name_topics]{name_topics()}} are
+dropped, because the merged topics need new ones.
 }
 \description{
-Cuts the topic hierarchy (see [topic_hierarchy()]) at the requested
+Cuts the topic hierarchy (see \code{\link[=topic_hierarchy]{topic_hierarchy()}}) at the requested
 count and rebuilds the model: documents keep their cluster memberships
 (merged, never re-clustered), centroids are recomputed from the member
 documents, and terms, labels, sizes, and representatives are derived
-afresh for the merged topics. The result is a full `sbert_topic_model`
-— every downstream verb (`summary()`, `coherence()`, `predict()`,
-[representatives()], plots) works unchanged.
+afresh for the merged topics. The result is a full \code{sbert_topic_model}
+— every downstream verb (\code{summary()}, \code{coherence()}, \code{predict()},
+\code{\link[=representatives]{representatives()}}, plots) works unchanged.
 }
 \examples{
 text <- c(
@@ -40,9 +42,9 @@ embeddings <- rbind(
   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 )
-topics <- topics(
+topic_model <- topics(
   text, 3,
   embeddings = embeddings, n_terms = 3, keep_embeddings = TRUE
 )
-reduce_topics(topics, 2)
+reduce_topics(topic_model, 2)
 }

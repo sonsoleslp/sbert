@@ -7,28 +7,30 @@
 name_topics(object, labels)
 }
 \arguments{
-\item{object}{A fitted [topics()] model.}
+\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
 
 \item{labels}{Character vector with one distinct, non-empty name per
 topic, in topic order (topic 1 first).}
 }
 \value{
-The model with its labels replaced: an `sbert_topic_model` whose
-  `$settings$topic_names` records the names. [reduce_topics()] merges
-  topics, so it drops the names and labels the merged topics afresh.
+The model with its labels replaced: an \code{sbert_topic_model} whose
+\verb{$settings$topic_names} records the names. \code{\link[=reduce_topics]{reduce_topics()}} merges
+topics, so it drops the names and labels the merged topics afresh.
 }
 \description{
 Replaces each topic's label with a name you choose after reading its
 representative texts, for example the kind of message a topic holds
-(`"Correction"`, `"Short hint"`). The names replace the `label` column of
-every table keyed by topic (`$topics`, `$documents`, `terms()`,
-`representatives`), so they appear in [summary()], [topic_sizes()],
-[predict()], [topic_hierarchy()], and every plot. Nothing is refitted.
+(\code{"Correction"}, \code{"Short hint"}). The names replace the \code{label} column of
+every table keyed by topic, so they appear in
+\link[=summary.sbert_topic_model]{summary()}, \code{\link[=topic_sizes]{topic_sizes()}},
+\link[=terms.sbert_topic_model]{terms()}, \code{\link[=representatives]{representatives()}},
+\link[=predict.sbert_topic_model]{predict()}, \code{\link[=topic_hierarchy]{topic_hierarchy()}}, and every
+plot. Nothing is refitted.
 }
 \section{Errors}{
- Raises a condition of class `sbert_bad_topic_names` when
-  `labels` is not a character vector with one distinct, non-empty,
-  non-missing name per topic.
+ Raises a condition of class \code{sbert_bad_topic_names} when
+\code{labels} is not a character vector with one distinct, non-empty,
+non-missing name per topic.
 }
 
 \examples{

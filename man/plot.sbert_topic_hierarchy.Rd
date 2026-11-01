@@ -7,13 +7,13 @@
 \method{plot}{sbert_topic_hierarchy}(x, main = "Topic hierarchy", cex = 0.8, ...)
 }
 \arguments{
-\item{x}{An `sbert_topic_hierarchy` object.}
+\item{x}{An \code{sbert_topic_hierarchy} object.}
 
 \item{main}{Plot title.}
 
 \item{cex}{Character expansion factor for labels.}
 
-\item{...}{Passed to [plot.dendrogram()].}
+\item{...}{Passed to \code{\link[=plot.dendrogram]{plot.dendrogram()}}.}
 }
 \value{
 The hierarchy object, invisibly.

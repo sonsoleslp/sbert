@@ -26,10 +26,10 @@
 #' @examples
 #' head(feedback_translations)
 #'
-#' segment(
-#'   head(feedback_translations$translation, 5),
-#'   level = "sentence"
-#' )
+#' # Repeated messages collapse to one row with their count.
+#' head(with(feedback_translations, dedupe(translation)))
+#'
+#' with(head(feedback_translations, 5), segment(translation, level = "sentence"))
 "feedback_translations"
 
 #' COVID-19 Research Abstracts
@@ -45,17 +45,20 @@
 #' \describe{
 #'   \item{Year}{Integer publication year, from 2020 to 2024.}
 #'   \item{Abstract}{The article abstract. 323 records carry the placeholder
-#'     `"[No abstract available]"`; 3,671 of the abstracts are distinct and the
-#'     longest is 5,285 characters.}
+#'     `"[No abstract available]"`; the other 3,847 hold 3,670 distinct
+#'     abstracts, and the longest is 5,285 characters.}
 #' }
 #' Editorial notices (retractions, corrections, and errata) are removed during
 #' preparation, so every row is a research abstract or a placeholder.
+#' [topics()] and [compare_topics()] drop the placeholder rows themselves when
+#' given the data frame with `column = "Abstract"`.
 #'
 #' @source Bibliographic database export of COVID-19 research articles
 #'   (2020-2024), prepared by `data-raw/covid.R`.
 #' @examples
-#' table(covid$Year)
+#' xtabs(~ Year, data = covid)
 #'
-#' content <- covid$Abstract[covid$Abstract != "[No abstract available]"]
-#' nchar(content[1])
+#' abstracts <- subset(covid, Abstract != "[No abstract available]")
+#' nrow(abstracts)
+#' with(abstracts, summary(nchar(Abstract)))
 "covid"

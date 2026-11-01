@@ -19,7 +19,7 @@ only zero and one.}
 
 \item{normalize}{Whether to L2-normalize every sentence vector.}
 
-\item{method}{`"mean"` (default) or `"cls"` (first token).}
+\item{method}{\code{"mean"} (default) or \code{"cls"} (first token).}
 }
 \value{
 A numeric matrix shaped batch by hidden.

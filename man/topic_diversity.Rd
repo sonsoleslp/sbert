@@ -7,13 +7,13 @@
 topic_diversity(object, n_terms = 10L)
 }
 \arguments{
-\item{object}{An `sbert_topic_model` returned by [topics()].}
+\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
 
 \item{n_terms}{Number of top terms per topic to pool. Capped at the number
 of terms available for each topic.}
 }
 \value{
-A single proportion in `(0, 1]`.
+A single proportion in \verb{(0, 1]}.
 }
 \description{
 Reports the proportion of distinct terms among the pooled top terms of every
@@ -27,10 +27,11 @@ text <- c(
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-topic_diversity(topics)
+topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+topic_diversity(topic_model)
 }
 \references{
 Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic
-  modeling in embedding spaces. TACL.
+modeling in embedding spaces. \emph{Transactions of the Association for
+Computational Linguistics}, 8, 439--453. \doi{10.1162/tacl_a_00325}
 }

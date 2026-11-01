@@ -7,17 +7,17 @@
 \format{
 A data frame with 8,757 rows and 2 character columns:
 \describe{
-  \item{feedback}{The original feedback message in the source language.}
-  \item{translation}{The English translation of the message.}
+\item{feedback}{The original feedback message in the source language.}
+\item{translation}{The English translation of the message.}
 }
 There are 8,005 distinct translations. Messages are at most 193 characters
 long.
 }
 \source{
 Anonymized export of the AI mathematics feedback of the Levebee
-  educational application (<https://www.levebee.com/>), December 2025. The
-  messages address learners generically and contain no personal names or
-  identifiers.
+educational application (\url{https://www.levebee.com/}), December 2025. The
+messages address learners generically and contain no personal names or
+identifiers.
 }
 \usage{
 feedback_translations
@@ -37,9 +37,9 @@ their original language, and a few are identical to their translation.
 \examples{
 head(feedback_translations)
 
-segment(
-  head(feedback_translations$translation, 5),
-  level = "sentence"
-)
+# Repeated messages collapse to one row with their count.
+head(with(feedback_translations, dedupe(translation)))
+
+with(head(feedback_translations, 5), segment(translation, level = "sentence"))
 }
 \keyword{datasets}

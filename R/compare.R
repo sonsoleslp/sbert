@@ -9,7 +9,7 @@
 #' justify a granularity choice: mean topic coherence, topic diversity, and
 #' the share of embedding variance separated between topics. The verb
 #' compares; it never chooses for you. Take the count you want out of the
-#' comparison with [fitted()].
+#' comparison with [fitted()][fitted.sbert_topic_sweep].
 #'
 #' There is no single correct topic count; this verb replaces the habit of
 #' picking one by feel with a table you can defend. Coherence typically falls
@@ -30,7 +30,7 @@
 #'   document (or per segment when `segment` is not `"document"`); supply it
 #'   to avoid re-encoding.
 #' @param measure Coherence measure, `"npmi"` (default) or `"umass"`.
-#' @param n_terms Top terms per topic used for coherence and topic_diversity.
+#' @param n_terms Top terms per topic used for coherence and topic diversity.
 #'   Default `10`.
 #' @param n_representatives Representative documents kept per topic in each
 #'   retained model. Default `1`; raise it when the stored models are meant
@@ -51,8 +51,9 @@
 #'   several levels — for example `c("document", "sentence", "clause")` — to
 #'   compare the segmentations as well as the counts: every level is fitted
 #'   across every candidate, the table gains a leading `segment` column, the
-#'   plot draws one line per level, and [fitted()] takes `segment =` alongside
-#'   `n_topics`. `max_tokens`, `merge_below`, and `min_content` then apply to
+#'   plot draws one line per level, and [fitted()][fitted.sbert_topic_sweep]
+#'   takes `segment =` alongside `n_topics`. `max_tokens`, `merge_below`, and
+#'   `min_content` then apply to
 #'   the segmented levels only. With several levels, precomputed `embeddings`
 #'   are a list of matrices named by level.
 #' @inheritParams topics
@@ -61,9 +62,12 @@
 #'   (between-topic share of total variance), preceded by `segment` when
 #'   several levels were compared. The coherence measure is recorded in the
 #'   `measure` attribute. When `keep_models = TRUE` the result also carries
-#'   class `sbert_topic_sweep` and the fitted models, which [fitted()]
-#'   extracts and [plot.sbert_topic_sweep()] draws.
-#' @seealso [fitted()] to pull one fitted model out of the comparison.
+#'   class `sbert_topic_sweep` and the fitted models, which
+#'   [fitted()][fitted.sbert_topic_sweep] extracts,
+#'   [as.data.frame()][as.data.frame.sbert_topic_sweep] strips, and
+#'   [plot.sbert_topic_sweep()] draws.
+#' @seealso [fitted()][fitted.sbert_topic_sweep] to pull one fitted model out
+#'   of the comparison.
 #' @export
 #' @examples
 #' text <- c(
@@ -607,12 +611,15 @@ print.sbert_topic_sweep <- function(x, ...) {
 
 #' Coerce a Topic-Count Comparison to a Data Frame
 #'
-#' Drops the retained models and the sweep attributes, leaving the plain
-#' table of candidates and their measures for further manipulation.
+#' Drops the retained models and the sweep class, leaving the plain table of
+#' candidates and their measures.
 #'
 #' @param x An `sbert_topic_sweep` object.
 #' @param ... Ignored.
-#' @return A plain data frame without the attached models or sweep attributes.
+#' @return A base data frame with one row per candidate and columns
+#'   `n_topics`, `coherence`, `topic_diversity`, and `explained`, preceded by
+#'   `segment` when several levels were compared. The coherence measure stays
+#'   in the `measure` attribute; the fitted models are dropped.
 #' @export
 #' @examples
 #' text <- c(

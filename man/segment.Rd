@@ -17,62 +17,62 @@ segment(
 }
 \arguments{
 \item{text}{A character vector of documents. Names, when present, are
-carried into the `document_name` column.}
+carried into the \code{document_name} column.}
 
-\item{level}{`"clause"` (default), `"sentence"`, or `"phrase"`.}
+\item{level}{\code{"clause"} (default), \code{"sentence"}, or \code{"phrase"}.}
 
 \item{merge_below}{Re-join segments shorter than this many words into their
-neighbor. `0` (default) disables merging and returns the pure
+neighbor. \code{0} (default) disables merging and returns the pure
 segmentation.}
 
 \item{abbreviations}{Character vector of abbreviations (each ending in a
 period) whose periods never end a sentence. Defaults to the built-in
-gazetteer from [abbreviations()]; matching is case-insensitive.}
+gazetteer from \code{\link[=abbreviations]{abbreviations()}}; matching is case-insensitive.}
 
 \item{cores}{Number of forked worker processes used to split documents.
-Default `1` (serial). Values above one use `parallel::mclapply` on
+Default \code{1} (serial). Values above one use \code{parallel::mclapply} on
 Unix-alikes and fall back to serial on Windows or for small inputs; the
 segmentation is identical regardless of the count.}
 
 \item{max_tokens}{Optional cap on segment length, so no segment overruns an
-encoder's context window and is silently truncated. `NULL` (default) leaves
+encoder's context window and is silently truncated. \code{NULL} (default) leaves
 segments uncapped. When set, any segment over the budget is re-split at the
-finest logical boundaries — clause hinges, `";"`, `":"`, `" - "`, and
+finest logical boundaries — clause hinges, \code{";"}, \code{":"}, \code{" - "}, and
 commas (though a comma that would sever a name from its initials, as in
-`"Tomlinson, C. A."`, does not split) — and the pieces are packed back up to
+\code{"Tomlinson, C. A."}, does not split) — and the pieces are packed back up to
 the budget, so a split lands on punctuation wherever possible. A run with no
 such boundary is chopped
 further, but even then the break is placed just before a function word (a
 coordinator, preposition, article, or relative pronoun) near the budget
 edge rather than mid-phrase, falling back to the raw edge only when the run
-has no function word either. With `model = NULL` the budget counts
+has no function word either. With \code{model = NULL} the budget counts
 whitespace-delimited words, a deterministic offline proxy; set it below the
 model's true token limit (for example around 200 for a 256-token model),
 since a tokenizer emits somewhat more tokens than words.}
 
-\item{model}{Optional loaded [sbert_model][load_model()]. When supplied with
-`max_tokens`, the budget counts that model's exact sub-word tokens instead
-of words, so `max_tokens` can be the model's real limit. Token-counted
-segmentation runs serially (the tokenizer is not forked), so `cores` is
+\item{model}{Optional loaded \link[=load_model]{sbert_model}. When supplied with
+\code{max_tokens}, the budget counts that model's exact sub-word tokens instead
+of words, so \code{max_tokens} can be the model's real limit. Token-counted
+segmentation runs serially (the tokenizer is not forked), so \code{cores} is
 ignored in that case.}
 
-\item{min_content}{Minimum alphabetic-content ratio, in `[0, 1]`, for a
-segment to be kept (see [content_ratio()]). Segments below the floor —
+\item{min_content}{Minimum alphabetic-content ratio, in \verb{[0, 1]}, for a
+segment to be kept (see \code{\link[=content_ratio]{content_ratio()}}). Segments below the floor —
 citation fragments, page and reference bits, number lists — are dropped.
-Prose scores near 1 and reference noise far below, so a value around `0.5`
-removes the noise while keeping real clauses. `0` (default) keeps every
+Prose scores near 1 and reference noise far below, so a value around \code{0.5}
+removes the noise while keeping real clauses. \code{0} (default) keeps every
 segment.}
 }
 \value{
 A base data frame with one row per segment and columns
-  `document_id` (integer position in `text`), `document_name` (name of the
-  input element, or `""`), `segment` (integer position within the
-  document), and `text` (the segment). Blank documents contribute no rows.
+\code{document_id} (integer position in \code{text}), \code{document_name} (name of the
+input element, or \code{""}), \code{segment} (integer position within the
+document), and \code{text} (the segment). Blank documents contribute no rows.
 }
 \description{
 Splits each document into units at a selectable granularity using
 deterministic sentence-boundary rules: a word-boundary-anchored,
-case-insensitive abbreviation gazetteer (see [abbreviations()]),
+case-insensitive abbreviation gazetteer (see \code{\link[=abbreviations]{abbreviations()}}),
 a decimal-number guard, and a parenthetical guard, plus shallow clause
 chunking at discourse connectives. No model call is involved, so
 segmentation works offline and is fully reproducible.
@@ -80,11 +80,11 @@ segmentation works offline and is fully reproducible.
 \details{
 Each finer level adds separators:
 \describe{
-  \item{`"sentence"`}{splits at `.`, `?`, and `!` only.}
-  \item{`"clause"`}{additionally splits at `;`, `:`, spaced dashes, and
-    subordinating hinges (for example "which", "where", "in terms of").
-    Comma-separated enumerations stay whole. This is the default.}
-  \item{`"phrase"`}{additionally splits at commas, for maximal granularity.}
+\item{\code{"sentence"}}{splits at \code{.}, \verb{?}, and \code{!} only.}
+\item{\code{"clause"}}{additionally splits at \verb{;}, \code{:}, spaced dashes, and
+subordinating hinges (for example "which", "where", "in terms of").
+Comma-separated enumerations stay whole. This is the default.}
+\item{\code{"phrase"}}{additionally splits at commas, for maximal granularity.}
 }
 
 Before segmentation, each document is normalized: curly quotes become

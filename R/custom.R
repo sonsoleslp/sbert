@@ -206,7 +206,8 @@ verify_custom_files <- function(model_directory, manifest) {
 #' @param verify Whether to verify recorded byte sizes and SHA-256 hashes
 #'   when loading from an existing cache.
 #' @param quiet Whether to suppress download progress.
-#' @return An object of class `sbert_model`.
+#' @return An object of class `sbert_model`, with the same fields as
+#'   [load_model()] returns; its `short_name` is `"custom:<id>"`.
 #' @export
 #' @examples
 #' # Cache root used for downloaded and custom models.

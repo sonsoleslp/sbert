@@ -7,15 +7,17 @@
 model_remove(cache_dir = default_cache_dir(), model = "all-MiniLM-L6-v2")
 }
 \arguments{
-\item{cache_dir}{Cache root returned by [cache_dir()].}
+\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
 
-\item{model}{Name of a pinned model listed by [models()].}
+\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
 }
 \value{
 Invisibly, whether the model directory no longer exists.
 }
 \description{
-Remove an Installed Model from the Cache
+Deletes the cached files of one pinned model. Other models and the rest
+of the cache are left untouched; a model that is not installed is not an
+error.
 }
 \examples{
 cache <- file.path(tempdir(), "sbert-example-cache")

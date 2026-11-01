@@ -7,16 +7,19 @@
 \method{as.data.frame}{sbert_topic_sweep}(x, ...)
 }
 \arguments{
-\item{x}{An `sbert_topic_sweep` object.}
+\item{x}{An \code{sbert_topic_sweep} object.}
 
 \item{...}{Ignored.}
 }
 \value{
-A plain data frame without the attached models or sweep attributes.
+A base data frame with one row per candidate and columns
+\code{n_topics}, \code{coherence}, \code{topic_diversity}, and \code{explained}, preceded by
+\code{segment} when several levels were compared. The coherence measure stays
+in the \code{measure} attribute; the fitted models are dropped.
 }
 \description{
-Drops the retained models and the sweep attributes, leaving the plain
-table of candidates and their measures for further manipulation.
+Drops the retained models and the sweep class, leaving the plain table of
+candidates and their measures.
 }
 \examples{
 text <- c(

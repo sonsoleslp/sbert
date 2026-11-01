@@ -7,12 +7,12 @@
 dedupe(text)
 }
 \arguments{
-\item{text}{A character vector. `NA` and blank (whitespace-only) elements
+\item{text}{A character vector. \code{NA} and blank (whitespace-only) elements
 are dropped before deduplication.}
 }
 \value{
 A base data frame with one row per distinct text and columns
-  `text` (in order of first appearance) and `n` (number of occurrences).
+\code{text} (in order of first appearance) and \code{n} (number of occurrences).
 }
 \description{
 Collapses a character vector to its distinct non-blank texts, keeping the
@@ -20,7 +20,7 @@ order of first appearance and counting how often each text occurred.
 Embedding and clustering operate on the distinct texts (so repeated
 templates cannot drag the cluster geometry), while the returned counts
 carry the original frequencies back into reporting, for example through
-[topic_sizes()].
+\code{\link[=topic_sizes]{topic_sizes()}}.
 }
 \examples{
 dedupe(c("Very good!", "Try again.", "Very good!", NA, "  "))

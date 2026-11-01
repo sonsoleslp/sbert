@@ -16,28 +16,28 @@
 )
 }
 \arguments{
-\item{x}{A comparison returned by [compare_topics()].}
+\item{x}{A comparison returned by \code{\link[=compare_topics]{compare_topics()}}.}
 
-\item{type}{`"metrics"` (default) or `"fit"`.}
+\item{type}{\code{"metrics"} (default) or \code{"fit"}.}
 
-\item{main}{Overall title for `type = "metrics"`.}
+\item{main}{Overall title for \code{type = "metrics"}.}
 
-\item{n_topics}{For `type = "fit"`, the candidate count whose models are
+\item{n_topics}{For \code{type = "fit"}, the candidate count whose models are
 drawn. Required when the comparison holds several candidates.}
 
-\item{segment}{For `type = "fit"`, the segment levels to draw; defaults to
+\item{segment}{For \code{type = "fit"}, the segment levels to draw; defaults to
 every level in the comparison.}
 
-\item{n_terms, n_representatives}{For `type = "fit"`, passed to
-[plot.sbert_topic_model()].}
+\item{n_terms, n_representatives}{For \code{type = "fit"}, passed to
+\code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}}.}
 
 \item{...}{Passed to the underlying plotting calls.}
 }
 \value{
-`x`, invisibly.
+\code{x}, invisibly.
 }
 \description{
-`type = "metrics"` (the default) draws coherence, topic diversity, and
+\code{type = "metrics"} (the default) draws coherence, topic diversity, and
 between-topic variance against the candidate topic counts, marking the
 count with the highest coherence. A comparison over several segment levels
 draws one line per level in each panel, told apart by color, point shape,
@@ -46,8 +46,8 @@ useful signal is the count after which coherence stops improving, not a
 global maximum.
 }
 \details{
-`type = "fit"` draws the per-topic fit report of
-[plot.sbert_topic_model()] for the retained model at `n_topics`, one
+\code{type = "fit"} draws the per-topic fit report of
+\code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}} for the retained model at \code{n_topics}, one
 figure per segment level, so the same topic count can be read across
 segmentations side by side.
 }

@@ -8,19 +8,20 @@ models(detail = FALSE)
 }
 \arguments{
 \item{detail}{Whether to include the technical columns. The default
-`FALSE` returns the menu (`model`, `dimensions`, `max_tokens`,
-`languages`, `size_mb`); `TRUE` adds `pooling` (`"mean"` or `"cls"`),
-`prefix` (text automatically prepended by [encode()]), `engine`
-(`"onnx"` or `"static"`), `license`, `id`, and `revision`.}
+\code{FALSE} returns the menu (\code{model}, \code{dimensions}, \code{max_tokens},
+\code{languages}, \code{size_mb}); \code{TRUE} adds \code{pooling} (\code{"mean"} or \code{"cls"}),
+\code{prefix} (text automatically prepended by \code{\link[=encode]{encode()}}), \code{engine}
+(\code{"onnx"} or \code{"static"}), \code{license}, \code{id}, and \code{revision}.}
 }
 \value{
-A data frame with one row per model.
+A base data frame with one row per pinned model and the columns
+described under \code{detail}.
 }
 \description{
 Every supported model is locked to an immutable Hugging Face revision and
-verified by byte size and SHA-256 before use. Pass the `model` column value
+verified by byte size and SHA-256 before use. Pass the \code{model} column value
 to any verb that takes a model, for example
-`encode(text, model = "bge-small-en-v1.5")`.
+\code{encode(text, model = "bge-small-en-v1.5")}.
 }
 \examples{
 models()

@@ -7,7 +7,7 @@
 \method{print}{sbert_topic_model}(x, ...)
 }
 \arguments{
-\item{x}{An `sbert_topic_model` object.}
+\item{x}{An \code{sbert_topic_model} object.}
 
 \item{...}{Ignored.}
 }
@@ -15,8 +15,11 @@
 The topic model object, invisibly.
 }
 \description{
-Shows the fit at a glance: how many documents and topics, the variance
-explained, and each topic with its size and its most distinctive terms.
+Shows the fit at a glance: the number of documents and topics, the
+embedding source, the clustering algorithm, the size of every topic, and
+the share of the embedding variance that lies between topics. Use
+\link[=summary.sbert_topic_model]{summary()} for coherence per topic and
+\code{\link[=topic_sizes]{topic_sizes()}} for the labeled size table.
 }
 \examples{
 text <- c(

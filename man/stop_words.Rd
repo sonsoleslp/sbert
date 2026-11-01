@@ -7,7 +7,7 @@
 stop_words(language = "en", add = NULL, remove = NULL)
 }
 \arguments{
-\item{language}{Currently only `"en"` is supported.}
+\item{language}{Currently only \code{"en"} is supported.}
 
 \item{add}{Character vector of extra words to exclude (matched
 case-insensitively).}
@@ -19,17 +19,17 @@ A sorted character vector of lowercase stop words.
 }
 \description{
 Returns the stop words excluded from term extraction and keyword
-candidates. `add` extends the list — the standard way to remove a
+candidates. \code{add} extends the list — the standard way to remove a
 corpus-wide vocabulary from topic labels (words every document shares
-carry no discriminative information). `remove` un-lists built-in entries
+carry no discriminative information). \code{remove} un-lists built-in entries
 whose surface form is meaningful in a specific corpus.
 }
 \details{
 For a fully custom list, pass any character vector straight to the
-`stop_words` argument of [topics()], [compare_topics()], [topic_corpus()], or
-[keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
-the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
-list entirely, or `character()` to disable stop-word filtering.
+\code{stop_words} argument of \code{\link[=topics]{topics()}}, \code{\link[=compare_topics]{compare_topics()}}, \code{\link[=topic_corpus]{topic_corpus()}}, or
+\code{\link[=keywords]{keywords()}} — for example \code{stop_words(add = c("covid", "patient"))} to keep
+the defaults plus domain terms, a bare \code{c("covid", "patient")} to replace the
+list entirely, or \code{character()} to disable stop-word filtering.
 }
 \examples{
 head(stop_words())

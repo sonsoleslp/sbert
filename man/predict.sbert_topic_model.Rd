@@ -7,37 +7,37 @@
 \method{predict}{sbert_topic_model}(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 }
 \arguments{
-\item{object}{A fitted [topics()] model.}
+\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
 
 \item{text}{Character vector of new documents. A model fitted with
-`segment = "sentence"`, `"clause"`, or `"phrase"` splits them the same
-way first (with the fitted `max_tokens`, `merge_below`, and
-`min_content`) and assigns every segment.}
+\code{segment = "sentence"}, \code{"clause"}, or \code{"phrase"} splits them the same
+way first (with the fitted \code{max_tokens}, \code{merge_below}, and
+\code{min_content}) and assigns every segment.}
 
-\item{model}{A loaded [sbert_model][load_model()], a pinned model
-name, or `NULL` for the default model; ignored when `embeddings` are
+\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
+name, or \code{NULL} for the default model; ignored when \code{embeddings} are
 supplied. The embedding dimension must match the fitted model.}
 
 \item{embeddings}{Optional numeric matrix with one row per document, or
 one row per segment for a segmented model.}
 
-\item{batch_size}{Batch size passed to [encode()] when `model` is
+\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is
 used.}
 
 \item{...}{Unused; included for S3 compatibility.}
 }
 \value{
 A base data frame with one row per document and columns
-  `document_id`, `document_name`, `text`, `topic`, `label` (the fitted
-  topic label), and `distance` (cosine distance to the assigned centroid).
-  For a segmented model, one row per segment, with `document_id` naming
-  the source document and `segment` its position within it.
+\code{document_id}, \code{document_name}, \code{text}, \code{topic}, \code{label} (the fitted
+topic label), and \code{distance} (cosine distance to the assigned centroid).
+For a segmented model, one row per segment, with \code{document_id} naming
+the source document and \code{segment} its position within it.
 }
 \description{
 Predicts the topic of unseen documents by embedding them and assigning each
 to the nearest stored topic centroid under cosine distance. The fitted
-model is not modified. Supply either a loaded `model` (to embed `text`) or
-a precomputed embedding matrix whose rows align with `text`.
+model is not modified. Supply either a loaded \code{model} (to embed \code{text}) or
+a precomputed embedding matrix whose rows align with \code{text}.
 }
 \examples{
 text <- c(

@@ -7,13 +7,13 @@
 select_topics(...)
 }
 \arguments{
-\item{...}{Passed to [compare_topics()].}
+\item{...}{Passed to \code{\link[=compare_topics]{compare_topics()}}.}
 }
 \value{
-See [compare_topics()].
+See \code{\link[=compare_topics]{compare_topics()}}.
 }
 \description{
-`select_topics()` is the former name of [compare_topics()]. It never
+\code{select_topics()} is the former name of \code{\link[=compare_topics]{compare_topics()}}. It never
 selected a count, it compared them, so it was renamed in sbert 0.5.4. This
 alias forwards every argument and warns once per session.
 }

@@ -124,10 +124,10 @@ score_topic_coherence <- function(
 #' @param n_terms Number of top terms per topic to score. Capped at the number
 #'   of terms actually available for each topic.
 #' @param smoothing Additive smoothing for the UMass co-occurrence count.
-#' @param token_lists Optional precomputed per-document token lists, aligned to
-#'   `object$documents`, that skip re-tokenizing the corpus (as produced by
-#'   [topic_corpus()]). Leave `NULL` to tokenize internally; the score is
-#'   identical either way.
+#' @param token_lists Optional precomputed per-unit token lists, one per
+#'   fitted document or segment in model order, that skip re-tokenizing the
+#'   corpus (as produced by [topic_corpus()]). Leave `NULL` to tokenize
+#'   internally; the score is identical either way.
 #' @param cores Number of forked worker processes for tokenization when it is
 #'   not already cached. Default `1` (serial). Values above one use
 #'   `parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
@@ -137,7 +137,11 @@ score_topic_coherence <- function(
 #'   the `"mean_coherence"` attribute. Topics with fewer than two scorable terms
 #'   yield `NA`.
 #' @references Mimno, D., Wallach, H. M., Talley, E., Leenders, M., and
-#'   McCallum, A. (2011). Optimizing semantic coherence in topic models. EMNLP.
+#'   McCallum, A. (2011). Optimizing semantic coherence in topic models.
+#'   *Proceedings of EMNLP 2011*, 262--272.
+#'
+#' Bouma, G. (2009). Normalized (pointwise) mutual information in collocation
+#' extraction. *Proceedings of GSCL*, 31--40.
 #' @export
 #' @examples
 #' text <- c(
@@ -145,8 +149,8 @@ score_topic_coherence <- function(
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-#' coherence(topics)
+#' topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+#' coherence(topic_model)
 coherence <- function(
   object,
   measure = c("npmi", "umass"),
@@ -247,7 +251,8 @@ coherence <- function(
 #'   of terms available for each topic.
 #' @return A single proportion in `(0, 1]`.
 #' @references Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic
-#'   modeling in embedding spaces. TACL.
+#'   modeling in embedding spaces. *Transactions of the Association for
+#'   Computational Linguistics*, 8, 439--453. \doi{10.1162/tacl_a_00325}
 #' @export
 #' @examples
 #' text <- c(
@@ -255,8 +260,8 @@ coherence <- function(
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-#' topic_diversity(topics)
+#' topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+#' topic_diversity(topic_model)
 topic_diversity <- function(object, n_terms = 10L) {
   stopifnot(
     inherits(object, "sbert_topic_model"),
@@ -288,12 +293,12 @@ topic_diversity <- function(object, n_terms = 10L) {
 #' Summarize a Semantic Topic Model
 #'
 #' Prints a compact scientific report -- corpus size, cluster separation,
-#' coherence, and topic_diversity -- and returns a tidy per-topic quality table.
+#' coherence, and topic diversity -- and returns a tidy per-topic quality table.
 #'
 #' @param object An `sbert_topic_model` returned by [topics()].
 #' @param measure Coherence measure passed to [coherence()].
 #' @param n_terms Number of top terms per topic used for coherence and
-#'   topic_diversity.
+#'   topic diversity.
 #' @param ... Unused; present for S3 compatibility.
 #' @return Invisibly, a data frame with one row per topic containing `topic`,
 #'   `label`, `n_documents`, `proportion`, and `coherence`.
@@ -304,8 +309,8 @@ topic_diversity <- function(object, n_terms = 10L) {
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-#' summary(topics)
+#' topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+#' summary(topic_model)
 summary.sbert_topic_model <- function(
   object,
   measure = c("npmi", "umass"),

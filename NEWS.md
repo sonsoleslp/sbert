@@ -1,3 +1,30 @@
+# sbert 0.5.11
+
+* Documentation revision. roxygen markdown is now switched on
+  (`Roxygen: list(markdown = TRUE)`): the help pages had shown raw
+  backticks and `[topic()]` brackets instead of code and links, and every
+  `%` silently cut the rest of its line (for example the padding and
+  cache-cost figures in `?encode` and `?load_model`). Links to the
+  generics now point at this package's methods (`terms()`, `summary()`,
+  `predict()`, `plot()`, `fitted()`).
+* `?topics` describes the fields of a fitted model and the verbs that read
+  them, its error conditions, and its references (Reimers and Gurevych 2019;
+  Grootendorst 2022; Mendonca and Figueira 2025; Lloyd 1982). References
+  were added to `topic_membership()` (Bezdek 1981), `keywords()` (Carbonell
+  and Goldstein 1998; KeyBERT), and `coherence()` (Bouma 2009 for NPMI).
+* Corrected statements: `print()` of a topic model and of a loaded model
+  list what they actually show; `topic_corpus()` says that `topics()` takes
+  the tokenization settings from the corpus; `?covid` gives 3,670 distinct
+  abstracts and `?encode` 177 repeated ones; `?topic_palette` names the
+  HCL palette it returns; `?as.data.frame.sbert_topic_sweep` keeps the
+  `measure` attribute; `?topic_membership` and `?topic_gamma` no longer say
+  "topic_membership" where they mean membership.
+* Examples, the README, and the articles use the package's verbs instead of
+  reaching into results: `topic_sizes()`, `representatives()`, and
+  `topic_gamma()` replace `$topics` and `$documents`, and `topics()` and
+  `topic_corpus()` take `column =` instead of `df$column`. The README now
+  shows sentence labels, matching 0.5.9.
+
 # sbert 0.5.10
 
 * New `name_topics(object, labels)` names the topics of a fitted model, for

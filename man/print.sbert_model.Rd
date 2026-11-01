@@ -7,7 +7,7 @@
 \method{print}{sbert_model}(x, ...)
 }
 \arguments{
-\item{x}{An `sbert_model` object.}
+\item{x}{An \code{sbert_model} object.}
 
 \item{...}{Ignored.}
 }
@@ -16,7 +16,7 @@ The model object, invisibly.
 }
 \description{
 Shows the model's identity and the settings inference will run under:
-pinned revision, embedding dimensions, backend, and thread count.
+Hugging Face id, pinned revision, embedding dimensions, and backend.
 }
 \examples{
 # Pinned models that can be loaded and printed.

@@ -99,8 +99,8 @@ hierarchy_tree <- function(object, method) {
 #'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
 #'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 #' )
-#' topics <- topics(text, 3, embeddings = embeddings, n_terms = 3)
-#' topic_hierarchy(topics)
+#' topic_model <- topics(text, 3, embeddings = embeddings, n_terms = 3)
+#' topic_hierarchy(topic_model)
 topic_hierarchy <- function(object, method = "average") {
   stopifnot(
     inherits(object, "sbert_topic_model"),
@@ -227,7 +227,9 @@ plot.sbert_topic_hierarchy <- function(
 #'   models fitted with `keep_embeddings = TRUE` carry their embeddings.
 #' @param method Agglomeration method passed to [stats::hclust()]. Default
 #'   `"average"`.
-#' @return An `sbert_topic_model` with `n_topics` topics.
+#' @return An `sbert_topic_model` with `n_topics` topics and the same
+#'   structure as a [topics()] fit. Names given with [name_topics()] are
+#'   dropped, because the merged topics need new ones.
 #' @export
 #' @examples
 #' text <- c(
@@ -238,11 +240,11 @@ plot.sbert_topic_hierarchy <- function(
 #'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
 #'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 #' )
-#' topics <- topics(
+#' topic_model <- topics(
 #'   text, 3,
 #'   embeddings = embeddings, n_terms = 3, keep_embeddings = TRUE
 #' )
-#' reduce_topics(topics, 2)
+#' reduce_topics(topic_model, 2)
 reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average") {
   stopifnot(
     inherits(object, "sbert_topic_model"),

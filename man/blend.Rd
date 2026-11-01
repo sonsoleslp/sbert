@@ -15,43 +15,43 @@ blend(
 )
 }
 \arguments{
-\item{segments}{A data frame from [segment()] (or any data frame
-with integer `document_id` and character `text` columns), one row per
+\item{segments}{A data frame from \code{\link[=segment]{segment()}} (or any data frame
+with integer \code{document_id} and character \code{text} columns), one row per
 segment.}
 
 \item{documents}{The character vector of documents that was segmented;
-`segments$document_id` indexes into it. Required unless both embedding
+\code{segments$document_id} indexes into it. Required unless both embedding
 matrices are supplied.}
 
-\item{model}{A loaded sbert model, a pinned model name, or `NULL` for the
-session default (see [load_model()]). Ignored when embeddings are
+\item{model}{A loaded sbert model, a pinned model name, or \code{NULL} for the
+session default (see \code{\link[=load_model]{load_model()}}). Ignored when embeddings are
 supplied.}
 
-\item{alpha}{Blend weight in `[0, 1]` for the segment's
-context-orthogonal residual. Default `0.5`.}
+\item{alpha}{Blend weight in \verb{[0, 1]} for the segment's
+context-orthogonal residual. Default \code{0.5}.}
 
 \item{embeddings}{Optional precomputed segment embeddings (one row per
-row of `segments`). Supply together with `document_embeddings` to skip
+row of \code{segments}). Supply together with \code{document_embeddings} to skip
 encoding.}
 
 \item{document_embeddings}{Optional precomputed document embeddings (one
-row per document; `segments$document_id` indexes its rows).}
+row per document; \code{segments$document_id} indexes its rows).}
 
 \item{batch_size}{Number of texts encoded per model call when encoding is
-needed. Default `32`.}
+needed. Default \code{32}.}
 }
 \value{
 A numeric matrix with one L2-normalized row per segment, suitable
-  for the `embeddings` argument of [topics()],
-  [representatives()], and [predict.sbert_topic_model()].
+for the \code{embeddings} argument of \code{\link[=topics]{topics()}},
+\code{\link[=representatives]{representatives()}}, and \code{\link[=predict.sbert_topic_model]{predict.sbert_topic_model()}}.
 }
 \description{
 Computes context-aware embeddings for text segments: each segment vector is
 decomposed against its parent document embedding, and the blend keeps
-`alpha` of the segment's context-orthogonal residual plus `1 - alpha` of
+\code{alpha} of the segment's context-orthogonal residual plus \code{1 - alpha} of
 the document direction, renormalized to unit length:
 \deqn{m = normalize(\alpha (u - (u \cdot d) d) + (1 - \alpha) d)}
-with `u` the unit-normalized segment embedding and `d` the unit-normalized
+with \code{u} the unit-normalized segment embedding and \code{d} the unit-normalized
 parent document embedding.
 }
 \details{
@@ -63,8 +63,8 @@ ambiguous in isolation inherits its document's context; identical segment
 texts from different documents get different blended vectors, which keeps
 repeated boilerplate from collapsing into a single artificial topic.
 
-`alpha = 0` returns the parent document embedding; `alpha = 1` keeps only
-what the segment says beyond its document; the default `0.5` balances the
+\code{alpha = 0} returns the parent document embedding; \code{alpha = 1} keeps only
+what the segment says beyond its document; the default \code{0.5} balances the
 two. A segment exactly collinear with its document falls back to the
 document vector.
 }

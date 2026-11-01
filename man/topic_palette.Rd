@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{topic_palette}
 \alias{topic_palette}
-\title{Qualitative Colour Palette for Topics}
+\title{Qualitative Color Palette for Topics}
 \usage{
 topic_palette(n)
 }
@@ -10,10 +10,15 @@ topic_palette(n)
 \item{n}{Number of colors to return.}
 }
 \value{
-A character vector of `n` hex colors.
+A character vector of \code{n} hex colors.
 }
 \description{
-A color-blind-friendly qualitative palette used by the package plots.
+The qualitative palette the package plots use to tell topics apart: \code{n}
+colors from the qualitative HCL palette \code{"Dark 3"}
+(\code{\link[grDevices:palettes]{grDevices::hcl.colors()}}), which vary only in hue at fixed lightness and
+chroma, so no topic looks more prominent than another. Pass your own
+vector to the \code{colors} argument of \code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}} to override
+it.
 }
 \examples{
 topic_palette(4)

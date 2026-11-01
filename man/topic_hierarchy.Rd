@@ -7,17 +7,17 @@
 topic_hierarchy(object, method = "average")
 }
 \arguments{
-\item{object}{An `sbert_topic_model` returned by [topics()].}
+\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
 
-\item{method}{Agglomeration method passed to [stats::hclust()]. Default
-`"average"`.}
+\item{method}{Agglomeration method passed to \code{\link[stats:hclust]{stats::hclust()}}. Default
+\code{"average"}.}
 }
 \value{
-An `sbert_topic_hierarchy`: a list with `merges` (a tidy data
-  frame with one row per merge — `step`, `height`, and the human-readable
-  `left` and `right` branch descriptions) and `tree` (the underlying
-  `hclust` object, labeled with topic labels). `print()` shows the merge
-  table; `plot()` draws the labeled dendrogram.
+An \code{sbert_topic_hierarchy}: a list with \code{merges} (a tidy data
+frame with one row per merge — \code{step}, \code{height}, and the human-readable
+\code{left} and \code{right} branch descriptions) and \code{tree} (the underlying
+\code{hclust} object, labeled with topic labels). \code{print()} shows the merge
+table; \code{plot()} draws the labeled dendrogram.
 }
 \description{
 Agglomeratively clusters the topic centroids by cosine distance and
@@ -25,7 +25,7 @@ returns the merge tree: which topics are semantic neighbors, in what
 order they would fuse, and how far apart they are. Use it to judge
 whether a topic count is too fine (early merges at small heights are
 near-duplicate topics) and to choose a target count for
-[reduce_topics()]. Deterministic — no sampling, no seed.
+\code{\link[=reduce_topics]{reduce_topics()}}. Deterministic — no sampling, no seed.
 }
 \examples{
 text <- c(
@@ -36,6 +36,6 @@ embeddings <- rbind(
   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 )
-topics <- topics(text, 3, embeddings = embeddings, n_terms = 3)
-topic_hierarchy(topics)
+topic_model <- topics(text, 3, embeddings = embeddings, n_terms = 3)
+topic_hierarchy(topic_model)
 }

@@ -19,53 +19,54 @@
 )
 }
 \arguments{
-\item{x}{An `sbert_topic_model` returned by [topics()].}
+\item{x}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
 
-\item{type}{One of `"sizes"` (document count per topic), `"terms"` (top
-terms per topic), `"representatives"` (a ranked text list of the
-centroid-nearest documents per topic), `"fit"` (a per-topic report with the
+\item{type}{One of \code{"sizes"} (document count per topic), \code{"terms"} (top
+terms per topic), \code{"representatives"} (a ranked text list of the
+centroid-nearest documents per topic), \code{"fit"} (a per-topic report with the
 representative documents followed by all three term views -- count,
-TF-IDF, beta -- one row per topic), or `"map"` (a two-dimensional classical-MDS
-projection of the document embeddings, colored by topic). The `"map"` view
-requires a model fitted with `keep_embeddings = TRUE`.}
+TF-IDF, beta -- one row per topic), or \code{"map"} (a two-dimensional classical-MDS
+projection of the document embeddings, colored by topic). The \code{"map"} view
+requires a model fitted with \code{keep_embeddings = TRUE}.}
 
-\item{by}{For `type = "terms"`, one or more of `"score"` (class-based
-TF-IDF, the default and most distinctive terms), `"beta"` (the generative
-within-topic word probability), and `"frequency"` (the raw within-topic
+\item{by}{For \code{type = "terms"}, one or more of \code{"score"} (class-based
+TF-IDF, the default and most distinctive terms), \code{"beta"} (the generative
+within-topic word probability), and \code{"frequency"} (the raw within-topic
 count). A single value draws one panel per topic; several values draw one
 row per topic with a column for each metric.}
 
-\item{topics}{For `type` `"terms"`, `"representatives"`, or `"fit"`, an
+\item{topics}{For \code{type} \code{"terms"}, \code{"representatives"}, or \code{"fit"}, an
 optional vector of topic numbers to restrict the plot to. Defaults to all
 topics.}
 
-\item{per_topic}{For `type` `"terms"`, `"representatives"`, or `"fit"`, draw
+\item{per_topic}{For \code{type} \code{"terms"}, \code{"representatives"}, or \code{"fit"}, draw
 a separate figure for each topic instead of arranging all topics into one
-gridded figure. Most useful with a device or `knitr` chunk that keeps every
+gridded figure. Most useful with a device or \code{knitr} chunk that keeps every
 figure (each topic then becomes its own image).}
 
-\item{n_terms}{Number of top terms shown per panel when `type` is `"terms"`
-or `"fit"`.}
+\item{n_terms}{Number of top terms shown per panel when \code{type} is \code{"terms"}
+or \code{"fit"}.}
 
 \item{n_representatives}{Number of representative documents shown per panel
-when `type` is `"representatives"` or `"fit"`. When more are requested than
+when \code{type} is \code{"representatives"} or \code{"fit"}. When more are requested than
 the model stored at fit time, they are recomputed from the retained
-embeddings; if the model was fitted with `keep_embeddings = FALSE`, the
+embeddings; if the model was fitted with \code{keep_embeddings = FALSE}, the
 stored set is used and a warning is issued.}
 
-\item{colors}{Optional vector of topic colors; defaults to [topic_palette()].}
+\item{colors}{Optional vector of topic colors; defaults to \code{\link[=topic_palette]{topic_palette()}}.}
 
-\item{max_points}{Maximum documents drawn when `type = "map"`. Larger corpora
+\item{max_points}{Maximum documents drawn when \code{type = "map"}. Larger corpora
 are thinned to a deterministic stratified subsample so the classical-MDS
 projection stays tractable.}
 
-\item{main}{Optional figure title for `type = "fit"`. The default names the
-layout (term columns and representative documents).}
+\item{main}{Optional figure title for \code{type = "fit"} drawn as one figure
+(it is not used with \code{per_topic = TRUE}). The default names the layout
+(term columns and representative documents).}
 
 \item{...}{Unused; present for S3 compatibility.}
 }
 \value{
-Invisibly, `x`.
+Invisibly, \code{x}.
 }
 \description{
 Draws one of five deterministic base-graphics views of a fitted topic
@@ -82,13 +83,13 @@ embeddings <- rbind(
   c(0, 1, 0), c(0.1, 0.9, 0),
   c(0, 0, 1), c(0.05, 0, 0.95)
 )
-topics <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
-plot(topics, type = "sizes")
-plot(topics, type = "terms")
-plot(topics, type = "terms", by = "frequency")
-plot(topics, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
-plot(topics, type = "representatives")
-plot(topics, type = "fit")
-plot(topics, type = "fit", per_topic = TRUE)
-plot(topics, type = "map")
+topic_model <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
+plot(topic_model, type = "sizes")
+plot(topic_model, type = "terms")
+plot(topic_model, type = "terms", by = "frequency")
+plot(topic_model, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
+plot(topic_model, type = "representatives")
+plot(topic_model, type = "fit")
+plot(topic_model, type = "fit", per_topic = TRUE)
+plot(topic_model, type = "map")
 }

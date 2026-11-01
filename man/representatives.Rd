@@ -15,39 +15,39 @@ representatives(
 )
 }
 \arguments{
-\item{object}{A fitted [topics()] model.}
+\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
 
-\item{text}{Character vector of candidate units, for example the `text`
-column of [segment()]. `NULL` (the default) ranks the units the model
+\item{text}{Character vector of candidate units, for example the \code{text}
+column of \code{\link[=segment]{segment()}}. \code{NULL} (the default) ranks the units the model
 was fitted on — its documents, or its segments for a model fitted with
-`segment =` — from their stored embeddings, with no encoding.}
+\verb{segment =} — from their stored embeddings, with no encoding.}
 
-\item{model}{A loaded [sbert_model][load_model()], a pinned model
-name, or `NULL` for the default model; ignored when `embeddings` are
+\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
+name, or \code{NULL} for the default model; ignored when \code{embeddings} are
 supplied.}
 
 \item{embeddings}{Optional numeric matrix with one row per unit.}
 
 \item{n}{Number of units returned per topic.}
 
-\item{rank}{`"margin"` (default) or `"distance"` (raw closeness to the
+\item{rank}{\code{"margin"} (default) or \code{"distance"} (raw closeness to the
 topic centroid).}
 
-\item{batch_size}{Batch size passed to [encode()] when `model` is
+\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is
 used.}
 }
 \value{
-A base data frame with columns `topic`, `rank`, `text`,
-  `distance` (to the unit's own centroid), and `margin`, ordered by topic
-  and rank. When the fitted units are ranked (`text = NULL`), `document_id`
-  — and `segment`, for a segmented model — sit between `rank` and `text`
-  so every example can be traced to its source. Topics to which no unit is
-  assigned contribute no rows.
+A base data frame with columns \code{topic}, \code{rank}, \code{text},
+\code{distance} (to the unit's own centroid), and \code{margin}, ordered by topic
+and rank. When the fitted units are ranked (\code{text = NULL}), \code{document_id}
+— and \code{segment}, for a segmented model — sit between \code{rank} and \code{text}
+so every example can be traced to its source. Topics to which no unit is
+assigned contribute no rows.
 }
 \description{
 Selects, for each fitted topic, the text units (documents, sentences, or
 clause segments) that best evidence it. The default ranking is by
-*distinctiveness margin* — the unit's cosine distance to its second-best
+\emph{distinctiveness margin} — the unit's cosine distance to its second-best
 centroid minus the distance to its own — rather than by raw closeness.
 Raw closeness systematically favors long units, because topic centroids
 are averages of whole-document embeddings and long units resemble whole

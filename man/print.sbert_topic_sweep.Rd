@@ -7,7 +7,7 @@
 \method{print}{sbert_topic_sweep}(x, ...)
 }
 \arguments{
-\item{x}{An `sbert_topic_sweep` object.}
+\item{x}{An \code{sbert_topic_sweep} object.}
 
 \item{...}{Ignored.}
 }

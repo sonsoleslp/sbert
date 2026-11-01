@@ -7,16 +7,16 @@
 install_runtime(cuda = NULL)
 }
 \arguments{
-\item{cuda}{Passed to [onnxr::onnx_install()]. Use `FALSE` for the portable
-CPU runtime, `TRUE` to request CUDA on supported systems, or `NULL` for
+\item{cuda}{Passed to \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}. Use \code{FALSE} for the portable
+CPU runtime, \code{TRUE} to request CUDA on supported systems, or \code{NULL} for
 automatic detection.}
 }
 \value{
-The result returned by [onnxr::onnx_install()], invisibly.
+The result returned by \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}, invisibly.
 }
 \description{
 Explicitly downloads the native ONNX Runtime used by the CRAN package
-`onnxr`. This is never called during package installation or loading.
+\code{onnxr}. This is never called during package installation or loading.
 }
 \examples{
 # Whether the ONNX Runtime is already available; nothing is installed here.

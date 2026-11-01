@@ -7,12 +7,15 @@
 model_status(cache_dir = default_cache_dir(), model = "all-MiniLM-L6-v2")
 }
 \arguments{
-\item{cache_dir}{Cache root returned by [cache_dir()].}
+\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
 
-\item{model}{Name of a pinned model listed by [models()].}
+\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
 }
 \value{
-A data frame with one row per required artifact.
+A base data frame with one row per required artifact and columns
+\code{file}, \code{path} (where it is expected in the cache), \code{exists}, \code{valid}
+(size and hash both match), \code{expected_bytes}, and \code{actual_bytes} (\code{NA}
+when the file is missing).
 }
 \description{
 Reports whether each required artifact exists and passes its pinned byte-size

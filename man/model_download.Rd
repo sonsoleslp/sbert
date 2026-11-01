@@ -12,9 +12,9 @@ model_download(
 )
 }
 \arguments{
-\item{model}{Name of a pinned model listed by [models()].}
+\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
 
-\item{cache_dir}{Cache root returned by [cache_dir()].}
+\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
 
 \item{quiet}{Whether to suppress download progress.}
 
@@ -27,8 +27,8 @@ Invisibly, the model directory.
 Downloads the official ONNX graph and tokenizer of a pinned model only
 after this function is called. Files are locked to an immutable repository
 revision and checked against package-controlled SHA-256 values. See
-[models()] for the available models; the default remains
-`all-MiniLM-L6-v2`.
+\code{\link[=models]{models()}} for the available models; the default remains
+\code{all-MiniLM-L6-v2}.
 }
 \examples{
 # Report what is already cached; nothing is downloaded here.

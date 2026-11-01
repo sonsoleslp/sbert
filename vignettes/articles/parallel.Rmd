@@ -48,15 +48,15 @@ the result as `embeddings`:
 ```{r embed-once}
 embeddings <- encode(abstracts$Abstract)
 
-model_8 <- topics(abstracts$Abstract, n_topics = 8, embeddings = embeddings)
-model_12 <- topics(abstracts$Abstract, n_topics = 12, embeddings = embeddings)
+model_8 <- topics(abstracts, column = "Abstract", n_topics = 8, embeddings = embeddings)
+model_12 <- topics(abstracts, column = "Abstract", n_topics = 12, embeddings = embeddings)
 ```
 
 `topic_corpus()` goes one step further. It stores both the embeddings and the
 tokenized words, so later fits repeat neither:
 
 ```{r corpus-once}
-prepared <- topic_corpus(abstracts$Abstract, embeddings = embeddings)
+prepared <- topic_corpus(abstracts, column = "Abstract", embeddings = embeddings)
 
 sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12))
 model_8 <- fitted(sweep, n_topics = 8)
@@ -118,7 +118,9 @@ these functions tokenize and split documents in parallel, and
 `compare_topics()` fits its topic counts in parallel.
 
 ```{r cores}
-prepared <- topic_corpus(abstracts$Abstract, embeddings = embeddings, cores = 4)
+prepared <- topic_corpus(
+  abstracts, column = "Abstract", embeddings = embeddings, cores = 4
+)
 sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12), cores = 4)
 ```
 
@@ -161,7 +163,8 @@ with its abstract, so `topic_gamma()` needs no further encoding:
 
 ```{r fit-segments}
 sentence_model <- topics(
-  abstracts$Abstract,
+  abstracts,
+  column = "Abstract",
   n_topics = 8,
   segment = "sentence",
   model = model,

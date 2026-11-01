@@ -20,30 +20,30 @@ load_custom(
 )
 }
 \arguments{
-\item{id}{Hugging Face repository id, for example `"thenlper/gte-small"`.}
+\item{id}{Hugging Face repository id, for example \code{"thenlper/gte-small"}.}
 
-\item{revision}{Optional commit hash to pin. `NULL` resolves the current
+\item{revision}{Optional commit hash to pin. \code{NULL} resolves the current
 revision on first download (recorded in the manifest thereafter).}
 
-\item{onnx_path}{Repository path of the ONNX graph. `NULL` auto-detects
-`onnx/model.onnx` or `model.onnx`.}
+\item{onnx_path}{Repository path of the ONNX graph. \code{NULL} auto-detects
+\code{onnx/model.onnx} or \code{model.onnx}.}
 
 \item{tokenizer_path}{Repository path of the tokenizer. Default
-`"tokenizer.json"`.}
+\code{"tokenizer.json"}.}
 
-\item{pooling}{`"mean"` or `"cls"`. `NULL` auto-detects from
-`1_Pooling/config.json` and fails with a clear message when absent.}
+\item{pooling}{\code{"mean"} or \code{"cls"}. \code{NULL} auto-detects from
+\verb{1_Pooling/config.json} and fails with a clear message when absent.}
 
-\item{prefix}{Text prepended to every input by [encode()]. `NULL`
-(default) keeps the recorded value (`""` on first use); pass `""` to
+\item{prefix}{Text prepended to every input by \code{\link[=encode]{encode()}}. \code{NULL}
+(default) keeps the recorded value (\code{""} on first use); pass \code{""} to
 clear a recorded prefix.}
 
-\item{max_length}{Maximum word pieces per input. `NULL` auto-detects from
-`sentence_bert_config.json`, falling back to 512.}
+\item{max_length}{Maximum word pieces per input. \code{NULL} auto-detects from
+\code{sentence_bert_config.json}, falling back to 512.}
 
-\item{cache_dir}{Cache root returned by [cache_dir()].}
+\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
 
-\item{backend}{ONNX execution backend accepted by [onnxr::onnx_model()].}
+\item{backend}{ONNX execution backend accepted by \code{\link[onnxr:onnx_model]{onnxr::onnx_model()}}.}
 
 \item{threads}{Positive number of inference threads.}
 
@@ -53,17 +53,18 @@ when loading from an existing cache.}
 \item{quiet}{Whether to suppress download progress.}
 }
 \value{
-An object of class `sbert_model`.
+An object of class \code{sbert_model}, with the same fields as
+\code{\link[=load_model]{load_model()}} returns; its \code{short_name} is \code{"custom:<id>"}.
 }
 \description{
 Loads any public Hugging Face repository that ships an ONNX encoder export
-and a `tokenizer.json`, returning the same `sbert_model` object as
-[load_model()] so that [encode()], [topics()], and every
+and a \code{tokenizer.json}, returning the same \code{sbert_model} object as
+\code{\link[=load_model]{load_model()}} so that \code{\link[=encode]{encode()}}, \code{\link[=topics]{topics()}}, and every
 downstream verb work unchanged.
 }
 \details{
 This is the escape hatch below the curated registry. On first use the
-current revision is resolved (unless `revision` is given), the artifacts
+current revision is resolved (unless \code{revision} is given), the artifacts
 are downloaded, and their byte sizes and SHA-256 values are recorded in a
 local manifest ("trust on first use"); later loads verify the files
 against that manifest and never touch the network. Pooling, prefix, and

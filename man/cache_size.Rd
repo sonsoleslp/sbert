@@ -7,14 +7,16 @@
 cache_size(cache_dir = cache_dir())
 }
 \arguments{
-\item{cache_dir}{Cache root returned by [cache_dir()].}
+\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
 }
 \value{
-The total number of bytes currently used by regular files beneath
-  the cache root.
+A single number: the total bytes used by regular files beneath
+the cache root, or \code{0} when it does not exist.
 }
 \description{
-Measure the sbert Cache
+Reports how much disk space the files under a cache root take, for
+example the downloaded models, so the cache can be pruned with
+\code{\link[=model_remove]{model_remove()}}.
 }
 \examples{
 cache_size(tempdir())

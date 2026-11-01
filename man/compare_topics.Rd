@@ -25,87 +25,92 @@ compare_topics(
 }
 \arguments{
 \item{text}{A character vector of documents, a data frame together with
-`column`, or a prepared [topic_corpus()]. Passing a corpus (or letting
-`compare_topics()` build one internally) segments, embeds, and tokenizes
+\code{column}, or a prepared \code{\link[=topic_corpus]{topic_corpus()}}. Passing a corpus (or letting
+\code{compare_topics()} build one internally) segments, embeds, and tokenizes
 the documents once and reuses that work across every candidate, instead
 of re-tokenizing per candidate.}
 
 \item{n_topics}{Integer vector of candidate topic counts, each at least 2
-and below the number of modeled units. Default `c(5, 10, 15, 20, 25, 30)`.}
+and below the number of modeled units. Default \code{c(5, 10, 15, 20, 25, 30)}.}
 
-\item{column}{When `text` is a data frame, the name of the column
-holding the documents to model. Every other column is carried into
-`$documents`, and rows whose text is missing, blank, or a
-bibliographic placeholder are dropped. Leave `NULL` for a character
-vector.}
+\item{column}{When \code{text} is a data frame, the name of the column
+holding the documents to model. Every other column is carried along
+with each document in the fitted document table, and rows whose text is
+missing, blank, or a bibliographic placeholder
+(\code{"[No abstract available]"}) are dropped. Precomputed
+\code{embeddings} may keep one row per supplied row; the dropped rows are
+removed from them too. Leave \code{NULL} for a character vector.}
 
-\item{model}{A loaded sbert model, a pinned model name, or `NULL` for the
-session default. Ignored when `embeddings` is supplied.}
+\item{model}{A loaded sbert model, a pinned model name, or \code{NULL} for the
+session default. Ignored when \code{embeddings} is supplied.}
 
 \item{embeddings}{Optional precomputed embedding matrix, one row per
-document (or per segment when `segment` is not `"document"`); supply it
+document (or per segment when \code{segment} is not \code{"document"}); supply it
 to avoid re-encoding.}
 
-\item{measure}{Coherence measure, `"npmi"` (default) or `"umass"`.}
+\item{measure}{Coherence measure, \code{"npmi"} (default) or \code{"umass"}.}
 
-\item{n_terms}{Top terms per topic used for coherence and topic_diversity.
-Default `10`.}
+\item{n_terms}{Top terms per topic used for coherence and topic diversity.
+Default \code{10}.}
 
 \item{n_representatives}{Representative documents kept per topic in each
-retained model. Default `1`; raise it when the stored models are meant
+retained model. Default \code{1}; raise it when the stored models are meant
 to be inspected rather than only compared.}
 
 \item{keep_models}{Whether to retain every fitted model so the chosen
-granularity needs no refitting. Default `TRUE`; set `FALSE` to return
+granularity needs no refitting. Default \code{TRUE}; set \code{FALSE} to return
 only the comparison table when memory matters.}
 
 \item{batch_size}{Number of texts encoded per model call when encoding is
-needed. Default `32`.}
+needed. Default \code{32}.}
 
-\item{cores}{Number of forked worker processes. Default `1` (serial). Above
+\item{cores}{Number of forked worker processes. Default \code{1} (serial). Above
 one, the shared corpus is tokenized in parallel and the candidates — which
 are independent and deterministic — are fitted in parallel, on Unix-alikes
 (serial fallback on Windows). Results are identical for any core count.}
 
-\item{segment}{The unit the candidates are fitted on, as in [topics()]:
-`"document"` (default), `"sentence"`, `"clause"`, or `"phrase"`. Give
-several levels — for example `c("document", "sentence", "clause")` — to
+\item{segment}{The unit the candidates are fitted on, as in \code{\link[=topics]{topics()}}:
+\code{"document"} (default), \code{"sentence"}, \code{"clause"}, or \code{"phrase"}. Give
+several levels — for example \code{c("document", "sentence", "clause")} — to
 compare the segmentations as well as the counts: every level is fitted
-across every candidate, the table gains a leading `segment` column, the
-plot draws one line per level, and [fitted()] takes `segment =` alongside
-`n_topics`. `max_tokens`, `merge_below`, and `min_content` then apply to
-the segmented levels only. With several levels, precomputed `embeddings`
+across every candidate, the table gains a leading \code{segment} column, the
+plot draws one line per level, and \link[=fitted.sbert_topic_sweep]{fitted()}
+takes \verb{segment =} alongside \code{n_topics}. \code{max_tokens}, \code{merge_below}, and
+\code{min_content} then apply to
+the segmented levels only. With several levels, precomputed \code{embeddings}
 are a list of matrices named by level.}
 
-\item{max_tokens}{Optional cap on segment length, passed to [segment()].
-When a `model` is used, the budget counts that model's exact tokens; with
-precomputed `embeddings` it counts words. Only with a segmented fit.}
+\item{max_tokens}{Optional cap on segment length, passed to \code{\link[=segment]{segment()}}.
+When a \code{model} is used, the budget counts that model's exact tokens; with
+precomputed \code{embeddings} it counts words. Only with a segmented fit.}
 
 \item{merge_below}{Re-join segments shorter than this many words into their
-neighbor, passed to [segment()]. Only with a segmented fit.}
+neighbor, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
 
 \item{min_content}{Minimum alphabetic-content ratio for a segment to be
-kept, passed to [segment()]. Only with a segmented fit.}
+kept, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
 
-\item{...}{Further arguments passed to [topics()] (for example
-`stop_words` or `weighting`).}
+\item{...}{Further arguments passed to \code{\link[=topics]{topics()}} (for example
+\code{stop_words} or \code{weighting}).}
 }
 \value{
 A base data frame with one row per candidate and columns
-  `n_topics`, `coherence` (corpus mean), `topic_diversity`, and `explained`
-  (between-topic share of total variance), preceded by `segment` when
-  several levels were compared. The coherence measure is recorded in the
-  `measure` attribute. When `keep_models = TRUE` the result also carries
-  class `sbert_topic_sweep` and the fitted models, which [fitted()]
-  extracts and [plot.sbert_topic_sweep()] draws.
+\code{n_topics}, \code{coherence} (corpus mean), \code{topic_diversity}, and \code{explained}
+(between-topic share of total variance), preceded by \code{segment} when
+several levels were compared. The coherence measure is recorded in the
+\code{measure} attribute. When \code{keep_models = TRUE} the result also carries
+class \code{sbert_topic_sweep} and the fitted models, which
+\link[=fitted.sbert_topic_sweep]{fitted()} extracts,
+\link[=as.data.frame.sbert_topic_sweep]{as.data.frame()} strips, and
+\code{\link[=plot.sbert_topic_sweep]{plot.sbert_topic_sweep()}} draws.
 }
 \description{
-Fits [topics()] once per candidate topic count — deterministically,
+Fits \code{\link[=topics]{topics()}} once per candidate topic count — deterministically,
 on one shared set of embeddings — and returns the quality metrics that
 justify a granularity choice: mean topic coherence, topic diversity, and
 the share of embedding variance separated between topics. The verb
 compares; it never chooses for you. Take the count you want out of the
-comparison with [fitted()].
+comparison with \link[=fitted.sbert_topic_sweep]{fitted()}.
 }
 \details{
 There is no single correct topic count; this verb replaces the habit of
@@ -151,5 +156,6 @@ levels
 fitted(levels, n_topics = 2, segment = "sentence")
 }
 \seealso{
-[fitted()] to pull one fitted model out of the comparison.
+\link[=fitted.sbert_topic_sweep]{fitted()} to pull one fitted model out
+of the comparison.
 }

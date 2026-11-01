@@ -10,13 +10,17 @@ topic_similarity(x, y = NULL)
 \item{x}{Numeric embedding matrix, or one numeric vector.}
 
 \item{y}{Optional second embedding matrix or vector. When omitted, computes
-all pairwise similarities among rows of `x`.}
+all pairwise similarities among rows of \code{x}.}
 }
 \value{
-A numeric similarity matrix.
+A numeric matrix of cosine similarities in \verb{[-1, 1]} with one row
+per row of \code{x} and one column per row of \code{y} (or of \code{x} when \code{y} is
+omitted). A vector counts as a one-row matrix.
 }
 \description{
-Compute Cosine Similarity
+Cosine similarity between embedding rows, for example to check how close
+two texts are in meaning before or after topic modeling. Rows are
+L2-normalized first, so unnormalized embeddings give the same result.
 }
 \examples{
 x <- rbind(c(1, 0), c(0, 1), c(1, 1))

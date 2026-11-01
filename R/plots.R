@@ -4,9 +4,14 @@
 # rather than a stochastic projection such as UMAP or t-SNE, so the same model
 # always yields the same picture.
 
-#' Qualitative Colour Palette for Topics
+#' Qualitative Color Palette for Topics
 #'
-#' A color-blind-friendly qualitative palette used by the package plots.
+#' The qualitative palette the package plots use to tell topics apart: `n`
+#' colors from the qualitative HCL palette `"Dark 3"`
+#' ([grDevices::hcl.colors()]), which vary only in hue at fixed lightness and
+#' chroma, so no topic looks more prominent than another. Pass your own
+#' vector to the `colors` argument of [plot.sbert_topic_model()] to override
+#' it.
 #'
 #' @param n Number of colors to return.
 #' @return A character vector of `n` hex colors.
@@ -681,8 +686,9 @@ plot_topic_map <- function(x, colors, max_points) {
 #' @param max_points Maximum documents drawn when `type = "map"`. Larger corpora
 #'   are thinned to a deterministic stratified subsample so the classical-MDS
 #'   projection stays tractable.
-#' @param main Optional figure title for `type = "fit"`. The default names the
-#'   layout (term columns and representative documents).
+#' @param main Optional figure title for `type = "fit"` drawn as one figure
+#'   (it is not used with `per_topic = TRUE`). The default names the layout
+#'   (term columns and representative documents).
 #' @param ... Unused; present for S3 compatibility.
 #' @return Invisibly, `x`.
 #' @export
@@ -697,15 +703,15 @@ plot_topic_map <- function(x, colors, max_points) {
 #'   c(0, 1, 0), c(0.1, 0.9, 0),
 #'   c(0, 0, 1), c(0.05, 0, 0.95)
 #' )
-#' topics <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
-#' plot(topics, type = "sizes")
-#' plot(topics, type = "terms")
-#' plot(topics, type = "terms", by = "frequency")
-#' plot(topics, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
-#' plot(topics, type = "representatives")
-#' plot(topics, type = "fit")
-#' plot(topics, type = "fit", per_topic = TRUE)
-#' plot(topics, type = "map")
+#' topic_model <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
+#' plot(topic_model, type = "sizes")
+#' plot(topic_model, type = "terms")
+#' plot(topic_model, type = "terms", by = "frequency")
+#' plot(topic_model, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
+#' plot(topic_model, type = "representatives")
+#' plot(topic_model, type = "fit")
+#' plot(topic_model, type = "fit", per_topic = TRUE)
+#' plot(topic_model, type = "map")
 plot.sbert_topic_model <- function(
   x,
   type = c("sizes", "terms", "representatives", "fit", "map"),

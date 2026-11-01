@@ -8,10 +8,12 @@ cache_dir()
 }
 \value{
 A length-one character vector containing the platform-appropriate
-  user cache directory.
+user cache directory.
 }
 \description{
-Locate the sbert Model Cache
+The directory under which downloaded and custom models are stored, from
+\code{\link[tools:userdir]{tools::R_user_dir()}} with \code{which = "cache"}. It is only a path: calling
+this function creates nothing.
 }
 \examples{
 cache_dir()

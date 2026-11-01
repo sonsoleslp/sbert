@@ -26,7 +26,12 @@
 #'   under 3% single-threaded — so benchmark with repetition before tuning.
 #'   Set `threads = "auto"` for the knee of that curve, or an integer to pin it.
 #' @param verify Whether to verify file sizes and SHA-256 hashes before loading.
-#' @return An object of class `sbert_model`.
+#' @return An object of class `sbert_model` (class
+#'   `c("sbert_static_model", "sbert_model")` for `potion-base-8M`): a list
+#'   holding the model's identity (`id`, `short_name`, `revision`), its
+#'   encoding settings (`dimension`, `max_length`, `pooling`, `prefix`), the
+#'   `backend` and `threads` it runs with, and the loaded tokenizer and model.
+#'   Pass it to the `model` argument of [encode()] and the topic verbs.
 #' @export
 #' @examples
 #' # Pinned models that can be loaded.
@@ -210,7 +215,7 @@ load_sbert_onnx_model <- function(path, backend, threads) {
 #' Print a Loaded Model
 #'
 #' Shows the model's identity and the settings inference will run under:
-#' pinned revision, embedding dimensions, backend, and thread count.
+#' Hugging Face id, pinned revision, embedding dimensions, and backend.
 #'
 #' @param x An `sbert_model` object.
 #' @param ... Ignored.

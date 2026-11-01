@@ -8,13 +8,13 @@ abbreviations()
 }
 \value{
 A sorted character vector of uppercase abbreviations, each ending
-  in a period.
+in a period.
 }
 \description{
 Returns the abbreviations whose periods are never treated as sentence
-boundaries by [segment()]. Matching is case-insensitive and anchored
-at a word boundary, so `"ST."` protects `"St. Petersburg"` but never the
-end of `"cost."`.
+boundaries by \code{\link[=segment]{segment()}}. Matching is case-insensitive and anchored
+at a word boundary, so \code{"ST."} protects \code{"St. Petersburg"} but never the
+end of \code{"cost."}.
 }
 \examples{
 head(abbreviations())

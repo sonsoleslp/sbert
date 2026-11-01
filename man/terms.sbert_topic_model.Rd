@@ -22,55 +22,55 @@
 )
 }
 \arguments{
-\item{x}{A fitted model from [topics()].}
+\item{x}{A fitted model from \code{\link[=topics]{topics()}}.}
 
-\item{n}{Terms returned per topic, or `NULL` for the whole vocabulary
-(useful together with `smoothing` to obtain a full \eqn{p(term | topic)}
-distribution). Defaults to the model's fitted `n_terms`.}
+\item{n}{Terms returned per topic, or \code{NULL} for the whole vocabulary
+(useful together with \code{smoothing} to obtain a full \eqn{p(term | topic)}
+distribution). Defaults to the model's fitted \code{n_terms}.}
 
 \item{stop_words}{Character vector excluded from terms. Defaults to the
-model's fitted list; see [stop_words()].}
+model's fitted list; see \code{\link[=stop_words]{stop_words()}}.}
 
 \item{min_term_frequency}{Minimum corpus-wide token frequency.}
 
 \item{min_token_length}{Minimum Unicode character length for a token.}
 
-\item{weighting}{Class-based term weighting, `"ctfidf"` or `"bm25"`.}
+\item{weighting}{Class-based term weighting, \code{"ctfidf"} or \code{"bm25"}.}
 
 \item{reduce_frequent_words}{Square-root the within-topic frequency before
 weighting, damping very frequent words.}
 
 \item{stem}{Collapse inflected forms onto a shared Porter stem, displaying
-the most frequent surface form. Requires `SnowballC`.}
+the most frequent surface form. Requires \code{SnowballC}.}
 
-\item{numbers}{How to treat purely numeric tokens: `"keep"` or `"remove"`
+\item{numbers}{How to treat purely numeric tokens: \code{"keep"} or \code{"remove"}
 (drop digit-only tokens such as years and counts). Defaults to the model's
 fitted setting.}
 
-\item{roman_numerals}{How to treat Roman-numeral tokens: `"keep"` or
-`"remove"` (drop chapter/section markers such as `ii`, `iv`, up to 100).
+\item{roman_numerals}{How to treat Roman-numeral tokens: \code{"keep"} or
+\code{"remove"} (drop chapter/section markers such as \code{ii}, \code{iv}, up to 100).
 Defaults to the model's fitted setting.}
 
 \item{section_numbers}{How to treat section, reference, and list numbering —
-multi-level indices such as `1.2.3` and enumeration markers such as `1.`,
-`2.`: `"keep"` or `"remove"`. Defaults to the model's fitted setting.}
+multi-level indices such as \verb{1.2.3} and enumeration markers such as \code{1.},
+\code{2.}: \code{"keep"} or \code{"remove"}. Defaults to the model's fitted setting.}
 
-\item{smoothing}{Additive (Dirichlet) smoothing for the `beta` column. Only
-terms a topic actually used are returned, so with `smoothing = 0`
-(default) each topic's `beta` sums to one, while any positive value
+\item{smoothing}{Additive (Dirichlet) smoothing for the \code{beta} column. Only
+terms a topic actually used are returned, so with \code{smoothing = 0}
+(default) each topic's \code{beta} sums to one, while any positive value
 reserves mass for the zero-count vocabulary and the returned rows sum to
 less than one.}
 
-\item{sort_by}{Order terms within each topic by `"score"` (default, the
-class-based weight — distinctive words) or `"beta"` (raw \eqn{p(term | topic)}
-— the words the topic uses most). `n` is applied after ordering.}
+\item{sort_by}{Order terms within each topic by \code{"score"} (default, the
+class-based weight — distinctive words) or \code{"beta"} (raw \eqn{p(term | topic)}
+— the words the topic uses most). \code{n} is applied after ordering.}
 
 \item{...}{Unused, present for generic consistency.}
 }
 \value{
-A base data frame with one row per topic and term: `topic`,
-  `label`, `term`, `rank`, `score` (the class-based weight), `frequency`
-  (within-topic count), and `beta`, the multinomial \eqn{p(term | topic)}.
+A base data frame with one row per topic and term: \code{topic},
+\code{label}, \code{term}, \code{rank}, \code{score} (the class-based weight), \code{frequency}
+(within-topic count), and \code{beta}, the multinomial \eqn{p(term | topic)}.
 }
 \description{
 Recomputes the ranked terms of a fitted topic model under different term

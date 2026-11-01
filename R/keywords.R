@@ -99,6 +99,13 @@ mmr_select <- function(relevance, candidate_similarity, n, topic_diversity) {
 #' @return A base data frame with one row per keyword and columns
 #'   `document_id`, `document_name`, `rank`, `keyword`, and `topic_similarity`
 #'   (cosine similarity between the keyword and its document).
+#' @references Carbonell, J. and Goldstein, J. (1998). The use of MMR,
+#'   diversity-based reranking for reordering documents and producing
+#'   summaries. *Proceedings of SIGIR 1998*, 335--336.
+#'   \doi{10.1145/290941.291025}
+#'
+#' Grootendorst, M. (2020). KeyBERT: Minimal keyword extraction with BERT.
+#' \doi{10.5281/zenodo.4461265}
 #' @export
 #' @examples
 #' # Pinned models that can encode the text.

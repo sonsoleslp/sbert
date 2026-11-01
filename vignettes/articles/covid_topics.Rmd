@@ -37,7 +37,7 @@ abstracts and all their sentences. It takes a few minutes.
 
 # Preparing the abstracts
 
-`r sum(covid$Abstract == "[No abstract available]")` records have no abstract,
+`r nrow(subset(covid, Abstract == "[No abstract available]"))` records have no abstract,
 only the placeholder `"[No abstract available]"`. We drop them.
 
 ```{r data}

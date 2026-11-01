@@ -14,32 +14,32 @@ coherence(
 )
 }
 \arguments{
-\item{object}{An `sbert_topic_model` returned by [topics()].}
+\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
 
-\item{measure}{Either `"umass"` (Mimno et al. 2011; larger, i.e. closer to
-zero, is more coherent) or `"npmi"` (normalized pointwise mutual
-information, bounded in `[-1, 1]`; larger is more coherent).}
+\item{measure}{Either \code{"umass"} (Mimno et al. 2011; larger, i.e. closer to
+zero, is more coherent) or \code{"npmi"} (normalized pointwise mutual
+information, bounded in \verb{[-1, 1]}; larger is more coherent).}
 
 \item{n_terms}{Number of top terms per topic to score. Capped at the number
 of terms actually available for each topic.}
 
 \item{smoothing}{Additive smoothing for the UMass co-occurrence count.}
 
-\item{token_lists}{Optional precomputed per-document token lists, aligned to
-`object$documents`, that skip re-tokenizing the corpus (as produced by
-[topic_corpus()]). Leave `NULL` to tokenize internally; the score is
-identical either way.}
+\item{token_lists}{Optional precomputed per-unit token lists, one per
+fitted document or segment in model order, that skip re-tokenizing the
+corpus (as produced by \code{\link[=topic_corpus]{topic_corpus()}}). Leave \code{NULL} to tokenize
+internally; the score is identical either way.}
 
 \item{cores}{Number of forked worker processes for tokenization when it is
-not already cached. Default `1` (serial). Values above one use
-`parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
+not already cached. Default \code{1} (serial). Values above one use
+\code{parallel::mclapply} on Unix-alikes and fall back to serial elsewhere; the
 result is identical regardless of the count.}
 }
 \value{
-A data frame with one row per topic and columns `topic`, `label`,
-  `measure`, `n_terms`, and `coherence`. The corpus-level mean is attached as
-  the `"mean_coherence"` attribute. Topics with fewer than two scorable terms
-  yield `NA`.
+A data frame with one row per topic and columns \code{topic}, \code{label},
+\code{measure}, \code{n_terms}, and \code{coherence}. The corpus-level mean is attached as
+the \code{"mean_coherence"} attribute. Topics with fewer than two scorable terms
+yield \code{NA}.
 }
 \description{
 Computes intrinsic topic coherence from the top terms of a fitted topic
@@ -54,10 +54,14 @@ text <- c(
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topics <- topics(text, 2, embeddings = embeddings, n_terms = 3)
-coherence(topics)
+topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+coherence(topic_model)
 }
 \references{
 Mimno, D., Wallach, H. M., Talley, E., Leenders, M., and
-  McCallum, A. (2011). Optimizing semantic coherence in topic models. EMNLP.
+McCallum, A. (2011). Optimizing semantic coherence in topic models.
+\emph{Proceedings of EMNLP 2011}, 262--272.
+
+Bouma, G. (2009). Normalized (pointwise) mutual information in collocation
+extraction. \emph{Proceedings of GSCL}, 31--40.
 }

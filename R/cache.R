@@ -1,5 +1,9 @@
 #' Locate the sbert Model Cache
 #'
+#' The directory under which downloaded and custom models are stored, from
+#' [tools::R_user_dir()] with `which = "cache"`. It is only a path: calling
+#' this function creates nothing.
+#'
 #' @return A length-one character vector containing the platform-appropriate
 #'   user cache directory.
 #' @export
@@ -16,7 +20,10 @@ cache_dir <- function() {
 #'
 #' @param cache_dir Cache root returned by [cache_dir()].
 #' @param model Name of a pinned model listed by [models()].
-#' @return A data frame with one row per required artifact.
+#' @return A base data frame with one row per required artifact and columns
+#'   `file`, `path` (where it is expected in the cache), `exists`, `valid`
+#'   (size and hash both match), `expected_bytes`, and `actual_bytes` (`NA`
+#'   when the file is missing).
 #' @export
 #' @examples
 #' model_status(tempdir())
@@ -221,9 +228,13 @@ model_download <- function(
 
 #' Measure the sbert Cache
 #'
+#' Reports how much disk space the files under a cache root take, for
+#' example the downloaded models, so the cache can be pruned with
+#' [model_remove()].
+#'
 #' @param cache_dir Cache root returned by [cache_dir()].
-#' @return The total number of bytes currently used by regular files beneath
-#'   the cache root.
+#' @return A single number: the total bytes used by regular files beneath
+#'   the cache root, or `0` when it does not exist.
 #' @export
 #' @examples
 #' cache_size(tempdir())
@@ -255,6 +266,10 @@ cache_size <- function(cache_dir = cache_dir()) {
 }
 
 #' Remove an Installed Model from the Cache
+#'
+#' Deletes the cached files of one pinned model. Other models and the rest
+#' of the cache are left untouched; a model that is not installed is not an
+#' error.
 #'
 #' @param cache_dir Cache root returned by [cache_dir()].
 #' @param model Name of a pinned model listed by [models()].

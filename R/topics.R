@@ -823,11 +823,14 @@ is_segmented_topic_model <- function(object) {
 #'   embedding source (`model` or `embeddings`), the segmentation (`segment`,
 #'   `max_tokens`, `merge_below`, `min_content`), and the tokenization settings
 #'   (`stop_words`, `min_token_length`, `stem`, `numbers`, `roman_numerals`,
-#'   `section_numbers`); [topics()] then refuses conflicting overrides for
-#'   those, while per-model settings (`n_topics`, `n_terms`,
-#'   `min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`, ...)
-#'   are still chosen per call.
+#'   `section_numbers`). [topics()] refuses a `model`, `embeddings`, or a
+#'   different `segment` alongside a corpus, and takes the tokenization
+#'   settings from the corpus, so set them when building it. Per-model
+#'   settings (`n_topics`, `n_terms`, `min_term_frequency`, `weighting`,
+#'   `reduce_frequent_words`, `seeds`, ...) are still chosen per call.
 #'
+#' @param text Character vector containing one document per element, or a
+#'   data frame together with `column`.
 #' @inheritParams topics
 #' @return An object of class `sbert_topic_corpus`: a list with the prepared
 #'   `text` (one element per modeled unit), carried `metadata`, `units` (the
@@ -844,7 +847,7 @@ is_segmented_topic_model <- function(object) {
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 #' corpus <- topic_corpus(text, embeddings = embeddings)
-#' topics(corpus, n_topics = 2)$topics
+#' topic_sizes(topics(corpus, n_topics = 2))
 #' compare_topics(corpus, n_topics = 2:3)
 topic_corpus <- function(
   text,
@@ -1078,8 +1081,9 @@ print.sbert_topic_corpus <- function(x, ...) {
 
 #' Discover Semantic Topics in Documents
 #'
-#' Performs deterministic document-level topic clustering with Sentence-BERT
-#' embeddings. Supply either a loaded `model` or a precomputed embedding matrix.
+#' Groups documents, or their sentences, clauses, or phrases (`segment`), into
+#' topics by deterministic k-means on their Sentence-BERT embeddings. Supply
+#' either a `model` to encode the text or a precomputed embedding matrix.
 #' Topics are summarized with representative documents and class-based TF-IDF
 #' terms. This is embedding-based topic discovery, not a probabilistic LDA model.
 #'
@@ -1088,8 +1092,9 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   topics come from the meaning of whole texts, so a text names a topic
 #'   better than its top words do; `label = "terms"` names topics by their
 #'   three most distinctive words instead. Read more examples per topic with
-#'   [representatives()], and its typical words with [terms()]. Term scores use the
-#'   class-based TF-IDF weighting `tf * log(1 + A / f_x)`, where `tf` is the
+#'   [representatives()], and its typical words with
+#'   [terms()][terms.sbert_topic_model]. Term scores use the class-based
+#'   TF-IDF weighting `tf * log(1 + A / f_x)`, where `tf` is the
 #'   frequency of a term normalized within its topic, `f_x` is the term's
 #'   frequency across all topics, and `A` is the mean topic length (a real
 #'   number, matching Mendonca and Figueira (2025), Eq. 1). Set
@@ -1098,13 +1103,16 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   Unicode alphanumeric tokens and internal apostrophes, but does not perform
 #'   language-specific word segmentation for unspaced CJK text.
 #'
-#' @param text Character vector containing one document per element.
+#' @param text Character vector containing one document per element, a data
+#'   frame together with `column`, or a prepared [topic_corpus()].
 #' @param n_topics Number of semantic topics. Must be at least two.
 #' @param column When `text` is a data frame, the name of the column
-#'   holding the documents to model. Every other column is carried into
-#'   `$documents`, and rows whose text is missing, blank, or a
-#'   bibliographic placeholder are dropped. Leave `NULL` for a character
-#'   vector.
+#'   holding the documents to model. Every other column is carried along
+#'   with each document in the fitted document table, and rows whose text is
+#'   missing, blank, or a bibliographic placeholder
+#'   (`"[No abstract available]"`) are dropped. Precomputed
+#'   `embeddings` may keep one row per supplied row; the dropped rows are
+#'   removed from them too. Leave `NULL` for a character vector.
 #' @param model A loaded [sbert_model][load_model()], a pinned model
 #'   name from [models()], or `NULL` for the default model. Ignored
 #'   when `embeddings` are supplied.
@@ -1177,11 +1185,12 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   splits every document with [segment()] at that level and fits the topics
 #'   on the segments, so long documents are modeled in full instead of being
 #'   truncated to the encoder's context window, and a document can span several
-#'   topics. The fitted `$documents` then has one row per segment with its
+#'   topics. The fitted document table then has one row per segment with its
 #'   parent `document_id` and `segment` position; [topic_sizes()] counts by
 #'   segment or by document, [topic_gamma()] recovers each document's topic
-#'   mixture from the stored segments, and [predict()] segments new text the
-#'   same way. A precomputed `embeddings` matrix must then have one row per
+#'   mixture from the stored segments, and
+#'   [predict()][predict.sbert_topic_model] segments new text the same way. A
+#'   precomputed `embeddings` matrix must then have one row per
 #'   segment, aligned with `segment(text, level = segment, ...)`.
 #' @param max_tokens Optional cap on segment length, passed to [segment()].
 #'   When a `model` is used, the budget counts that model's exact tokens; with
@@ -1194,10 +1203,49 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   `"representative"` (default) uses the topic's most central text,
 #'   shortened to 60 characters; `"terms"` joins its three most distinctive
 #'   words (`"box / red / blue"`). Named `seeds` override either.
-#' @return An object of class `sbert_topic_model` containing unit
-#'   assignments (`$documents`, one row per document or per segment),
-#'   topic summaries, ranked terms, representatives, centers, clustering
-#'   diagnostics, and the `$settings` the fit was made with.
+#' @return An object of class `sbert_topic_model`: a list with
+#'   \describe{
+#'     \item{`documents`}{One row per modeled unit (document, or segment for a
+#'       segmented fit): `document_id`, `document_name`, `segment` (segmented
+#'       fits only), `text`, `topic`, `label`, and `distance` (cosine distance
+#'       to the assigned centroid), followed by any carried `column` data.}
+#'     \item{`topics`}{One row per topic: `topic`, `label`, `n_documents`,
+#'       `proportion`, and `withinss`.}
+#'     \item{`terms`, `representatives`}{The tables returned by
+#'       [terms()][terms.sbert_topic_model] and, ranked by distance, by
+#'       [representatives()].}
+#'     \item{`centers`}{Numeric matrix of unit-length topic centroids, one row
+#'       per topic.}
+#'     \item{`embeddings`}{The normalized unit embeddings, or `NULL` when
+#'       `keep_embeddings = FALSE`.}
+#'     \item{`diagnostics`}{Sums of squares (`totss`, `tot_withinss`,
+#'       `betweenss`), `iterations`, and `algorithm`.}
+#'     \item{`model`, `settings`}{The embedding model identity and every
+#'       setting the fit was made with, which later verbs reuse.}
+#'   }
+#'   Read it through its verbs rather than its fields: [topic_sizes()],
+#'   [terms()][terms.sbert_topic_model], [representatives()],
+#'   [summary()][summary.sbert_topic_model],
+#'   [predict()][predict.sbert_topic_model], [topic_membership()],
+#'   [topic_gamma()], and [plot()][plot.sbert_topic_model].
+#' @section Errors: Raises an error when `n_topics` is below two or exceeds
+#'   the number of modeled units, when `embeddings` does not have one row per
+#'   unit, or when `column` is missing or not found in a data frame. With a
+#'   prepared [topic_corpus()], passing `model`, `embeddings`, or a different
+#'   `segment` is an error.
+#' @references
+#' Reimers, N. and Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
+#' using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP 2019*,
+#' 3982--3992. \doi{10.18653/v1/D19-1410}
+#'
+#' Grootendorst, M. (2022). BERTopic: Neural topic modeling with a class-based
+#' TF-IDF procedure. arXiv:2203.05794.
+#'
+#' Mendonca, M. and Figueira, A. (2025). Modeling political discourse with
+#' Sentence-BERT and BERTopic. arXiv:2510.22904.
+#'
+#' Lloyd, S. P. (1982). Least squares quantization in PCM. *IEEE Transactions
+#' on Information Theory*, 28(2), 129--137. \doi{10.1109/TIT.1982.1056489}
 #' @export
 #' @examples
 #' text <- c(
@@ -1205,8 +1253,9 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topics <- topics(text, 2, embeddings = embeddings)
-#' topics$topics
+#' topic_model <- topics(text, 2, embeddings = embeddings)
+#' topic_sizes(topic_model)
+#' terms(topic_model, n = 3)
 #'
 #' # Fit on sentences: each document is split first, and the segments are
 #' # what the topics are made of (the embeddings here are one row per
@@ -1220,8 +1269,9 @@ print.sbert_topic_corpus <- function(x, ...) {
 #'   segment = "sentence",
 #'   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
 #' )
-#' sentence_model$documents
+#' representatives(sentence_model)
 #' topic_sizes(sentence_model, by = "document")
+#' topic_gamma(sentence_model)
 topics <- function(
   text,
   n_topics,
@@ -1640,8 +1690,11 @@ topics <- function(
 
 #' Print a Semantic Topic Model
 #'
-#' Shows the fit at a glance: how many documents and topics, the variance
-#' explained, and each topic with its size and its most distinctive terms.
+#' Shows the fit at a glance: the number of documents and topics, the
+#' embedding source, the clustering algorithm, the size of every topic, and
+#' the share of the embedding variance that lies between topics. Use
+#' [summary()][summary.sbert_topic_model] for coherence per topic and
+#' [topic_sizes()] for the labeled size table.
 #'
 #' @param x An `sbert_topic_model` object.
 #' @param ... Ignored.
@@ -1696,9 +1749,11 @@ print.sbert_topic_model <- function(x, ...) {
 #' Replaces each topic's label with a name you choose after reading its
 #' representative texts, for example the kind of message a topic holds
 #' (`"Correction"`, `"Short hint"`). The names replace the `label` column of
-#' every table keyed by topic (`$topics`, `$documents`, `terms()`,
-#' `representatives`), so they appear in [summary()], [topic_sizes()],
-#' [predict()], [topic_hierarchy()], and every plot. Nothing is refitted.
+#' every table keyed by topic, so they appear in
+#' [summary()][summary.sbert_topic_model], [topic_sizes()],
+#' [terms()][terms.sbert_topic_model], [representatives()],
+#' [predict()][predict.sbert_topic_model], [topic_hierarchy()], and every
+#' plot. Nothing is refitted.
 #'
 #' @param object A fitted [topics()] model.
 #' @param labels Character vector with one distinct, non-empty name per

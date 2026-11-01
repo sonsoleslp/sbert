@@ -7,28 +7,28 @@
 topic_membership(object, embeddings = NULL, sharpness = 1.15)
 }
 \arguments{
-\item{object}{A fitted [topics()] model.}
+\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
 
 \item{embeddings}{Optional numeric matrix of document embeddings. When
-omitted, the embeddings stored by `topics(keep_embeddings = TRUE)`
+omitted, the embeddings stored by \code{topics(keep_embeddings = TRUE)}
 are used.}
 
-\item{sharpness}{Fuzzy-c-means fuzzifier `m`. Must be greater than 1;
+\item{sharpness}{Fuzzy-c-means fuzzifier \code{m}. Must be greater than 1;
 values close to 1 give crisper memberships.}
 }
 \value{
 A base data frame with one row per document-topic pair and columns
-  `document_id`, `topic`, `probability`, and `rank` (1 is the strongest
-  topic of the document). Probabilities sum to 1 within each document.
+\code{document_id}, \code{topic}, \code{probability}, and \code{rank} (1 is the strongest
+topic of the document). Probabilities sum to 1 within each document.
 }
 \description{
-Computes fuzzy-c-means-style topic_membership of every document in every topic
+Computes fuzzy-c-means-style membership of every document in every topic
 from cosine distances to the stored centroids, without changing the
 deterministic hard clustering. In high-dimensional embedding spaces
-distances concentrate, so the textbook fuzzifier `sharpness = 2` collapses
-memberships toward the uniform `1/k`; the default `sharpness = 1.15`
-preserves contrast. The topic_membership ranking of topics within a document is
-invariant to `sharpness`; the probability magnitudes are not, and should be
+distances concentrate, so the textbook fuzzifier \code{sharpness = 2} collapses
+memberships toward the uniform \code{1/k}; the default \code{sharpness = 1.15}
+preserves contrast. The membership ranking of topics within a document is
+invariant to \code{sharpness}; the probability magnitudes are not, and should be
 interpreted relative to the chosen value.
 }
 \examples{
@@ -39,4 +39,9 @@ text <- c(
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 fitted <- topics(text, 2, embeddings = embeddings, keep_embeddings = TRUE)
 topic_membership(fitted)
+}
+\references{
+Bezdek, J. C. (1981). \emph{Pattern Recognition with Fuzzy
+Objective Function Algorithms}. Plenum Press, New York.
+\doi{10.1007/978-1-4757-0450-1}
 }

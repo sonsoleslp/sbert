@@ -17,41 +17,41 @@ keywords(
 }
 \arguments{
 \item{text}{A character vector of documents. Names, when present, are
-carried into the `document_name` column.}
+carried into the \code{document_name} column.}
 
-\item{model}{A loaded sbert model, a pinned model name, or `NULL` for the
+\item{model}{A loaded sbert model, a pinned model name, or \code{NULL} for the
 session default.}
 
-\item{n}{Maximum keywords returned per document. Default `10`.}
+\item{n}{Maximum keywords returned per document. Default \code{10}.}
 
-\item{ngrams}{Maximum phrase length in tokens. Default `2` (unigrams and
+\item{ngrams}{Maximum phrase length in tokens. Default \code{2} (unigrams and
 bigrams).}
 
-\item{topic_diversity}{Maximal-marginal-relevance trade-off in `[0, 1)`: `0`
+\item{topic_diversity}{Maximal-marginal-relevance trade-off in \verb{[0, 1)}: \code{0}
 ranks purely by similarity, larger values penalize keywords similar to
-ones already selected. Default `0.3`.}
+ones already selected. Default \code{0.3}.}
 
 \item{stop_words}{Words excluded from candidates. Defaults to
-[stop_words()].}
+\code{\link[=stop_words]{stop_words()}}.}
 
 \item{min_token_length}{Minimum character length of a candidate token.
-Default `3`.}
+Default \code{3}.}
 
-\item{batch_size}{Number of texts encoded per model call. Default `32`.}
+\item{batch_size}{Number of texts encoded per model call. Default \code{32}.}
 }
 \value{
 A base data frame with one row per keyword and columns
-  `document_id`, `document_name`, `rank`, `keyword`, and `topic_similarity`
-  (cosine similarity between the keyword and its document).
+\code{document_id}, \code{document_name}, \code{rank}, \code{keyword}, and \code{topic_similarity}
+(cosine similarity between the keyword and its document).
 }
 \description{
 Ranks each document's own words and phrases by cosine similarity between
 their embeddings and the document embedding, computed with the same model,
-and selects the top `n` by maximal marginal relevance so the keywords are
+and selects the top \code{n} by maximal marginal relevance so the keywords are
 relevant without being redundant (the KeyBERT design).
 }
 \details{
-Candidates are consecutive-token n-grams (lengths `1` to `ngrams`) drawn
+Candidates are consecutive-token n-grams (lengths \code{1} to \code{ngrams}) drawn
 from the document after stop-word removal, so a candidate phrase never
 crosses a removed stop word silently: "analysis of networks" yields the
 candidates "analysis", "networks", and "analysis networks".
@@ -68,4 +68,13 @@ if (interactive()) {
   )
 }
 }
+}
+\references{
+Carbonell, J. and Goldstein, J. (1998). The use of MMR,
+diversity-based reranking for reordering documents and producing
+summaries. \emph{Proceedings of SIGIR 1998}, 335--336.
+\doi{10.1145/290941.291025}
+
+Grootendorst, M. (2020). KeyBERT: Minimal keyword extraction with BERT.
+\doi{10.5281/zenodo.4461265}
 }

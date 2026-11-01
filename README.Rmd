@@ -71,12 +71,12 @@ topic_model <- topics(
   n_terms = 8
 )
 
-topic_model$topics
+topic_sizes(topic_model)
 ```
 
 You can run the whole thing with no download by passing a precomputed
 embedding matrix. Here two clearly separated groups — cooking and astronomy —
-fall out, each labeled by its most distinctive terms:
+fall out, each labeled by its most central sentence:
 
 ```{r topics-live, eval = TRUE}
 sentences <- c(
@@ -95,19 +95,19 @@ embeddings <- rbind(
   c(0.05, 0.98), c(0.08, 0.95), c(0.10, 0.92), c(0.03, 0.97)
 )
 topic_model <- topics(sentences, n_topics = 2, embeddings = embeddings)
-topic_model$topics
+topic_sizes(topic_model)
 ```
 
 `plot(type = "fit")` lays the whole model out at a glance — one row per topic,
-its three keyword views (raw count, class-based TF-IDF, and generative
-probability) beside its representative documents:
+its representative documents first, then its three keyword views (raw count,
+class-based TF-IDF, and generative probability):
 
-```{r topics-fit, eval = TRUE, fig.width = 12, fig.height = 4, fig.alt = "Topic fit plot: two rows, one per topic, each showing count, TF-IDF, and beta term bars next to representative documents."}
+```{r topics-fit, eval = TRUE, fig.width = 12, fig.height = 4, fig.alt = "Topic fit plot: two rows, one per topic, each showing its representative documents followed by count, TF-IDF, and beta term bars."}
 plot(topic_model, type = "fit")
 ```
 
 Pass a data frame instead and name the text column: every other column rides
-along into `$documents`, and rows whose text is missing, blank, or a
+along with each document, and rows whose text is missing, blank, or a
 bibliographic placeholder are dropped once rather than by you.
 
 ```{r}
@@ -250,7 +250,7 @@ pure base R — around 10,000 sentences per second, no ONNX involved, with
 the same pinning, verification, and verbs as every other model:
 
 ```{r}
-model_download("potion-base-8M")   # 30 MB
+model_download("potion-base-8M")   # 31 MB
 fast <- load_model("potion-base-8M")
 embeddings <- encode(text, model = fast)
 ```
@@ -337,9 +337,10 @@ verified by byte size and SHA-256 before it is used.
 ## Tutorial
 
 A full worked tutorial ships with the package and runs offline on the
-bundled `feedback_translations` data — building a six-topic model, checking
-its coherence and diversity, reading each topic through two keyword views, and
-confirming the labels with representative messages:
+bundled `feedback_translations` data — choosing the topic count, building a
+six-topic model, reading and naming each topic from its representative
+messages, weighting topic sizes by how often messages repeat, and comparing
+the words each topic uses:
 
 ```{r}
 vignette("math_vignette", package = "sbert")
@@ -372,5 +373,6 @@ vignette("math_vignette", package = "sbert")
   bars, representative documents, a per-topic fit report, and an MDS document map
 - Backends: those exposed by `onnxr`, with CPU as the portable default
 
-Arbitrary unpinned Hugging Face models and training/fine-tuning are
-intentionally out of scope.
+Training and fine-tuning are intentionally out of scope. Models outside the
+pinned registry load through `load_custom()`, which pins them locally but
+makes no numerical-parity claim.
