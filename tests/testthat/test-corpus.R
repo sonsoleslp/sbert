@@ -149,3 +149,33 @@ testthat::test_that("strip_list_markers removes bare Roman-numeral section marke
   testthat::expect_identical(strip_list_markers("the reading was 5 V. today"),
                              "the reading was 5 V. today")
 })
+
+testthat::test_that("a number that ends a sentence is content, not a list marker", {
+  content <- c(
+    "Rank is top 20. Good.", "Value for student 10.",
+    "We chose option 1. It works.", "In week 2. Then week 3. Done."
+  )
+  testthat::expect_identical(strip_list_markers(content), content)
+  # section_numbers applies the same rule to the text.
+  testthat::expect_identical(clean_corpus(content, list_markers = FALSE), content)
+})
+
+testthat::test_that("numbered lists are still stripped where a list can be", {
+  testthat::expect_identical(
+    strip_list_markers(c(
+      "Steps: 1. Read 2. Write", "Steps 1. Read 2. Write 3. Stop",
+      "Done. 1. First 2. Second"
+    )),
+    c("Steps: Read Write", "Steps Read Write Stop", "Done. First Second")
+  )
+  testthat::expect_identical(
+    clean_corpus("Steps 1. Read 2. Write", list_markers = FALSE),
+    "Steps Read Write"
+  )
+})
+
+testthat::test_that("text without a list number is unchanged by the marker rule", {
+  plain <- c("no markers here", "a decimal 1.5 and a year 2020.", "", "(a) kept here")
+  testthat::expect_identical(strip_enumeration_markers(plain), plain)
+  testthat::expect_identical(strip_enumeration_markers(character(0)), character(0))
+})

@@ -319,3 +319,36 @@ testthat::test_that("representatives skip letterless units", {
   m <- topics(docs, n_topics = 2, embeddings = E, n_representatives = 2)
   testthat::expect_true(all(grepl("(*UTF)\\p{L}", m$representatives$text, perl = TRUE)))
 })
+
+testthat::test_that("topic_gamma(top =) keeps each document's largest shares", {
+  fake <- list(
+    documents = data.frame(
+      document_id = c(1L, 1L, 1L, 1L, 2L, 2L, 3L),
+      topic = c(2L, 2L, 3L, 1L, 3L, 3L, 1L)
+    ),
+    topics = data.frame(topic = 1:3),
+    settings = list(segmentation = list(level = "sentence"))
+  )
+  full <- gamma_from_assignments(fake$documents$document_id, fake$documents$topic, 3L)
+  top2 <- top_topic_gamma(full, 2L)
+  testthat::expect_identical(names(top2), c("document_id", "rank", "topic", "gamma", "n_segments"))
+  # Document 1: topic 2 (0.5) then a 0.25 tie broken by topic number (1 before 3).
+  testthat::expect_identical(top2$topic[top2$document_id == 1L], c(2L, 1L))
+  testthat::expect_equal(top2$gamma[top2$document_id == 1L], c(0.5, 0.25))
+  # Zero shares never appear; document 3 has one topic only.
+  testthat::expect_true(all(top2$gamma > 0))
+  testthat::expect_identical(top2$topic[top2$document_id == 3L], 1L)
+  testthat::expect_identical(top2$rank, c(1L, 2L, 1L, 1L))
+  # Invariant: top = number of topics keeps every non-zero share.
+  testthat::expect_identical(nrow(top_topic_gamma(full, 3L)), sum(full$gamma > 0))
+  testthat::expect_identical(top_topic_gamma(full, NULL), full)
+})
+
+testthat::test_that("topic_gamma(top =) works on a fitted segmented model and validates top", {
+  text <- c("Cats chase mice. Stocks trade.", "Dogs chase balls. Markets price shares.")
+  embeddings <- rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
+  model <- topics(text, 2, embeddings = embeddings, segment = "sentence")
+  testthat::expect_identical(nrow(topic_gamma(model, top = 1)), 2L)
+  testthat::expect_error(topic_gamma(model, top = 0), "positive whole number")
+  testthat::expect_error(topic_gamma(model, top = 1.5), "positive whole number")
+})

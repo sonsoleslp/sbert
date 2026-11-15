@@ -20,6 +20,7 @@ compare_topics(
   max_tokens = NULL,
   merge_below = 0L,
   min_content = 0,
+  coherence_weight = c("none", "size"),
   ...
 )
 }
@@ -90,15 +91,24 @@ neighbor, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit
 \item{min_content}{Minimum alphabetic-content ratio for a segment to be
 kept, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
 
+\item{coherence_weight}{How each candidate's topic coherences are averaged:
+\code{"none"} (default) gives every topic the same weight; \code{"size"} weights
+each topic by its number of modeled units, so a tiny topic of a few
+near-identical texts (which scores very high) cannot decide the
+comparison. Passed to \code{\link[=coherence]{coherence()}} as \code{weight}.}
+
 \item{...}{Further arguments passed to \code{\link[=topics]{topics()}} (for example
 \code{stop_words} or \code{weighting}).}
 }
 \value{
 A base data frame with one row per candidate and columns
-\code{n_topics}, \code{coherence} (corpus mean), \code{topic_diversity}, and \code{explained}
-(between-topic share of total variance), preceded by \code{segment} when
-several levels were compared. The coherence measure is recorded in the
-\code{measure} attribute. When \code{keep_models = TRUE} the result also carries
+\code{n_topics}, \code{coherence} (mean over the topics with at least two scorable
+terms, as in \link[=summary.sbert_topic_model]{summary()}, weighted as
+\code{coherence_weight} says; \code{NA} only when no topic can be scored),
+\code{topic_diversity}, and \code{explained} (between-topic share of total
+variance), preceded by \code{segment} when several levels were compared. The
+coherence measure is recorded in the \code{measure} attribute and the averaging
+in the \code{coherence_weight} attribute. When \code{keep_models = TRUE} the result also carries
 class \code{sbert_topic_sweep} and the fitted models, which
 \link[=fitted.sbert_topic_sweep]{fitted()} extracts,
 \link[=as.data.frame.sbert_topic_sweep]{as.data.frame()} strips, and

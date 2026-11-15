@@ -245,3 +245,32 @@ testthat::test_that("panel titles are shortened to fit the panel", {
   )
   testthat::expect_identical(fit_panel_title("Topic 1", cex = 0.9, font = 2), "Topic 1")
 })
+
+testthat::test_that("representative texts never overlap, whatever the panel height", {
+  long <- paste(
+    "However, average forum reading and contributing indicate limited social",
+    "and collaborative learning, which may reduce elaboration and feedback."
+  )
+  reps <- data.frame(text = rep(long, 5L), distance = rep(0.07, 5L))
+  layout_at <- function(height_px) {
+    path <- tempfile(fileext = ".png")
+    grDevices::png(path, width = 700, height = height_px)
+    on.exit(grDevices::dev.off(), add = TRUE)
+    graphics::par(mar = c(0, 0, 1, 0))
+    graphics::plot.new()
+    list(layout = rep_panel_layout(reps, 70L, 0.82), usr = graphics::par("usr"))
+  }
+  tall <- layout_at(400)
+  short <- layout_at(110)
+  tiny <- layout_at(40)
+  testthat::expect_identical(nrow(tall$layout), 5L)
+  testthat::expect_true(all(grepl("\n", tall$layout$label)))
+  testthat::expect_false(any(grepl("\n", short$layout$label)))
+  testthat::expect_lt(nrow(tiny$layout), 5L)
+  # Invariant: each item ends above the next one's top, and above the panel floor.
+  lapply(list(tall, short, tiny), function(one) {
+    bottoms <- one$layout$top - one$layout$height
+    testthat::expect_true(all(utils::head(bottoms, -1L) >= utils::tail(one$layout$top, -1L) - 1e-9))
+    testthat::expect_true(all(bottoms >= one$usr[[3]] - 1e-9))
+  })
+})

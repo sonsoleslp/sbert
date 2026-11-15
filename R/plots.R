@@ -308,9 +308,12 @@ truncate_topic_text <- function(text, max_chars) {
 # rank 1 (centroid-nearest) at the top, each line the document with its cosine
 # similarity to the centroid in parentheses. `reps` is already ordered and
 # capped by the caller.
-draw_topic_rep_panel <- function(reps, title, color, max_chars) {
-  proximity <- 1 - reps$distance
+draw_topic_rep_panel <- function(reps, title, color, max_chars, cex = 0.82) {
   graphics::plot.new()
+  layout <- rep_panel_layout(reps, max_chars, cex)
+  if (nrow(layout) < nrow(reps)) {
+    title <- sprintf("%s (%d of %d shown)", title, nrow(layout), nrow(reps))
+  }
   graphics::title(
     main = title,
     adj = 0,
@@ -319,22 +322,49 @@ draw_topic_rep_panel <- function(reps, title, color, max_chars) {
     font.main = 2,
     line = 0.4
   )
-  n <- nrow(reps)
-  positions <- seq(0.92, 0.08, length.out = max(n, 1L))
-  for (j in seq_len(n)) {
-    graphics::text(
-      0.02,
-      positions[[j]],
-      sprintf(
-        '%d. "%s"  (%.2f)',
-        j,
-        wrap_topic_text(reps$text[[j]], max_chars),
-        proximity[[j]]
+  if (nrow(layout) > 0L) {
+    graphics::text(0.02, layout$top, layout$label, adj = c(0, 1), cex = cex)
+  }
+}
+
+# Stack the representatives top-down by their measured height in the open
+# panel, so texts never overlap: two wrapped lines each when they fit, one line
+# when they do not, and only the items that fit when even one line is too
+# tall. Returns one row per drawn item: `label`, `top`, `height` (user units).
+rep_panel_layout <- function(reps, max_chars, cex) {
+  usr <- graphics::par("usr")
+  gap <- 0.5 * graphics::strheight("M", cex = cex)
+  labels_for <- function(max_lines) {
+    sprintf(
+      '%d. "%s"  (%.2f)',
+      seq_len(nrow(reps)),
+      vapply(
+        reps$text,
+        wrap_topic_text,
+        character(1),
+        width = max_chars,
+        max_lines = max_lines,
+        USE.NAMES = FALSE
       ),
-      adj = c(0, 0.5),
-      cex = 0.82
+      1 - reps$distance
     )
   }
+  fitting <- function(labels) {
+    heights <- graphics::strheight(labels, cex = cex) + gap
+    cumsum(heights) <= usr[[4]] - usr[[3]]
+  }
+  labels <- labels_for(2L)
+  if (!all(fitting(labels))) {
+    labels <- labels_for(1L)
+  }
+  labels <- labels[fitting(labels)]
+  heights <- graphics::strheight(labels, cex = cex) + gap
+  data.frame(
+    label = labels,
+    top = usr[[4]] - c(0, cumsum(heights))[seq_along(labels)],
+    height = heights,
+    stringsAsFactors = FALSE
+  )
 }
 
 # Representatives to plot. The model stores only the number requested at fit

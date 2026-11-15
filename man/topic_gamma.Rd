@@ -13,7 +13,8 @@ topic_gamma(
   batch_size = 32L,
   cores = 1L,
   dedupe_segments = FALSE,
-  sort_by_length = FALSE
+  sort_by_length = FALSE,
+  top = NULL
 )
 }
 \arguments{
@@ -73,11 +74,17 @@ lengths vary far more than document lengths — at clause level 60.1\% of
 token work is padding in input order against 1.6\% when sorted — so this is
 the single largest saving available on this verb, measured at 1.9x. Off by
 default for the same ~1e-7 reason as \code{dedupe_segments}.}
+
+\item{top}{\code{NULL} (default) for every topic of every document, or a whole
+number: each document's \code{top} largest topic shares, largest first. Topics
+with a zero share are left out, so a document can list fewer.}
 }
 \value{
 A base data frame with one row per document-topic pair and columns
 \code{document_id}, \code{topic}, \code{gamma}, and \code{n_segments}. \code{gamma} sums to 1
 within each document; documents with no segments contribute no rows.
+With \code{top}, only each document's \code{top} largest non-zero shares, ordered
+by document and then by share, with a \code{rank} column after \code{document_id}.
 }
 \description{
 Computes \code{gamma}, the distribution of every document over the fitted
@@ -109,4 +116,5 @@ sentence_model <- topics(
   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
 )
 topic_gamma(sentence_model)
+topic_gamma(sentence_model, top = 1)
 }

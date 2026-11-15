@@ -44,7 +44,11 @@ dedupe <- function(text) {
 #' so real words in parentheses (`"(civil)"`), four-digit years (`"(2020)"`),
 #' counts (`"(n=100)"`), multi-word parentheticals (`"(see Fig 1)"`), and
 #' decimals (`"1.5"`) are left untouched. Removed forms are a standalone one- or
-#' two-digit number followed by a period (`"1."`, `"12."`); a parenthesized
+#' two-digit number followed by a period (`"1."`, `"12."`) where a list can
+#' be: at the start of the text or of a sentence, as the `"1."` directly
+#' followed by a `"2."`, or as the next number of a list already under way. A
+#' number that ends a sentence (`"in the top 20."`) is content and kept; a
+#' parenthesized
 #' one- or two-digit number, single letter, or Roman numeral up to 39 (`"(1)"`,
 #' `"(a)"`, `"(iv)"`); and a bare upper-case Roman-numeral section marker with a
 #' period (`"II."`, `"IV."`). A multi-letter numeral is removed anywhere; a
@@ -61,6 +65,7 @@ dedupe <- function(text) {
 #' @examples
 #' strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
 #' strip_list_markers("the concept of (civil) society in (2020)")
+#' strip_list_markers("The student ranks in the top 20. Good work.")
 strip_list_markers <- function(text) {
   stopifnot(is.character(text), !anyNA(text))
   if (length(text) == 0L) {
@@ -74,7 +79,7 @@ strip_list_markers <- function(text) {
   parenthesized <- paste0("(?i:[0-9]{1,3}|[a-z]|", roman, ")")
   # `\\s*` tolerates the space that OCR and reflowed text leave around the mark,
   # so "2 ." and "( i )" are caught as well as "2." and "(i)".
-  text <- gsub("(^|\\s)[0-9]{1,2}\\s*\\.(?=\\s|$)", " ", text, perl = TRUE)
+  text <- strip_enumeration_markers(text)
   text <- gsub(
     paste0("(^|\\s)\\(\\s*", parenthesized, "\\s*\\)(?=\\s|$)"),
     " ", text,
@@ -170,7 +175,8 @@ clean_characters <- function(text) {
 
 # Text-level section/reference numbering: multi-level numeric indices ("1.2.3"),
 # alphanumeric section indices ("II.2", "AA.2", "A.1"), and enumeration markers
-# ("1.", "figure 12."). Mirrors the tokenizer's section_numbers = "remove",
+# where a list can be ("1. aims 2. methods", see strip_enumeration_markers()).
+# Mirrors the tokenizer's section_numbers = "remove",
 # operating on the source text.
 clean_section_numbers <- function(text) {
   text <- gsub("[0-9]+(?:\\.[0-9]+){2,}", " ", text, perl = TRUE)
@@ -179,7 +185,59 @@ clean_section_numbers <- function(text) {
   # are usually content ("B.12" vitamin, "A.1") intact, and upper-case only
   # keeps mixed-case words and lower-case abbreviations untouched.
   text <- gsub("\\b[A-Z]{2,3}\\.[0-9]+\\b", " ", text, perl = TRUE)
-  gsub("(^|\\s)[0-9]{1,2}\\s*\\.(?=\\s|$)", " ", text, perl = TRUE)
+  strip_enumeration_markers(text)
+}
+
+# Numbered-list markers ("1.", "2 ."). A one- or two-digit number with a period
+# is a marker only where a list can be: at the start of the text or of a
+# sentence, as a "1." directly followed by a "2.", or as the next number of a
+# list already under way. Anywhere else it ends a sentence ("in the top 20.",
+# "for student 10.") and is content, so it is kept.
+enumeration_marker_pattern <- "(^|\\s)([0-9]{1,2})\\s*\\.(?=\\s|$)"
+
+strip_enumeration_markers <- function(text) {
+  has_candidate <- grepl(enumeration_marker_pattern, text, perl = TRUE)
+  text[has_candidate] <- vapply(
+    text[has_candidate],
+    strip_document_enumeration_markers,
+    character(1),
+    USE.NAMES = FALSE
+  )
+  text
+}
+
+strip_document_enumeration_markers <- function(document) {
+  matches <- gregexpr(enumeration_marker_pattern, document, perl = TRUE)
+  number_start <- attr(matches[[1L]], "capture.start")[, 2L]
+  number_length <- attr(matches[[1L]], "capture.length")[, 2L]
+  numbers <- as.integer(substring(document, number_start, number_start + number_length - 1L))
+  # What precedes the number, ignoring spaces, quotes, and an opening bracket:
+  # nothing (start of text) or sentence/clause punctuation is a list position.
+  before <- sub(
+    "[[:space:]\"'(]+$", "",
+    substring(document, 1L, number_start - 1L),
+    perl = TRUE
+  )
+  boundary <- !nzchar(before) | grepl("[.:;!?]$", before, perl = TRUE)
+  starts_list <- numbers == 1L & c(numbers[-1L] == 2L, FALSE)
+  continues <- function(previous, i) !is.na(previous) && numbers[i] == previous + 1L
+  # Whether a number continues a list depends on the markers before it, so the
+  # last marker number is carried forward through the candidates in order.
+  last_marker <- Reduce(
+    function(previous, i) {
+      if (boundary[i] || starts_list[i] || continues(previous, i)) numbers[i] else previous
+    },
+    seq_along(numbers),
+    accumulate = TRUE,
+    NA_integer_
+  )
+  previous <- last_marker[seq_along(numbers)]
+  marker <- boundary | starts_list |
+    vapply(seq_along(numbers), \(i) continues(previous[i], i), logical(1))
+  regmatches(document, matches) <- list(
+    ifelse(marker, " ", regmatches(document, matches)[[1L]])
+  )
+  document
 }
 
 # Text-level numeric-token removal: drop stand-alone digit runs (years, counts)

@@ -324,9 +324,14 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #'   token work is padding in input order against 1.6% when sorted — so this is
 #'   the single largest saving available on this verb, measured at 1.9x. Off by
 #'   default for the same ~1e-7 reason as `dedupe_segments`.
+#' @param top `NULL` (default) for every topic of every document, or a whole
+#'   number: each document's `top` largest topic shares, largest first. Topics
+#'   with a zero share are left out, so a document can list fewer.
 #' @return A base data frame with one row per document-topic pair and columns
 #'   `document_id`, `topic`, `gamma`, and `n_segments`. `gamma` sums to 1
 #'   within each document; documents with no segments contribute no rows.
+#'   With `top`, only each document's `top` largest non-zero shares, ordered
+#'   by document and then by share, with a `rank` column after `document_id`.
 #' @export
 #' @examples
 #' text <- c(
@@ -350,6 +355,7 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #'   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
 #' )
 #' topic_gamma(sentence_model)
+#' topic_gamma(sentence_model, top = 1)
 topic_gamma <- function(
   object,
   text = NULL,
@@ -359,9 +365,13 @@ topic_gamma <- function(
   batch_size = 32L,
   cores = 1L,
   dedupe_segments = FALSE,
-  sort_by_length = FALSE
+  sort_by_length = FALSE,
+  top = NULL
 ) {
   stopifnot(
+    "`top` must be NULL or a single positive whole number" = is.null(top) ||
+      (is.numeric(top) && length(top) == 1L && is.finite(top) && top >= 1 &&
+        top == as.integer(top)),
     inherits(object, "sbert_topic_model"),
     is.numeric(batch_size),
     length(batch_size) == 1L,
@@ -401,10 +411,13 @@ topic_gamma <- function(
         call. = FALSE
       )
     }
-    return(gamma_from_assignments(
-      object$documents$document_id,
-      object$documents$topic,
-      nrow(object$topics)
+    return(top_topic_gamma(
+      gamma_from_assignments(
+        object$documents$document_id,
+        object$documents$topic,
+        nrow(object$topics)
+      ),
+      top
     ))
   }
 
@@ -488,11 +501,29 @@ topic_gamma <- function(
     )
   }
   assignment <- assign_topic_embeddings(embedding_matrix, object$centers)
-  gamma_from_assignments(
-    segments$document_id,
-    assignment$topic,
-    nrow(object$topics)
+  top_topic_gamma(
+    gamma_from_assignments(
+      segments$document_id,
+      assignment$topic,
+      nrow(object$topics)
+    ),
+    top
   )
+}
+
+# Each document's `top` largest topic shares, largest first, with their rank.
+# Zero shares are not topics of the document, so a document lists fewer than
+# `top` when fewer topics occur in it. Ties break by topic number.
+top_topic_gamma <- function(gamma, top) {
+  if (is.null(top)) {
+    return(gamma)
+  }
+  gamma <- gamma[gamma$gamma > 0, , drop = FALSE]
+  gamma <- gamma[order(gamma$document_id, -gamma$gamma, gamma$topic), , drop = FALSE]
+  gamma$rank <- as.integer(stats::ave(gamma$topic, gamma$document_id, FUN = seq_along))
+  gamma <- gamma[gamma$rank <= top, c("document_id", "rank", "topic", "gamma", "n_segments")]
+  rownames(gamma) <- NULL
+  gamma
 }
 
 # Per-document topic mixture from segment assignments: the share of each

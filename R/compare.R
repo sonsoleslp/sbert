@@ -32,6 +32,11 @@
 #' @param measure Coherence measure, `"npmi"` (default) or `"umass"`.
 #' @param n_terms Top terms per topic used for coherence and topic diversity.
 #'   Default `10`.
+#' @param coherence_weight How each candidate's topic coherences are averaged:
+#'   `"none"` (default) gives every topic the same weight; `"size"` weights
+#'   each topic by its number of modeled units, so a tiny topic of a few
+#'   near-identical texts (which scores very high) cannot decide the
+#'   comparison. Passed to [coherence()] as `weight`.
 #' @param n_representatives Representative documents kept per topic in each
 #'   retained model. Default `1`; raise it when the stored models are meant
 #'   to be inspected rather than only compared.
@@ -58,10 +63,13 @@
 #'   are a list of matrices named by level.
 #' @inheritParams topics
 #' @return A base data frame with one row per candidate and columns
-#'   `n_topics`, `coherence` (corpus mean), `topic_diversity`, and `explained`
-#'   (between-topic share of total variance), preceded by `segment` when
-#'   several levels were compared. The coherence measure is recorded in the
-#'   `measure` attribute. When `keep_models = TRUE` the result also carries
+#'   `n_topics`, `coherence` (mean over the topics with at least two scorable
+#'   terms, as in [summary()][summary.sbert_topic_model], weighted as
+#'   `coherence_weight` says; `NA` only when no topic can be scored),
+#'   `topic_diversity`, and `explained` (between-topic share of total
+#'   variance), preceded by `segment` when several levels were compared. The
+#'   coherence measure is recorded in the `measure` attribute and the averaging
+#'   in the `coherence_weight` attribute. When `keep_models = TRUE` the result also carries
 #'   class `sbert_topic_sweep` and the fitted models, which
 #'   [fitted()][fitted.sbert_topic_sweep] extracts,
 #'   [as.data.frame()][as.data.frame.sbert_topic_sweep] strips, and
@@ -120,9 +128,11 @@ compare_topics <- function(
   max_tokens = NULL,
   merge_below = 0L,
   min_content = 0,
+  coherence_weight = c("none", "size"),
   ...
 ) {
   measure <- match.arg(measure)
+  coherence_weight <- match.arg(coherence_weight)
   # The default is one level, but an explicit vector compares several.
   segment <- if (missing(segment)) {
     "document"
@@ -154,6 +164,7 @@ compare_topics <- function(
       max_tokens = max_tokens,
       merge_below = merge_below,
       min_content = min_content,
+      coherence_weight = coherence_weight,
       dots = list(...)
     ))
   }
@@ -251,7 +262,8 @@ compare_topics <- function(
         fitted,
         measure = measure,
         n_terms = n_terms,
-        token_lists = corpus$token_lists
+        token_lists = corpus$token_lists,
+        weight = coherence_weight
       )
       explained <- if (fitted$diagnostics$totss > 0) {
         fitted$diagnostics$betweenss / fitted$diagnostics$totss
@@ -260,7 +272,9 @@ compare_topics <- function(
       }
       data.frame(
         n_topics = candidate,
-        coherence = mean(coherence$coherence),
+        # The corpus mean over scored topics, the same number summary() prints;
+        # one unscorable topic (fewer than two terms) must not void the row.
+        coherence = attr(coherence, "mean_coherence"),
         topic_diversity = topic_diversity(fitted, n_terms = n_terms),
         explained = explained,
         stringsAsFactors = FALSE
@@ -272,6 +286,7 @@ compare_topics <- function(
   result <- do.call(rbind, rows)
   rownames(result) <- NULL
   attr(result, "measure") <- measure
+  attr(result, "coherence_weight") <- coherence_weight
   # The class is always applied so fitted() keeps dispatching here and can
   # explain itself; keep_models only controls whether the models are carried.
   if (keep_models) {
@@ -302,6 +317,7 @@ compare_topic_segments <- function(
   max_tokens,
   merge_below,
   min_content,
+  coherence_weight,
   dots
 ) {
   if (inherits(text, "sbert_topic_corpus")) {
@@ -345,7 +361,8 @@ compare_topic_segments <- function(
             segment = level,
             max_tokens = if (segmented) max_tokens else NULL,
             merge_below = if (segmented) merge_below else 0L,
-            min_content = if (segmented) min_content else 0
+            min_content = if (segmented) min_content else 0,
+            coherence_weight = coherence_weight
           ),
           dots
         )
@@ -366,6 +383,7 @@ compare_topic_segments <- function(
   result <- do.call(rbind, rows)
   rownames(result) <- NULL
   attr(result, "measure") <- measure
+  attr(result, "coherence_weight") <- coherence_weight
   if (keep_models) {
     attr(result, "models") <- lapply(comparisons, attr, "models")
   }
@@ -588,13 +606,19 @@ print.sbert_topic_sweep <- function(x, ...) {
   measure <- attr(x, "measure")
   models <- attr(x, "models")
   cat(sprintf(
-    "<sbert_topic_sweep> %d candidates, coherence measure: %s\n",
+    "<sbert_topic_sweep> %d candidates, coherence measure: %s%s\n",
     nrow(x),
-    if (is.null(measure)) "unknown" else measure
+    if (is.null(measure)) "unknown" else measure,
+    if (identical(attr(x, "coherence_weight"), "size")) ", weighted by topic size" else ""
   ))
   print(as.data.frame(x), row.names = FALSE)
   if (!is.null(models)) {
+    # The hint names the most coherent candidate, or the first when none has
+    # a coherence score.
     best <- which.max(x$coherence)
+    if (length(best) == 0L) {
+      best <- 1L
+    }
     level_hint <- if (is.null(comparison_levels(x))) {
       ""
     } else {
@@ -700,8 +724,9 @@ plot.sbert_topic_sweep <- function(
   }
   panels <- list(
     list(column = "coherence", ylab = sprintf(
-      "Coherence (%s)",
-      if (is.null(attr(x, "measure"))) "npmi" else attr(x, "measure")
+      "Coherence (%s%s)",
+      if (is.null(attr(x, "measure"))) "npmi" else attr(x, "measure"),
+      if (identical(attr(x, "coherence_weight"), "size")) ", size-weighted" else ""
     )),
     list(column = "topic_diversity", ylab = "Topic diversity"),
     list(column = "explained", ylab = "Variance between topics")
@@ -725,12 +750,15 @@ plot.sbert_topic_sweep <- function(
   )
   on.exit(graphics::par(previous), add = TRUE)
 
+  # which.max() skips NA; with no coherence at all there is no best count.
   best <- which.max(x$coherence)
   draw_panel <- function(panel, index) {
     column <- panel$column
+    values <- x[[column]]
+    finite <- values[is.finite(values)]
     plot(
       range(x$n_topics),
-      range(x[[column]]),
+      if (length(finite) > 0L) range(finite) else c(0, 1),
       type = "n",
       xlab = "Number of topics",
       ylab = panel$ylab,
@@ -738,7 +766,17 @@ plot.sbert_topic_sweep <- function(
       ...
     )
     graphics::grid(col = "grey90", lty = 1)
-    graphics::abline(v = x$n_topics[best], lty = 3, col = "grey40")
+    if (length(finite) == 0L) {
+      graphics::text(
+        mean(range(x$n_topics)),
+        0.5,
+        "not available",
+        col = "grey40"
+      )
+    }
+    if (length(best) > 0L) {
+      graphics::abline(v = x$n_topics[best], lty = 3, col = "grey40")
+    }
     Map(
       function(one, position) {
         graphics::lines(
@@ -771,12 +809,16 @@ plot.sbert_topic_sweep <- function(
   Map(draw_panel, panels, seq_along(panels))
 
   graphics::mtext(
-    sprintf(
-      "%s  (highest coherence at %d topics%s)",
-      main,
-      x$n_topics[best],
-      if (is.null(levels)) "" else sprintf(", %s level", x$segment[best])
-    ),
+    if (length(best) > 0L) {
+      sprintf(
+        "%s  (highest coherence at %d topics%s)",
+        main,
+        x$n_topics[best],
+        if (is.null(levels)) "" else sprintf(", %s level", x$segment[best])
+      )
+    } else {
+      sprintf("%s  (coherence not available)", main)
+    },
     outer = TRUE,
     cex = 0.95,
     font = 2

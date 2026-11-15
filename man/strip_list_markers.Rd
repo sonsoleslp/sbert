@@ -27,7 +27,11 @@ A marker must stand alone — whitespace or a string boundary on both sides —
 so real words in parentheses (\code{"(civil)"}), four-digit years (\code{"(2020)"}),
 counts (\code{"(n=100)"}), multi-word parentheticals (\code{"(see Fig 1)"}), and
 decimals (\code{"1.5"}) are left untouched. Removed forms are a standalone one- or
-two-digit number followed by a period (\code{"1."}, \code{"12."}); a parenthesized
+two-digit number followed by a period (\code{"1."}, \code{"12."}) where a list can
+be: at the start of the text or of a sentence, as the \code{"1."} directly
+followed by a \code{"2."}, or as the next number of a list already under way. A
+number that ends a sentence (\code{"in the top 20."}) is content and kept; a
+parenthesized
 one- or two-digit number, single letter, or Roman numeral up to 39 (\code{"(1)"},
 \code{"(a)"}, \code{"(iv)"}); and a bare upper-case Roman-numeral section marker with a
 period (\code{"II."}, \code{"IV."}). A multi-letter numeral is removed anywhere; a
@@ -38,6 +42,7 @@ mid-sentence initial (\code{"by V. Nabokov"}), unit (\code{"5 V."}), and lower-c
 \examples{
 strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
 strip_list_markers("the concept of (civil) society in (2020)")
+strip_list_markers("The student ranks in the top 20. Good work.")
 }
 \seealso{
 \code{\link[=dedupe]{dedupe()}}, and the \code{numbers} / \code{roman_numerals} / \code{section_numbers}

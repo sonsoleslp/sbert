@@ -132,10 +132,17 @@ score_topic_coherence <- function(
 #'   not already cached. Default `1` (serial). Values above one use
 #'   `parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
 #'   result is identical regardless of the count.
+#' @param weight How the topic scores are averaged into the corpus-level
+#'   `"mean_coherence"`: `"none"` (default) gives every topic the same weight;
+#'   `"size"` weights each topic by its number of modeled units (documents, or
+#'   segments for a segmented model), so a handful of near-duplicate texts
+#'   that form a tiny topic cannot move the mean. The per-topic scores are the
+#'   same either way.
 #' @return A data frame with one row per topic and columns `topic`, `label`,
-#'   `measure`, `n_terms`, and `coherence`. The corpus-level mean is attached as
-#'   the `"mean_coherence"` attribute. Topics with fewer than two scorable terms
-#'   yield `NA`.
+#'   `measure`, `n_terms`, and `coherence`. Topics with fewer than two scorable
+#'   terms yield `NA`. The corpus-level mean over the scored topics, averaged as
+#'   `weight` says, is attached as the `"mean_coherence"` attribute (`NA` when
+#'   no topic can be scored), and the averaging as the `"weight"` attribute.
 #' @references Mimno, D., Wallach, H. M., Talley, E., Leenders, M., and
 #'   McCallum, A. (2011). Optimizing semantic coherence in topic models.
 #'   *Proceedings of EMNLP 2011*, 262--272.
@@ -157,9 +164,11 @@ coherence <- function(
   n_terms = 10L,
   smoothing = 1,
   token_lists = NULL,
-  cores = 1L
+  cores = 1L,
+  weight = c("none", "size")
 ) {
   measure <- match.arg(measure)
+  weight <- match.arg(weight)
   stopifnot(
     inherits(object, "sbert_topic_model"),
     is.numeric(n_terms),
@@ -235,7 +244,21 @@ coherence <- function(
     coherence = scores,
     stringsAsFactors = FALSE
   )
-  attr(result, "mean_coherence") <- mean(scores, na.rm = TRUE)
+  # A topic with fewer than two scorable terms has no coherence (NA by
+  # definition), so the corpus mean is taken over the topics that do; with
+  # none it is NA rather than the NaN of an empty mean.
+  is_scored <- !is.na(scores)
+  attr(result, "mean_coherence") <- if (!any(is_scored)) {
+    NA_real_
+  } else if (weight == "size") {
+    stats::weighted.mean(
+      scores[is_scored],
+      as.numeric(object$topics$n_documents)[is_scored]
+    )
+  } else {
+    mean(scores[is_scored])
+  }
+  attr(result, "weight") <- weight
   result
 }
 
