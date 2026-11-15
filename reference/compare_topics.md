@@ -27,6 +27,7 @@ compare_topics(
   max_tokens = NULL,
   merge_below = 0L,
   min_content = 0,
+  coherence_weight = c("none", "size"),
   ...
 )
 ```
@@ -137,6 +138,15 @@ compare_topics(
   [`segment()`](https://sonsoles.me/sbert/reference/segment.md). Only
   with a segmented fit.
 
+- coherence_weight:
+
+  How each candidate's topic coherences are averaged: `"none"` (default)
+  gives every topic the same weight; `"size"` weights each topic by its
+  number of modeled units, so a tiny topic of a few near-identical texts
+  (which scores very high) cannot decide the comparison. Passed to
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) as
+  `weight`.
+
 - ...:
 
   Further arguments passed to
@@ -146,11 +156,16 @@ compare_topics(
 ## Value
 
 A base data frame with one row per candidate and columns `n_topics`,
-`coherence` (corpus mean), `topic_diversity`, and `explained`
-(between-topic share of total variance), preceded by `segment` when
-several levels were compared. The coherence measure is recorded in the
-`measure` attribute. When `keep_models = TRUE` the result also carries
-class `sbert_topic_sweep` and the fitted models, which
+`coherence` (mean over the topics with at least two scorable terms, as
+in
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md),
+weighted as `coherence_weight` says; `NA` only when no topic can be
+scored), `topic_diversity`, and `explained` (between-topic share of
+total variance), preceded by `segment` when several levels were
+compared. The coherence measure is recorded in the `measure` attribute
+and the averaging in the `coherence_weight` attribute. When
+`keep_models = TRUE` the result also carries class `sbert_topic_sweep`
+and the fitted models, which
 [fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
 extracts,
 [as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md)

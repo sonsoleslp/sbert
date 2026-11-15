@@ -15,7 +15,8 @@ coherence(
   n_terms = 10L,
   smoothing = 1,
   token_lists = NULL,
-  cores = 1L
+  cores = 1L,
+  weight = c("none", "size")
 )
 ```
 
@@ -58,12 +59,23 @@ coherence(
   Unix-alikes and fall back to serial elsewhere; the result is identical
   regardless of the count.
 
+- weight:
+
+  How the topic scores are averaged into the corpus-level
+  `"mean_coherence"`: `"none"` (default) gives every topic the same
+  weight; `"size"` weights each topic by its number of modeled units
+  (documents, or segments for a segmented model), so a handful of
+  near-duplicate texts that form a tiny topic cannot move the mean. The
+  per-topic scores are the same either way.
+
 ## Value
 
 A data frame with one row per topic and columns `topic`, `label`,
-`measure`, `n_terms`, and `coherence`. The corpus-level mean is attached
-as the `"mean_coherence"` attribute. Topics with fewer than two scorable
-terms yield `NA`.
+`measure`, `n_terms`, and `coherence`. Topics with fewer than two
+scorable terms yield `NA`. The corpus-level mean over the scored topics,
+averaged as `weight` says, is attached as the `"mean_coherence"`
+attribute (`NA` when no topic can be scored), and the averaging as the
+`"weight"` attribute.
 
 ## References
 

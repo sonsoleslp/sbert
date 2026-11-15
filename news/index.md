@@ -1,5 +1,51 @@
 # Changelog
 
+## sbert 0.5.12
+
+- [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+  gains `coherence_weight = c("none", "size")` and
+  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+  gains `weight =`. With `"size"`, each topic’s coherence counts in
+  proportion to its number of modeled units, so a tiny topic of a few
+  near-identical texts (which scores very high) cannot decide the
+  comparison. The default is unchanged.
+- [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
+  and
+  [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
+  (`list_markers`, `section_numbers`) no longer delete a number that
+  ends a sentence: “in the top 20. Good.” and “for student 10.” were cut
+  to “in the top Good.” and “for student”. A one- or two-digit number
+  with a period is now removed only where a list can be: at the start of
+  the text or of a sentence, as a “1.” directly followed by a “2.”, or
+  as the next number of a list under way. Numbered lists (“1. aims 2.
+  methods”) are removed as before.
+- [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+  gains `top =`: each document’s `top` largest non-zero topic shares,
+  largest first, with a `rank` column.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+  result no longer fails with “need finite ‘ylim’ values”. A topic with
+  fewer than two scorable terms has no coherence, and the sweep averaged
+  with [`mean()`](https://rdrr.io/r/base/mean.html), so one such topic
+  made the whole candidate `NA`, and a single `NA` row broke the plot.
+  The sweep’s `coherence` is now the mean over the scored topics, the
+  same number [`summary()`](https://rdrr.io/r/base/summary.html) prints
+  for that model. Sweeps that were already `NA` change; every other
+  value is identical.
+- The representatives panels of `plot(type = "fit")` and
+  `plot(type = "representatives")` no longer overlap when many topics
+  are stacked: texts are laid out by their measured height, on two lines
+  when they fit, else one, and a panel too short for all of them says
+  “(k of n shown)”.
+- [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+  reports `"mean_coherence"` as `NA` rather than `NaN` when no topic can
+  be scored.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
+  [`print()`](https://rdrr.io/r/base/print.html) of a comparison draw
+  and print missing coherence instead of failing: an empty panel says
+  “not available”, and the title drops the “highest coherence” marker
+  when no candidate has a score.
+
 ## sbert 0.5.11
 
 - Documentation revision. roxygen markdown is now switched on

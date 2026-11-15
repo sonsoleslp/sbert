@@ -21,7 +21,8 @@ topic_gamma(
   batch_size = 32L,
   cores = 1L,
   dedupe_segments = FALSE,
-  sort_by_length = FALSE
+  sort_by_length = FALSE,
+  top = NULL
 )
 ```
 
@@ -116,11 +117,19 @@ topic_gamma(
   saving available on this verb, measured at 1.9x. Off by default for
   the same ~1e-7 reason as `dedupe_segments`.
 
+- top:
+
+  `NULL` (default) for every topic of every document, or a whole number:
+  each document's `top` largest topic shares, largest first. Topics with
+  a zero share are left out, so a document can list fewer.
+
 ## Value
 
 A base data frame with one row per document-topic pair and columns
 `document_id`, `topic`, `gamma`, and `n_segments`. `gamma` sums to 1
 within each document; documents with no segments contribute no rows.
+With `top`, only each document's `top` largest non-zero shares, ordered
+by document and then by share, with a `rank` column after `document_id`.
 
 ## Examples
 
@@ -157,4 +166,8 @@ topic_gamma(sentence_model)
 #> 2           1     2   0.5          2
 #> 3           2     1   0.5          2
 #> 4           2     2   0.5          2
+topic_gamma(sentence_model, top = 1)
+#>   document_id rank topic gamma n_segments
+#> 1           1    1     1   0.5          2
+#> 2           2    1     1   0.5          2
 ```

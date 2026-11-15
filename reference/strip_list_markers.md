@@ -36,13 +36,16 @@ sides — so real words in parentheses (`"(civil)"`), four-digit years
 (`"(2020)"`), counts (`"(n=100)"`), multi-word parentheticals
 (`"(see Fig 1)"`), and decimals (`"1.5"`) are left untouched. Removed
 forms are a standalone one- or two-digit number followed by a period
-(`"1."`, `"12."`); a parenthesized one- or two-digit number, single
-letter, or Roman numeral up to 39 (`"(1)"`, `"(a)"`, `"(iv)"`); and a
-bare upper-case Roman-numeral section marker with a period (`"II."`,
-`"IV."`). A multi-letter numeral is removed anywhere; a single-letter
-one (`"V."`, `"X."`) only at the start of the text, so a mid-sentence
-initial (`"by V. Nabokov"`), unit (`"5 V."`), and lower-case `"v."`
-(versus) are kept.
+(`"1."`, `"12."`) where a list can be: at the start of the text or of a
+sentence, as the `"1."` directly followed by a `"2."`, or as the next
+number of a list already under way. A number that ends a sentence
+(`"in the top 20."`) is content and kept; a parenthesized one- or
+two-digit number, single letter, or Roman numeral up to 39 (`"(1)"`,
+`"(a)"`, `"(iv)"`); and a bare upper-case Roman-numeral section marker
+with a period (`"II."`, `"IV."`). A multi-letter numeral is removed
+anywhere; a single-letter one (`"V."`, `"X."`) only at the start of the
+text, so a mid-sentence initial (`"by V. Nabokov"`), unit (`"5 V."`),
+and lower-case `"v."` (versus) are kept.
 
 ## See also
 
@@ -58,4 +61,6 @@ strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
 #> [1] "background methods" "first second"      
 strip_list_markers("the concept of (civil) society in (2020)")
 #> [1] "the concept of (civil) society in (2020)"
+strip_list_markers("The student ranks in the top 20. Good work.")
+#> [1] "The student ranks in the top 20. Good work."
 ```
