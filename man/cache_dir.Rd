@@ -2,19 +2,31 @@
 % Please edit documentation in R/cache.R
 \name{cache_dir}
 \alias{cache_dir}
-\title{Locate the sbert Model Cache}
+\title{Locate the model cache}
 \usage{
 cache_dir()
 }
 \value{
-A length-one character vector containing the platform-appropriate
-user cache directory.
+A character string: the path of the cache directory.
 }
 \description{
-The directory under which downloaded and custom models are stored, from
-\code{\link[tools:userdir]{tools::R_user_dir()}} with \code{which = "cache"}. It is only a path: calling
-this function creates nothing.
+\code{cache_dir()} returns the path of the model cache: the user cache directory
+that R designates for the package, where downloaded models are stored once
+per user, outside any project. Every function that installs, verifies, loads,
+measures or removes a model uses this location unless given another
+\code{cache_dir}.
+
+The path is the one given by \code{tools::R_user_dir("sbert", which = "cache")}.
+\code{cache_dir()} only computes it: it creates no directory and does not check
+whether one exists.
+
+To see what the cache holds, use \code{\link[=model_status]{model_status()}} for one model and
+\code{\link[=cache_size]{cache_size()}} for the disk space used.
 }
 \examples{
 cache_dir()
+}
+\seealso{
+\code{\link[=model_status]{model_status()}}, \code{\link[=cache_size]{cache_size()}}, \code{\link[=model_download]{model_download()}} and
+\code{\link[=model_remove]{model_remove()}}, which take this path as \code{cache_dir}.
 }

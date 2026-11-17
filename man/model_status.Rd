@@ -2,25 +2,48 @@
 % Please edit documentation in R/cache.R
 \name{model_status}
 \alias{model_status}
-\title{Inspect an Installed Model}
+\title{Check the installed files of a model}
 \usage{
 model_status(cache_dir = default_cache_dir(), model = "all-MiniLM-L6-v2")
 }
 \arguments{
-\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
+\item{cache_dir}{Cache root (default \code{\link[=cache_dir]{cache_dir()}}).}
 
-\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
+\item{model}{Name of a pinned model, as listed by \code{\link[=models]{models()}} (default
+\code{"all-MiniLM-L6-v2"}).}
 }
 \value{
-A base data frame with one row per required artifact and columns
-\code{file}, \code{path} (where it is expected in the cache), \code{exists}, \code{valid}
-(size and hash both match), \code{expected_bytes}, and \code{actual_bytes} (\code{NA}
-when the file is missing).
+A base data frame with one row per required file and columns
+\code{file}, \code{path} (its expected location), \code{exists}, \code{valid} (size and hash
+both match), \code{expected_bytes}, and \code{actual_bytes} (\code{NA} when the file is
+missing).
 }
 \description{
-Reports whether each required artifact exists and passes its pinned byte-size
-and SHA-256 checks.
+\code{model_status()} checks the installed files of a pinned model: for each file
+the model needs, it reports where the file is expected in the cache, whether
+it exists, and whether its size and SHA-256 hash match the pinned values. A
+pinned model is usable only when each of its files is present and identical
+to the file the package was pinned to; size and hash establish that identity,
+so a truncated download or a modified file is detected before it can produce
+wrong embeddings.
+
+It reads the cache only; nothing is downloaded or repaired. The result is a
+data frame with one row per required file.
+
+To install missing or invalid files, use \code{\link[=model_download]{model_download()}}; to delete a
+model, \code{\link[=model_remove]{model_remove()}}.
 }
+\section{Conditions}{
+
+\code{sbert_unknown_model} when \code{model} names no pinned model.
+}
+
 \examples{
+# An empty cache: every file is missing.
 model_status(tempdir())
+model_status(tempdir(), model = "potion-base-8M")
+}
+\seealso{
+\code{\link[=model_download]{model_download()}} to install; \code{\link[=model_remove]{model_remove()}} to delete;
+\code{\link[=cache_size]{cache_size()}} for disk use; \code{\link[=load_model]{load_model()}}, which runs the same check.
 }

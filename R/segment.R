@@ -41,18 +41,33 @@
 .sbert_segment_period <- "@@P@@"
 .sbert_segment_comma <- "@@C@@"
 
-#' Obtain the Built-in Abbreviation Gazetteer
+#' List the abbreviations protected from sentence splitting
 #'
-#' Returns the abbreviations whose periods are never treated as sentence
-#' boundaries by [segment()]. Matching is case-insensitive and anchored
-#' at a word boundary, so `"ST."` protects `"St. Petersburg"` but never the
-#' end of `"cost."`.
+#' @description
+#' `abbreviations()` returns the built-in list of abbreviations whose period
+#' does not end a sentence, which [segment()] uses by default. A period ends a
+#' sentence far more often than not, but abbreviations such as "e.g.", "Fig." or
+#' "et al." also end in one, so rule-based sentence splitting needs such a list.
 #'
-#' @return A sorted character vector of uppercase abbreviations, each ending
-#'   in a period.
+#' Matching in [segment()] ignores case and starts at a word boundary, so
+#' `"ST."` protects `"St. Petersburg"` but not the end of `"cost."`.
+#'
+#' To protect further abbreviations, pass an extended vector to the
+#' `abbreviations` argument of [segment()].
+#'
+#' @return A sorted character vector of abbreviations in upper case, each
+#'   ending in a period.
+#' @seealso [segment()], which uses the list.
 #' @export
 #' @examples
-#' head(abbreviations())
+#' abbreviations()
+#'
+#' # "App." is not in the list, so its period ends a sentence ...
+#' segment("See App. B for the items. Then stop.", level = "sentence")
+#'
+#' # ... unless it is added.
+#' segment("See App. B for the items. Then stop.", level = "sentence",
+#'         abbreviations = c(abbreviations(), "APP."))
 abbreviations <- function() {
   sort(unique(.sbert_segment_abbreviations))
 }
@@ -413,81 +428,79 @@ segment_document <- function(text, level, merge_below, abbreviations) {
   segment_merge_short(parts, as.integer(merge_below))
 }
 
-#' Segment Text into Sentences, Clauses, or Phrases
+#' Split documents into sentences, clauses, or phrases
 #'
-#' Splits each document into units at a selectable granularity using
-#' deterministic sentence-boundary rules: a word-boundary-anchored,
-#' case-insensitive abbreviation gazetteer (see [abbreviations()]),
-#' a decimal-number guard, and a parenthetical guard, plus shallow clause
-#' chunking at discourse connectives. No model call is involved, so
-#' segmentation works offline and is fully reproducible.
+#' @description
+#' `segment()` splits documents into sentences, clauses, or phrases by
+#' deterministic rules, with no model involved, so the result is reproducible
+#' and needs no download. A long document usually discusses several things, and
+#' one embedding of the whole document averages them; shorter units can each be
+#' embedded and assigned to a topic on their own, so that a document can be
+#' described as a mixture of topics, and each unit stays within the input length
+#' of the model.
 #'
-#' Each finer level adds separators:
-#' \describe{
-#'   \item{`"sentence"`}{splits at `.`, `?`, and `!` only.}
-#'   \item{`"clause"`}{additionally splits at `;`, `:`, spaced dashes, and
-#'     subordinating hinges (for example "which", "where", "in terms of").
-#'     Comma-separated enumerations stay whole. This is the default.}
-#'   \item{`"phrase"`}{additionally splits at commas, for maximal granularity.}
-#' }
+#' The `"sentence"` level splits at `.`, `?` and `!`, protecting the periods of
+#' abbreviations (see [abbreviations()]), decimal numbers and parenthetical
+#' remarks. The `"clause"` level, the default, also splits at `;`, `:`, spaced
+#' dashes, and subordinating words such as "which", "where" or "in terms of",
+#' while comma-separated lists stay whole. The `"phrase"` level also splits at
+#' commas. Quotes, dashes and whitespace are normalized first; letter case is
+#' kept. Optional steps merge very short segments into their neighbors, cap
+#' segment length at a number of words or model tokens, and drop segments with
+#' little alphabetic content, such as citation fragments. The result is a data
+#' frame with one row per segment.
 #'
-#' Before segmentation, each document is normalized: curly quotes become
-#' straight quotes, en and em dashes become spaced hyphens, and runs of
-#' whitespace collapse to single spaces. Letter case is preserved.
+#' The topic verbs segment documents themselves through their `segment`
+#' argument (see [topics()] and [topic_corpus()]); call `segment()` directly
+#' to inspect the units, or to reuse one segmentation and its embeddings in
+#' [topic_gamma()] and [blend()].
 #'
-#' @param text A character vector of documents. Names, when present, are
-#'   carried into the `document_name` column.
+#' @param text Character vector of documents. Names are carried into the
+#'   `document_name` column.
 #' @param level `"clause"` (default), `"sentence"`, or `"phrase"`.
-#' @param merge_below Re-join segments shorter than this many words into their
-#'   neighbor. `0` (default) disables merging and returns the pure
-#'   segmentation.
-#' @param abbreviations Character vector of abbreviations (each ending in a
-#'   period) whose periods never end a sentence. Defaults to the built-in
-#'   gazetteer from [abbreviations()]; matching is case-insensitive.
-#' @param cores Number of forked worker processes used to split documents.
-#'   Default `1` (serial). Values above one use `parallel::mclapply` on
-#'   Unix-alikes and fall back to serial on Windows or for small inputs; the
-#'   segmentation is identical regardless of the count.
-#' @param max_tokens Optional cap on segment length, so no segment overruns an
-#'   encoder's context window and is silently truncated. `NULL` (default) leaves
-#'   segments uncapped. When set, any segment over the budget is re-split at the
-#'   finest logical boundaries — clause hinges, `";"`, `":"`, `" - "`, and
-#'   commas (though a comma that would sever a name from its initials, as in
-#'   `"Tomlinson, C. A."`, does not split) — and the pieces are packed back up to
-#'   the budget, so a split lands on punctuation wherever possible. A run with no
-#'   such boundary is chopped
-#'   further, but even then the break is placed just before a function word (a
-#'   coordinator, preposition, article, or relative pronoun) near the budget
-#'   edge rather than mid-phrase, falling back to the raw edge only when the run
-#'   has no function word either. With `model = NULL` the budget counts
-#'   whitespace-delimited words, a deterministic offline proxy; set it below the
-#'   model's true token limit (for example around 200 for a 256-token model),
-#'   since a tokenizer emits somewhat more tokens than words.
-#' @param model Optional loaded [sbert_model][load_model()]. When supplied with
-#'   `max_tokens`, the budget counts that model's exact sub-word tokens instead
-#'   of words, so `max_tokens` can be the model's real limit. Token-counted
-#'   segmentation runs serially (the tokenizer is not forked), so `cores` is
-#'   ignored in that case.
-#' @param min_content Minimum alphabetic-content ratio, in `[0, 1]`, for a
-#'   segment to be kept (see [content_ratio()]). Segments below the floor —
-#'   citation fragments, page and reference bits, number lists — are dropped.
-#'   Prose scores near 1 and reference noise far below, so a value around `0.5`
-#'   removes the noise while keeping real clauses. `0` (default) keeps every
-#'   segment.
+#' @param merge_below Join segments shorter than this many words to a
+#'   neighbor; `0` (default) keeps every segment as split.
+#' @param abbreviations Abbreviations, each ending in a period, whose period
+#'   never ends a sentence (default [abbreviations()]); matched ignoring case.
+#' @param cores Number of forked processes used to split documents (default
+#'   1). Ignored on Windows and for small inputs; the result does not depend
+#'   on it.
+#' @param max_tokens Maximum length of a segment, or `NULL` (default) for no
+#'   limit. A longer segment is split again at clause words, `;`, `:`, dashes
+#'   or commas, or, failing those, before a function word near the limit.
+#'   Length is counted in words, or in the tokens of `model` when one is given;
+#'   a tokenizer yields more tokens than words, so a word limit should sit
+#'   below the model's token limit.
+#' @param model `NULL` (default), or a model from [load_model()] whose
+#'   tokenizer counts the length for `max_tokens`. Requires `max_tokens`;
+#'   splitting then runs in one process.
+#' @param min_content Minimum share of alphabetic content, between 0 and 1,
+#'   for a segment to be kept (see [content_ratio()]); `0` (default) keeps
+#'   every segment.
 #' @return A base data frame with one row per segment and columns
-#'   `document_id` (integer position in `text`), `document_name` (name of the
-#'   input element, or `""`), `segment` (integer position within the
-#'   document), and `text` (the segment). Blank documents contribute no rows.
+#'   `document_id` (position of the document in `text`), `document_name`
+#'   (its name, or `""`), `segment` (position within the document), and
+#'   `text`. Blank documents contribute no rows.
+#' @section Conditions:
+#'   `sbert_bad_input` when `model` is given without `max_tokens`.
+#' @seealso [abbreviations()] for the protected abbreviations;
+#'   [content_ratio()] for `min_content`; [topics()] and [topic_corpus()],
+#'   which segment through their `segment` argument; [topic_gamma()] and
+#'   [blend()], which take this data frame.
 #' @export
 #' @examples
-#' segment(
-#'   "We propose a simulator which runs alongside the processor."
+#' feedback <- c(
+#'   first = paste("The task was clear. I liked the colors, the sounds",
+#'                 "and the pictures, which were funny."),
+#'   second = "Too hard; I did not understand the question."
 #' )
+#' segment(feedback)
+#' segment(feedback, level = "sentence")
+#' segment(feedback, level = "phrase")
 #'
-#' segment(
-#'   c(intro = "See Fig. 3 for details. The next part follows."),
-#'   level = "sentence"
-#' )
+#' # Abbreviation and decimal periods do not end a sentence.
+#' segment("See Fig. 3 for details. The mean was 2.5 points.",
+#'         level = "sentence")
 segment <- function(
   text,
   level = c("clause", "sentence", "phrase"),
@@ -520,7 +533,10 @@ segment <- function(
   )
   max_tokens <- if (is.null(max_tokens)) NULL else as.integer(max_tokens)
   if (is.null(max_tokens) && !is.null(model)) {
-    stop("`model` is only used when `max_tokens` is set.", call. = FALSE)
+    sbert_abort(
+      "`model` is only used when `max_tokens` is set.",
+      class = "sbert_bad_input"
+    )
   }
   # The unit counter is built once. With a model it holds an external tokenizer
   # pointer, so token-capped segmentation runs in one process rather than across

@@ -2,27 +2,30 @@
 % Please edit documentation in R/topics.R
 \name{print.sbert_topic_corpus}
 \alias{print.sbert_topic_corpus}
-\title{Print a Prepared Topic Corpus}
+\title{Print a prepared topic corpus}
 \usage{
 \method{print}{sbert_topic_corpus}(x, ...)
 }
 \arguments{
-\item{x}{An \code{sbert_topic_corpus} object.}
+\item{x}{A corpus prepared by \code{\link[=topic_corpus]{topic_corpus()}}.}
 
 \item{...}{Ignored.}
 }
 \value{
-The corpus object, invisibly.
+\code{x}, invisibly.
 }
 \description{
-Shows what the corpus holds and can be reused for: document and unit
-counts, the segmentation level, and whether embeddings are attached.
+\code{print()} shows what a corpus prepared by \code{\link[=topic_corpus]{topic_corpus()}} holds: the number
+of documents and, for a segmented corpus, of segments and their level; the
+embedding dimension; the embedding model; and the minimum token length and
+whether tokens are stemmed.
 }
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-print(topic_corpus(text, embeddings = embeddings))
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+print(topic_corpus(corpus, column = "translation",
+                   embeddings = feedback_embeddings))
+}
+\seealso{
+\code{\link[=topic_corpus]{topic_corpus()}};
+\link[=as.data.frame.sbert_topic_corpus]{as.data.frame()} for the units.
 }

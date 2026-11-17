@@ -4,11 +4,98 @@
 \name{sbert-package}
 \alias{sbert}
 \alias{sbert-package}
-\title{sbert: Topic Modeling with 'Sentence-BERT' Embeddings}
+\title{sbert: Topic modeling with Sentence-BERT embeddings}
 \description{
-\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+\code{sbert} fits topic models of texts from their sentence embeddings. A
+sentence embedding places a text in a space where texts with similar
+meaning lie close together, whatever words they use (Reimers and Gurevych
+2019), so topics found in that space group texts by what they mean rather
+than by the words they share. Each topic is described by its most typical
+texts and by its distinctive terms, scored with class-based TF-IDF
+(Grootendorst 2022). Topics can be fitted to whole documents or to their
+sentences, clauses, or phrases, compared across numbers of topics by
+coherence and diversity, and used to assign new texts and give each
+document a mixture of topics.
 
-Builds semantic topic models from 'Sentence-BERT' embeddings (Reimers and Gurevych, 2019) \doi{10.18653/v1/D19-1410}. Sentence embeddings are computed in several modes with models run on the Open Neural Network Exchange ('ONNX') Runtime, including multilingual and long-context encoders and a fast static model. Topics are labeled with class-based term weighting that can be retuned without refitting. Candidate topic counts and document granularities (whole documents, sentences, clauses, or phrases) can be compared side by side, and fitted models assign topics to new documents, give soft memberships and per-document topic mixtures. The package offers coherence and diversity metrics and visualizations.
+The embeddings come from pretrained models, each fixed to one version (see
+\code{\link[=models]{models()}}). A model is downloaded only when it is first needed, with
+\code{\link[=model_download]{model_download()}} or after a prompt in an interactive session, and is
+stored in the user cache (\code{\link[=cache_dir]{cache_dir()}}); nothing is downloaded when the
+package is installed or loaded. The bundled \link{feedback_embeddings} let every
+topic-model function run without any download.
+}
+\section{Models and embeddings}{
+
+Texts are tokenized by the 'tok' package and encoded on the ONNX Runtime
+through 'onnxr'; pooling, normalization, and all of the topic modeling are
+done in R. Each model is fixed to one revision and its files are checked by
+SHA-256, so every user encodes with the same model.
+\itemize{
+\item \code{\link[=install_runtime]{install_runtime()}} installs the ONNX Runtime library.
+\item \code{\link[=models]{models()}}, \code{\link[=model_status]{model_status()}}, \code{\link[=model_download]{model_download()}}, \code{\link[=load_model]{load_model()}}, and
+\code{\link[=load_custom]{load_custom()}} list, download, and load models; \code{\link[=cache_dir]{cache_dir()}},
+\code{\link[=cache_size]{cache_size()}}, and \code{\link[=model_remove]{model_remove()}} manage the cache.
+\item \code{\link[=encode]{encode()}} embeds texts; \code{\link[=pool]{pool()}} pools token embeddings;
+\code{\link[=topic_similarity]{topic_similarity()}} gives cosine similarities between embeddings;
+\code{\link[=blend]{blend()}} combines segment embeddings with their document's.
+}
+}
+
+\section{Preparing a corpus}{
+
+\itemize{
+\item \code{\link[=clean_corpus]{clean_corpus()}}, \code{\link[=strip_list_markers]{strip_list_markers()}}, and \code{\link[=content_ratio]{content_ratio()}} clean
+the texts.
+\item \code{\link[=dedupe]{dedupe()}} collapses repeated texts and counts them.
+\item \code{\link[=segment]{segment()}} splits documents into sentences, clauses, or phrases;
+\code{\link[=abbreviations]{abbreviations()}} lists the abbreviations that do not end a sentence.
+\item \code{\link[=topic_corpus]{topic_corpus()}} segments, embeds, and tokenizes a corpus once.
+}
+}
+
+\section{Fitting and choosing topic models}{
+
+\itemize{
+\item \code{\link[=topics]{topics()}} fits a topic model.
+\item \code{\link[=compare_topics]{compare_topics()}} compares numbers of topics and segmentation levels.
+\item \code{\link[=topic_hierarchy]{topic_hierarchy()}} and \code{\link[=reduce_topics]{reduce_topics()}} relate and merge topics.
+}
+
+The fits are deterministic: k-means starts from fixed farthest-point
+centers, so no random seed is involved and the same input gives the same
+topics.
+}
+
+\section{Describing topics}{
+
+\itemize{
+\item \code{\link[=topic_sizes]{topic_sizes()}}, \link[=terms.sbert_topic_model]{terms()},
+\code{\link[=representatives]{representatives()}}, and \link[=as.data.frame.sbert_topic_model]{as.data.frame()}
+give the tables of a model; \code{\link[=name_topics]{name_topics()}} names its topics.
+\item \link[=summary.sbert_topic_model]{summary()}, \code{\link[=coherence]{coherence()}}, and
+\code{\link[=topic_diversity]{topic_diversity()}} evaluate it; \code{\link[=keywords]{keywords()}} gives keywords of single
+documents; \code{\link[=stop_words]{stop_words()}} sets the words left out of the terms.
+\item \link[=plot.sbert_topic_model]{plot()} draws sizes, terms, representatives,
+a fit report, and a map; \code{\link[=topic_palette]{topic_palette()}} gives its colors.
+}
+}
+
+\section{Assigning topics to texts}{
+
+\itemize{
+\item \link[=predict.sbert_topic_model]{predict()} assigns new texts to topics.
+\item \code{\link[=topic_membership]{topic_membership()}} gives soft memberships, and \code{\link[=topic_gamma]{topic_gamma()}} the
+mixture of topics in each document.
+}
+}
+
+\references{
+Reimers, N. and Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks. \emph{Proceedings of EMNLP-IJCNLP 2019},
+3982--3992. \doi{10.18653/v1/D19-1410}
+
+Grootendorst, M. (2022). BERTopic: Neural topic modeling with a class-based
+TF-IDF procedure. arXiv:2203.05794.
 }
 \seealso{
 Useful links:
@@ -29,4 +116,3 @@ Authors:
 }
 
 }
-\keyword{internal}

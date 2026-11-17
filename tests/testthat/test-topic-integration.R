@@ -11,7 +11,7 @@ testthat::test_that("official Sentence-BERT discovers three semantic topics", {
     model_directory
   )
   testthat::expect_true(all(copied))
-  model <- load_model(cache_dir, threads = 1L)
+  model <- load_model(cache_dir = cache_dir, threads = 1L)
   expected_topic <- rep(c("astronomy", "cooking", "finance"), each = 5L)
   text <- c(
     "A telescope captured a distant galaxy filled with newborn stars.",

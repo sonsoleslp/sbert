@@ -2,7 +2,7 @@
 % Please edit documentation in R/custom.R
 \name{load_custom}
 \alias{load_custom}
-\title{Load an Arbitrary Hugging Face Embedding Model}
+\title{Load a Hugging Face embedding model outside the pinned list}
 \usage{
 load_custom(
   id,
@@ -22,60 +22,78 @@ load_custom(
 \arguments{
 \item{id}{Hugging Face repository id, for example \code{"thenlper/gte-small"}.}
 
-\item{revision}{Optional commit hash to pin. \code{NULL} resolves the current
-revision on first download (recorded in the manifest thereafter).}
+\item{revision}{Commit hash to pin, or \code{NULL} (default) to resolve the
+current revision online on every call. Pin it for offline reuse.}
 
-\item{onnx_path}{Repository path of the ONNX graph. \code{NULL} auto-detects
-\code{onnx/model.onnx} or \code{model.onnx}.}
+\item{onnx_path}{Path of the ONNX graph in the repository, or \code{NULL}
+(default) to use \code{onnx/model.onnx} or \code{model.onnx}.}
 
-\item{tokenizer_path}{Repository path of the tokenizer. Default
-\code{"tokenizer.json"}.}
+\item{tokenizer_path}{Path of the tokenizer in the repository (default
+\code{"tokenizer.json"}).}
 
-\item{pooling}{\code{"mean"} or \code{"cls"}. \code{NULL} auto-detects from
-\verb{1_Pooling/config.json} and fails with a clear message when absent.}
+\item{pooling}{\code{"mean"} or \code{"cls"}, or \code{NULL} (default) to read it from
+the repository's \verb{1_Pooling/config.json}.}
 
-\item{prefix}{Text prepended to every input by \code{\link[=encode]{encode()}}. \code{NULL}
-(default) keeps the recorded value (\code{""} on first use); pass \code{""} to
-clear a recorded prefix.}
+\item{prefix}{Text prepended to every input by \code{\link[=encode]{encode()}}. \code{NULL} (default)
+keeps the recorded prefix (\code{""} on first use); \code{""} clears it.}
 
-\item{max_length}{Maximum word pieces per input. \code{NULL} auto-detects from
-\code{sentence_bert_config.json}, falling back to 512.}
+\item{max_length}{Maximum word pieces per input, or \code{NULL} (default) to
+read it from \code{sentence_bert_config.json}, else 512.}
 
-\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
+\item{cache_dir}{Cache root (default \code{\link[=cache_dir]{cache_dir()}}).}
 
-\item{backend}{ONNX execution backend accepted by \code{\link[onnxr:onnx_model]{onnxr::onnx_model()}}.}
+\item{backend}{ONNX execution backend, as accepted by
+\code{\link[onnxr:onnx_model]{onnxr::onnx_model()}} (default \code{"cpu"}).}
 
-\item{threads}{Positive number of inference threads.}
+\item{threads}{Number of inference threads (default 1).}
 
-\item{verify}{Whether to verify recorded byte sizes and SHA-256 hashes
-when loading from an existing cache.}
+\item{verify}{Check recorded sizes and SHA-256 hashes when loading from the
+cache (default \code{TRUE}).}
 
-\item{quiet}{Whether to suppress download progress.}
+\item{quiet}{Suppress the download message and progress (default \code{FALSE}).}
 }
 \value{
-An object of class \code{sbert_model}, with the same fields as
+An object of class \code{sbert_model} with the same fields as
 \code{\link[=load_model]{load_model()}} returns; its \code{short_name} is \code{"custom:<id>"}.
 }
 \description{
-Loads any public Hugging Face repository that ships an ONNX encoder export
-and a \code{tokenizer.json}, returning the same \code{sbert_model} object as
-\code{\link[=load_model]{load_model()}} so that \code{\link[=encode]{encode()}}, \code{\link[=topics]{topics()}}, and every
-downstream verb work unchanged.
+\code{load_custom()} loads a Hugging Face embedding model that is not in the
+pinned list, on a "trust on first use" basis. Many embedding models on
+Hugging Face publish an ONNX export of their encoder and a \code{tokenizer.json};
+such a model can be used like a pinned one, but its configuration is not
+vouched for by the package: there is no pinned revision, no
+package-controlled hash, and no check that its embeddings match the reference
+implementation. The caller is responsible for the pooling rule, prefix and
+maximum length.
+
+On first use it resolves the current revision (unless \code{revision} is given),
+downloads the ONNX graph and tokenizer, and records their sizes, hashes and
+the model's configuration in a local manifest; later loads verify the files
+against that manifest. A later load with the same \code{revision} given uses no
+network; with \code{revision = NULL} every call first asks Hugging Face for the
+current revision. Pooling and maximum length are read from the repository's
+Sentence-Transformers configuration when it has one and must be given
+otherwise; the embedding dimension is read from the ONNX graph.
+
+The result is an \code{sbert_model} like the one \code{\link[=load_model]{load_model()}} returns, so
+\code{\link[=encode]{encode()}}, \code{\link[=topics]{topics()}} and every other verb accept it. For the pinned,
+verified models use \code{\link[=load_model]{load_model()}}.
 }
-\details{
-This is the escape hatch below the curated registry. On first use the
-current revision is resolved (unless \code{revision} is given), the artifacts
-are downloaded, and their byte sizes and SHA-256 values are recorded in a
-local manifest ("trust on first use"); later loads verify the files
-against that manifest and never touch the network. Pooling, prefix, and
-maximum length are auto-detected from the repository's
-Sentence-Transformers configuration when present, and must be supplied
-explicitly otherwise. The ONNX input signature and embedding dimension are
-read from the graph itself. Unlike registry models, the package makes no
-numerical-parity claim: you vouch for the configuration.
+\section{Conditions}{
+
+\code{sbert_runtime_missing} when ONNX Runtime is not installed;
+\code{sbert_missing_package} when jsonlite is not installed;
+\code{sbert_download_failed} when repository metadata or files cannot be
+downloaded or the revision cannot be resolved; \code{sbert_model_error} when
+the repository has no ONNX graph at the expected path, the pooling rule
+cannot be detected and was not given, or the graph lacks a
+\code{last_hidden_state} output or needs unsupported inputs;
+\code{sbert_cache_invalid} when cached files no longer match the recorded
+manifest.
 }
+
 \examples{
-# Cache root used for downloaded and custom models.
+# Custom models are stored under "custom" in this cache root.
 cache_dir()
 
 \donttest{
@@ -84,4 +102,9 @@ if (interactive()) {
   encode(c("one sentence", "another sentence"), model)
 }
 }
+}
+\seealso{
+\code{\link[=load_model]{load_model()}} for the pinned models; \code{\link[=install_runtime]{install_runtime()}} for
+ONNX Runtime; \code{\link[=encode]{encode()}} to use the model; \code{\link[=cache_dir]{cache_dir()}} for where it is
+stored.
 }

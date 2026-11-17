@@ -109,55 +109,69 @@ score_topic_coherence <- function(
   mean(pair_scores)
 }
 
-#' Score Topic Coherence
+#' Score the coherence of topics
 #'
-#' Computes intrinsic topic coherence from the top terms of a fitted topic
-#' model and the co-occurrence structure of the input documents. Coherence
-#' rewards topics whose top terms tend to appear together in the same
-#' documents, and is the standard quantitative measure for embedding-based
-#' topic models (Mimno et al. 2011).
+#' @description
+#' `coherence()` scores the coherence of each topic of a fitted model: whether
+#' the top terms of the topic tend to occur in the same texts. A topic whose
+#' terms co-occur is more likely to be interpretable as one subject than a topic
+#' whose terms rarely appear together, and coherence is the usual intrinsic
+#' measure of topic quality, computed from the corpus itself without external
+#' judgments.
 #'
-#' @param object An `sbert_topic_model` returned by [topics()].
-#' @param measure Either `"umass"` (Mimno et al. 2011; larger, i.e. closer to
-#'   zero, is more coherent) or `"npmi"` (normalized pointwise mutual
-#'   information, bounded in `[-1, 1]`; larger is more coherent).
-#' @param n_terms Number of top terms per topic to score. Capped at the number
-#'   of terms actually available for each topic.
-#' @param smoothing Additive smoothing for the UMass co-occurrence count.
-#' @param token_lists Optional precomputed per-unit token lists, one per
-#'   fitted document or segment in model order, that skip re-tokenizing the
-#'   corpus (as produced by [topic_corpus()]). Leave `NULL` to tokenize
-#'   internally; the score is identical either way.
-#' @param cores Number of forked worker processes for tokenization when it is
-#'   not already cached. Default `1` (serial). Values above one use
-#'   `parallel::mclapply` on Unix-alikes and fall back to serial elsewhere; the
-#'   result is identical regardless of the count.
-#' @param weight How the topic scores are averaged into the corpus-level
-#'   `"mean_coherence"`: `"none"` (default) gives every topic the same weight;
-#'   `"size"` weights each topic by its number of modeled units (documents, or
-#'   segments for a segmented model), so a handful of near-duplicate texts
-#'   that form a tiny topic cannot move the mean. The per-topic scores are the
-#'   same either way.
-#' @return A data frame with one row per topic and columns `topic`, `label`,
-#'   `measure`, `n_terms`, and `coherence`. Topics with fewer than two scorable
-#'   terms yield `NA`. The corpus-level mean over the scored topics, averaged as
-#'   `weight` says, is attached as the `"mean_coherence"` attribute (`NA` when
-#'   no topic can be scored), and the averaging as the `"weight"` attribute.
-#' @references Mimno, D., Wallach, H. M., Talley, E., Leenders, M., and
-#'   McCallum, A. (2011). Optimizing semantic coherence in topic models.
-#'   *Proceedings of EMNLP 2011*, 262--272.
+#' Each topic is scored from its top `n_terms` terms and the co-occurrence of
+#' those terms in the modeled units (documents, or segments of a segmented
+#' model). Two measures are available: normalized pointwise mutual information
+#' (NPMI; Bouma 2009), the mean over term pairs of how much more often two terms
+#' co-occur than expected, bounded between -1 and 1; and UMass coherence (Mimno
+#' et al. 2011), the mean log ratio of the number of units holding both terms of
+#' a pair to the number holding the higher-ranked one, usually negative. For
+#' both, larger values are more coherent. The result is a table with one row per
+#' topic; the mean over topics is kept with it, and is what [compare_topics()]
+#' and [summary()][summary.sbert_topic_model] report.
 #'
+#' Coherence is computed from words, while the topics are formed from
+#' embeddings, so a topic of short texts that share meaning but not vocabulary
+#' can score low. It complements reading the representative texts and does
+#' not replace it.
+#'
+#' @param object A topic model fitted by [topics()].
+#' @param measure `"npmi"` (default) or `"umass"`.
+#' @param n_terms Top terms per topic to score (default 10), capped at the
+#'   terms a topic has.
+#' @param smoothing Count added to each co-occurrence count for UMass
+#'   (default 1).
+#' @param token_lists Optional precomputed token lists, one per modeled unit,
+#'   as held by a [topic_corpus()]; `NULL` (default) tokenizes the text. The
+#'   scores are the same either way.
+#' @param cores Number of forked worker processes for tokenization (default
+#'   1; Unix-alikes only). Results do not depend on it.
+#' @param weight How topic scores are averaged into the mean: `"none"`
+#'   (default), every topic equally, or `"size"`, each topic in proportion to
+#'   its number of units, so that a very small topic of near-identical texts
+#'   cannot move the mean.
+#' @return A base data frame with one row per topic and columns `topic`,
+#'   `label`, `measure`, `n_terms` (terms scored), and `coherence` (`NA` for a
+#'   topic with fewer than two terms). The mean over the scored topics is
+#'   attached as the attribute `mean_coherence` (`NA` when no topic can be
+#'   scored) and the averaging as `weight`; [summary()][summary.sbert_topic_model]
+#'   prints the mean.
+#' @seealso [topic_diversity()]; [summary()][summary.sbert_topic_model] for
+#'   the model report; [compare_topics()] to compare numbers of topics.
+#' @references
 #' Bouma, G. (2009). Normalized (pointwise) mutual information in collocation
 #' extraction. *Proceedings of GSCL*, 31--40.
+#'
+#' Mimno, D., Wallach, H. M., Talley, E., Leenders, M., and McCallum, A.
+#' (2011). Optimizing semantic coherence in topic models. *Proceedings of
+#' EMNLP 2011*, 262--272.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
 #' coherence(topic_model)
+#' coherence(topic_model, measure = "umass", weight = "size")
 coherence <- function(
   object,
   measure = c("npmi", "umass"),
@@ -262,29 +276,37 @@ coherence <- function(
   result
 }
 
-#' Measure Topic Diversity
+#' Measure the diversity of topic terms
 #'
-#' Reports the proportion of distinct terms among the pooled top terms of every
-#' topic. A value near one indicates topics described by largely different
-#' vocabulary; a low value indicates redundant topics that repeat the same
-#' words (Dieng et al. 2020).
+#' @description
+#' `topic_diversity()` measures the diversity of topic terms (Dieng et al.
+#' 2020): it pools the top `n_terms` terms of every topic and returns the
+#' proportion of them that are distinct. A value near one means that the topics
+#' are described by different words; a low value means that several topics
+#' repeat the same words and may be redundant.
 #'
-#' @param object An `sbert_topic_model` returned by [topics()].
-#' @param n_terms Number of top terms per topic to pool. Capped at the number
-#'   of terms available for each topic.
-#' @return A single proportion in `(0, 1]`.
-#' @references Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic
-#'   modeling in embedding spaces. *Transactions of the Association for
-#'   Computational Linguistics*, 8, 439--453. \doi{10.1162/tacl_a_00325}
+#' It returns a single number between 0 and 1 and complements [coherence()],
+#' which scores each topic on its own.
+#'
+#' @param object A topic model fitted by [topics()].
+#' @param n_terms Top terms per topic to pool (default 10), capped at the
+#'   terms a topic has.
+#' @return A single number between 0 and 1.
+#' @section Conditions:
+#'   An error of class `sbert_no_terms` when the model has no terms.
+#' @seealso [coherence()]; [summary()][summary.sbert_topic_model];
+#'   [compare_topics()], which reports both measures per candidate.
+#' @references
+#' Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic modeling in
+#' embedding spaces. *Transactions of the Association for Computational
+#' Linguistics*, 8, 439--453. \doi{10.1162/tacl_a_00325}
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
 #' topic_diversity(topic_model)
+#' topic_diversity(topic_model, n_terms = 5)
 topic_diversity <- function(object, n_terms = 10L) {
   stopifnot(
     inherits(object, "sbert_topic_model"),
@@ -308,32 +330,48 @@ topic_diversity <- function(object, n_terms = 10L) {
     use.names = FALSE
   )
   if (length(pooled_terms) == 0L) {
-    stop("The topic model has no terms to evaluate.", call. = FALSE)
+    sbert_abort(
+      "The topic model has no terms to evaluate.",
+      class = "sbert_no_terms"
+    )
   }
   length(unique(pooled_terms)) / length(pooled_terms)
 }
 
-#' Summarize a Semantic Topic Model
+#' Summarize a topic model
 #'
-#' Prints a compact scientific report -- corpus size, cluster separation,
-#' coherence, and topic diversity -- and returns a tidy per-topic quality table.
+#' @description
+#' `summary()` reports the quality of a fitted topic model: the number of
+#' documents (and segments), topics, and the embedding model; the share of the
+#' embedding variance between topics; the mean coherence of the topics' terms;
+#' and the diversity of the terms. Below this overview, a table gives the size
+#' and coherence of every topic, so that small or incoherent topics stand out. A
+#' fit whose k-means did not converge is reported as such.
 #'
-#' @param object An `sbert_topic_model` returned by [topics()].
-#' @param measure Coherence measure passed to [coherence()].
-#' @param n_terms Number of top terms per topic used for coherence and
-#'   topic diversity.
-#' @param ... Unused; present for S3 compatibility.
-#' @return Invisibly, a data frame with one row per topic containing `topic`,
-#'   `label`, `n_documents`, `proportion`, and `coherence`.
+#' The result is an object that prints as the report; calling `summary()`
+#' does not print by itself.
+#'
+#' @param object A topic model fitted by [topics()].
+#' @param measure Coherence measure passed to [coherence()]: `"npmi"`
+#'   (default) or `"umass"`.
+#' @param n_terms Top terms per topic used for coherence and diversity
+#'   (default 10).
+#' @param ... Ignored.
+#' @return A data frame of class `summary.sbert_topic_model` with one row per
+#'   topic and columns `topic`, `label`, `n_documents`, `proportion`, and
+#'   `coherence`. The overview is kept with it and printed above the table;
+#'   [as.data.frame()] returns the table as a plain data frame.
+#' @section Conditions:
+#'   An error of class `sbert_no_terms` when the model has no terms.
+#' @seealso [coherence()] and [topic_diversity()] for the measures;
+#'   [topic_sizes()]; [print.summary.sbert_topic_model()].
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
 #' summary(topic_model)
+#' as.data.frame(summary(topic_model))
 summary.sbert_topic_model <- function(
   object,
   measure = c("npmi", "umass"),
@@ -349,34 +387,6 @@ summary.sbert_topic_model <- function(
     0
   }
 
-  cat("Semantic topic model summary\n")
-  if (is_segmented_topic_model(object)) {
-    cat(sprintf(
-      "  documents:            %d\n  segments:             %d (%s level)\n",
-      length(unique(object$documents$document_id)),
-      nrow(object$documents),
-      topic_segmentation(object)$segment
-    ))
-  } else {
-    cat(sprintf("  documents:            %d\n", nrow(object$documents)))
-  }
-  cat(sprintf(
-    paste0(
-      "  topics:               %d\n",
-      "  model:                %s\n",
-      "  between/total SS:      %.1f%%\n",
-      "  mean %-5s coherence:  %.4f\n",
-      "  topic topic_diversity:      %.3f (top %d terms)\n\n"
-    ),
-    nrow(object$topics),
-    object$model$id,
-    100 * explained,
-    measure,
-    attr(coherence, "mean_coherence"),
-    topic_diversity,
-    as.integer(n_terms)
-  ))
-
   quality <- data.frame(
     topic = object$topics$topic,
     label = object$topics$label,
@@ -385,6 +395,77 @@ summary.sbert_topic_model <- function(
     coherence = coherence$coherence,
     stringsAsFactors = FALSE
   )
-  print(quality, row.names = FALSE, digits = 4)
-  invisible(quality)
+  segmented <- is_segmented_topic_model(object)
+  attr(quality, "overview") <- list(
+    n_documents = length(unique(object$documents$document_id)),
+    n_segments = if (segmented) nrow(object$documents) else NA_integer_,
+    segment = topic_segmentation(object)$segment,
+    n_topics = nrow(object$topics),
+    model = object$model$id,
+    explained = explained,
+    measure = measure,
+    mean_coherence = attr(coherence, "mean_coherence"),
+    topic_diversity = topic_diversity,
+    n_terms = as.integer(n_terms),
+    converged = object$diagnostics$converged %||% NA
+  )
+  class(quality) <- c("summary.sbert_topic_model", "data.frame")
+  quality
+}
+
+#' Print a topic model summary
+#'
+#' @description
+#' `print()` shows the overview of a topic model summary (documents, segments,
+#' topics, model, between-topic share of the variance, mean coherence, topic
+#' diversity, and a note when k-means did not converge) followed by the table of
+#' topics.
+#'
+#' @param x A summary returned by [summary()][summary.sbert_topic_model].
+#' @param digits Significant digits in the table of topics (default 4).
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @seealso [summary.sbert_topic_model()].
+#' @export
+#' @examples
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' print(summary(topic_model), digits = 2)
+print.summary.sbert_topic_model <- function(x, digits = 4L, ...) {
+  overview <- attr(x, "overview")
+  cat("Semantic topic model summary\n")
+  cat(sprintf("  documents:            %d\n", as.integer(overview$n_documents)))
+  if (!is.na(overview$n_segments)) {
+    cat(sprintf(
+      "  segments:             %d (%s level)\n",
+      as.integer(overview$n_segments),
+      overview$segment
+    ))
+  }
+  cat(sprintf(
+    paste0(
+      "  topics:               %d\n",
+      "  model:                %s\n",
+      "  between/total SS:     %.1f%%\n",
+      "  mean %-5s coherence:  %.4f\n",
+      "  topic diversity:      %.3f (top %d terms)\n"
+    ),
+    as.integer(overview$n_topics),
+    overview$model,
+    100 * overview$explained,
+    overview$measure,
+    overview$mean_coherence,
+    overview$topic_diversity,
+    overview$n_terms
+  ))
+  if (isFALSE(overview$converged)) {
+    cat("  k-means:              did not converge (raise iter_max)\n")
+  }
+  cat("\n")
+  plain <- x
+  attr(plain, "overview") <- NULL
+  class(plain) <- "data.frame"
+  print(plain, row.names = FALSE, digits = digits)
+  invisible(x)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/encode.R
 \name{encode}
 \alias{encode}
-\title{Encode Text with Sentence-BERT}
+\title{Encode texts as sentence embeddings}
 \usage{
 encode(
   text,
@@ -15,75 +15,86 @@ encode(
 )
 }
 \arguments{
-\item{text}{Character vector of sentences. Empty strings are supported;
-missing values are rejected.}
+\item{text}{Character vector, one text per element. Empty strings are
+allowed; \code{NA} is not. Names become the row names of the result.}
 
-\item{model}{A loaded \link[=load_model]{sbert_model}, the name of a
-pinned model from \code{\link[=models]{models()}}, or \code{NULL} for the default
-\code{all-MiniLM-L6-v2}. Names are loaded lazily and kept in a session
-cache; the first use of a not-yet-installed model offers a one-time
-verified download (interactive prompt, or
-\code{options(sbert.download = TRUE)} in scripts).}
+\item{model}{A model from \code{\link[=load_model]{load_model()}} or \code{\link[=load_custom]{load_custom()}}, the name of a
+pinned model from \code{\link[=models]{models()}}, or \code{NULL} (default) for
+\code{"all-MiniLM-L6-v2"}. A name is loaded once per session. A model that is
+not installed is downloaded only with consent: an interactive prompt, or
+\code{options(sbert.download = TRUE)} in a script.}
 
-\item{batch_size}{Positive number of sentences processed per ONNX call.}
+\item{batch_size}{Number of texts per model call (default 32).}
 
-\item{normalize}{Whether to return row-wise L2-normalized embeddings.}
+\item{normalize}{Scale each embedding to unit L2 length (default \code{TRUE}).}
 
-\item{prefix}{Text prepended to every input before tokenization. \code{NULL}
-(default) uses the model's pinned prefix (for example \code{"query: "} for
-E5 models, which require one); \code{""} disables prefixing.}
+\item{prefix}{Text prepended to every input. \code{NULL} (default) uses the
+model's pinned prefix (for example \code{"query: "} for E5 models); \code{""} uses
+none.}
 
-\item{sort_by_length}{When \code{TRUE}, group inputs of similar length into the
-same batch before encoding and restore the original order afterwards.
-Sequences in a batch are padded to the longest member, so mixed-length
-input makes the model compute over padding: on clause-level segments
-60.1\% of token work is padding in input order against 1.6\% when sorted,
-measured at 1.9x faster end to end. Whole documents of similar length gain
-little (1.1x). Off by default because regrouping changes batch composition,
-which moves embeddings by around 1e-7 — enough to flip a rare borderline
-topic assignment, the same trade-off as \code{dedupe_segments} in
-\code{\link[=topic_gamma]{topic_gamma()}}. Row order of the result is unaffected.}
+\item{sort_by_length}{Batch texts of similar length together, which reduces
+computation over padding, most of all for segments of varying length
+(default \code{FALSE}). The rows keep input order, but the values can differ
+from an unsorted run by floating-point rounding, enough to change the
+assignment of a rare unit on a topic boundary.}
 
-\item{cache}{Optional path to an embedding cache file. When supplied, every
-document is looked up by a SHA-256 digest of its own text together with the
-model identity, revision, dimension, maximum length, pooling method and
-\code{normalize} setting; only documents with no matching entry are encoded, and
-the file is updated with whatever was newly computed. Corpora are usually
-edited rather than replaced — a few records corrected, a year appended, rows
-reordered — and encoding is about 97\% of the cost of a topic workflow, so
-reuse dominates. Changing 38 documents of 3,847 cost 0.59 s against 57 s to
-re-encode the corpus. Repeated documents within a single call are also
-encoded once (177 of the 3,847 bundled \code{covid} abstracts repeat an
-earlier one).
-
-The key deliberately excludes \code{batch_size} and \code{sort_by_length}, which shift
-embeddings by around 1e-7 through batch composition alone. Cached values are
-therefore stable to whatever computed them first rather than bit-identical
-to a fresh encode under different batching — the same trade-off as
-\code{sort_by_length} itself. A cache that cannot be read, or that was written
-for a different embedding dimension, is discarded with a warning and rebuilt
-rather than trusted.}
+\item{cache}{\code{NULL} (default), or the path of an \code{.rds} file of stored
+embeddings. Texts already stored for the same model and settings are read
+from the file; the others are encoded once each (repeats within the call
+included) and added to it. A file that cannot be read, or was written for
+another embedding dimension, is rebuilt with a warning.}
 }
 \value{
-A numeric matrix with one row per input, in input order, and one
-column per embedding dimension of the model (for example 384 for
-\code{all-MiniLM-L6-v2}; see \code{models()}).
+A numeric matrix with one row per text, in input order, and one
+column per embedding dimension of the model (the \code{dimensions} column of
+\code{\link[=models]{models()}}). Row names are \code{names(text)}. An empty \code{text} gives a matrix
+with no rows.
 }
 \description{
-Turns each text into one embedding: a vector in which texts with similar
-meaning lie close together. Encoding is the step every topic workflow
-starts from and by far its most expensive one, so encode once and pass the
-matrix to the \code{embeddings} argument of \code{\link[=topics]{topics()}}, \code{\link[=compare_topics]{compare_topics()}},
-\code{\link[=topic_corpus]{topic_corpus()}}, and the inference verbs. Each text is tokenized with the
-model's own tokenizer, truncated to the model's maximum length, run
-through the ONNX graph, pooled with \code{\link[=pool]{pool()}}, and by default
-L2-normalized. The static \verb{potion-base-8M} model instead averages
-looked-up token vectors, with no ONNX Runtime involved.
+\code{encode()} returns one sentence embedding per text from a pinned model (see
+\code{\link[=models]{models()}}): a point in a vector space learned so that texts with similar
+meaning lie close together, whatever words they use. Sentence-BERT models
+(Reimers and Gurevych, 2019) obtain such a vector by running a transformer
+encoder over the text and pooling its token vectors; the cosine of the angle
+between two embeddings then measures how close the two texts are in meaning.
+
+Each text is tokenized with the model's own tokenizer, truncated to the
+model's maximum length, run through the ONNX graph, pooled with the model's
+rule (\code{\link[=pool]{pool()}}), and by default scaled to unit length. The static
+\verb{potion-base-8M} model instead averages looked-up token vectors and needs no
+ONNX Runtime. With \code{cache}, embeddings are stored in a file keyed by text and
+model, so encoding an edited corpus again computes only the new or changed
+texts. The result is a numeric matrix with one row per text, in input order.
+
+Encoding is the expensive step of a workflow, and every analysis in the
+package (topics, the assignment of new texts, similarity) starts from its
+result: encode once and pass the matrix to the \code{embeddings} argument of
+\code{\link[=topics]{topics()}}, \code{\link[=compare_topics]{compare_topics()}}, \code{\link[=topic_corpus]{topic_corpus()}},
+\link[=predict.sbert_topic_model]{predict()}, \code{\link[=representatives]{representatives()}} and
+\code{\link[=topic_gamma]{topic_gamma()}}. To split long documents into sentences or clauses first, use
+\code{\link[=segment]{segment()}}. The bundled \link{feedback_embeddings} matrix is the output of
+\code{encode()} for 600 feedback messages and lets the examples run without a
+model.
 }
+\section{Conditions}{
+
+\code{sbert_unknown_model} when \code{model} names no pinned model;
+\code{sbert_model_not_installed} when the model is not installed and its
+download is declined or not permitted; \code{sbert_download_failed} or
+\code{sbert_cache_invalid} when a permitted download fails or does not verify;
+\code{sbert_cache_invalid} when installed files fail verification;
+\code{sbert_runtime_missing} when ONNX Runtime is not installed;
+\code{sbert_missing_package} when the static model is loaded without
+jsonlite; \code{sbert_model_error} when the model cannot be loaded, or
+inference fails or returns non-finite values. Warning
+\code{sbert_cache_rebuilt} when the \code{cache} file is unusable.
+}
+
 \examples{
-# Embeddings need a downloaded model, so the full workflow is in the
-# interactive block below. Segmenting needs none.
-segment("One sentence. Another sentence.", level = "sentence")
+# The bundled embeddings are what encode() returns for 600 feedback
+# messages: one row per text, one column per model dimension.
+dim(feedback_embeddings)
+topic_similarity(head(feedback_embeddings, 3))
 
 \donttest{
 if (interactive()) {
@@ -102,4 +113,16 @@ if (interactive()) {
   unlink(store)
 }
 }
+}
+\references{
+Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence
+embeddings using Siamese BERT-networks. \emph{Proceedings of the 2019
+Conference on Empirical Methods in Natural Language Processing and the
+9th International Joint Conference on Natural Language Processing
+(EMNLP-IJCNLP)}, 3982-3992. \doi{10.18653/v1/D19-1410}
+}
+\seealso{
+\code{\link[=load_model]{load_model()}} and \code{\link[=models]{models()}} for the models; \code{\link[=segment]{segment()}} to
+split documents first; \code{\link[=topic_similarity]{topic_similarity()}} to compare embeddings;
+\code{\link[=topics]{topics()}} to fit topics on them.
 }

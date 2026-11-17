@@ -2,31 +2,30 @@
 % Please edit documentation in R/compare.R
 \name{print.sbert_topic_sweep}
 \alias{print.sbert_topic_sweep}
-\title{Print a Topic-Count Comparison}
+\title{Print a topic-count comparison}
 \usage{
 \method{print}{sbert_topic_sweep}(x, ...)
 }
 \arguments{
-\item{x}{An \code{sbert_topic_sweep} object.}
+\item{x}{A comparison returned by \code{\link[=compare_topics]{compare_topics()}}.}
 
 \item{...}{Ignored.}
 }
 \value{
-The sweep object, invisibly.
+\code{x}, invisibly.
 }
 \description{
-Shows one row per candidate with its quality measures, and the call that
-pulls the best-scoring fitted model back out.
+\code{print()} shows a topic-count comparison: the coherence measure, one row per
+candidate with its measures, and, when the fitted models are kept, the
+\link[=fitted.sbert_topic_sweep]{fitted()} call that returns the most coherent
+candidate.
 }
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
-print(comparison)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+print(compare_topics(corpus, n_topics = c(4, 6), column = "translation",
+                     embeddings = feedback_embeddings))
+}
+\seealso{
+\code{\link[=compare_topics]{compare_topics()}}; \link[=summary.sbert_topic_sweep]{summary()};
+\link[=as.data.frame.sbert_topic_sweep]{as.data.frame()}.
 }

@@ -1,0 +1,281 @@
+---
+title: "Sentence embeddings without Python"
+author: "Written by [Mohammed Saqr](https://saqr.me) and [Sonsoles López-Pernas](https://sonsoles.me)"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Sentence embeddings without Python}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r options, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center", dpi = 96)
+old_options <- options(digits = 3, width = 90)
+```
+
+A sentence embedding is a fixed-length vector that represents the meaning
+of a whole text. Sentence-BERT (Reimers & Gurevych, 2019) obtains such
+vectors from a pretrained transformer that is fine-tuned in a siamese
+arrangement: pairs of sentences pass through the same network, and the
+network is trained so that the cosine similarity of their pooled vectors
+tracks how similar the sentences are in meaning. The result is a space in
+which "Choose the pictures between the cat and the dog" and "Pick all the
+images that lie between them" are neighbors although they share few words,
+so that similarity search, clustering and topic modeling can operate on
+meaning rather than on vocabulary.
+
+In R, sentence embeddings have usually been computed by calling the Python
+`sentence-transformers` library, which brings a second language runtime, a
+deep-learning framework and its version conflicts into an R analysis. The
+`sbert` package computes the same embeddings in R. It tokenizes with each
+model's own Hugging Face tokenizer through the `tok` package, runs the
+transformer as an ONNX graph through the `onnxr` package, and pools and
+normalizes the result in base R. Models are pinned to fixed revisions and
+verified by checksum, and nothing is downloaded unless it is requested.
+
+Computing an embedding needs a downloaded model, so the encoding steps
+below are shown and not run. Everything that runs uses the embeddings
+bundled with the package, which were computed by those same steps.
+
+```{r setup}
+library(sbert)
+```
+
+## Data
+
+- **`feedback_translations`:** AI-generated feedback messages from a
+  mathematics learning application, with the source-language text in
+  `feedback` and the English translation in `translation`.
+- **`feedback_embeddings`:** the embeddings of the first 600 distinct
+  translations, computed with the pinned `all-MiniLM-L6-v2` model. Row *i*
+  is the embedding of row *i* of `corpus` below.
+
+```{r data}
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+dim(feedback_embeddings)
+```
+
+Each of the 600 messages is a vector of 384 numbers, one per dimension of
+the model.
+
+## How is a sentence turned into a vector?
+
+`encode()` takes a character vector and returns a matrix with one row per
+text. Between the two, each batch of texts passes through four steps:
+
+1. **Tokenization.** The model's `tokenizer.json` is loaded with `tok` and
+   splits each text into subword tokens, adds the model's special tokens,
+   truncates at the model's maximum length, and pads the batch to its
+   longest member. It returns the token ids and an attention mask that is
+   1 for real tokens and 0 for padding.
+2. **Inference.** The ONNX graph, run by `onnxr`, maps the token ids to one
+   contextual vector per token: an array of texts by tokens by dimensions.
+3. **Pooling.** The token vectors of each text are combined into one
+   vector. Mean pooling averages the vectors of the real tokens,
+   $e = \sum_t m_t h_t / \sum_t m_t$, where $h_t$ is the vector of token $t$
+   and $m_t$ its mask value; CLS pooling takes the vector of the first
+   token. Each model uses the pooling it was trained with.
+4. **Normalization.** Each vector is divided by its Euclidean length, so
+   that the dot product of two embeddings is their cosine similarity.
+
+Steps 3 and 4 are plain R arithmetic, exported as `pool()`. A small
+example with two texts, three token positions and two dimensions shows
+what they compute. In the mask below, the third token position of the
+first text is padding:
+
+```{r pool-input}
+token_vectors <- array(1:12, dim = c(2, 3, 2))
+mask <- matrix(c(1, 1, 0,
+                 1, 1, 1), nrow = 2, byrow = TRUE)
+pool(token_vectors, mask, normalize = FALSE)
+```
+
+The first text has the token vectors (1, 7), (3, 9) and (5, 11), and its
+third token is masked, so its mean is (2, 8). The second text has three
+real tokens, (2, 8), (4, 10) and (6, 12), with mean (4, 10). The masked
+token is excluded from the average, which is why padding a batch to its
+longest member does not change any text's embedding. CLS pooling returns
+the first token of each text, and normalization rescales each row to
+length 1:
+
+```{r pool-methods}
+pool(token_vectors, mask, normalize = FALSE, method = "cls")
+pool(token_vectors, mask)
+```
+
+The bundled embeddings were normalized in the same way; their row lengths
+are 1 up to the four-decimal rounding of the stored values:
+
+```{r norms}
+summary(sqrt(rowSums(feedback_embeddings^2)))
+```
+
+## Which models can be used?
+
+`models()` lists the pinned models. It reads the registry inside the
+package and needs no network:
+
+```{r models}
+models()
+```
+
+The registry holds 14 models, from 30.9 MB to 1,337.6 MB on disk, with
+256 to 1,024 dimensions. Most are English; two
+`paraphrase-multilingual` models cover more than 50 languages and `multilingual-e5-small` more than 100.
+The default, `all-MiniLM-L6-v2`, is the model of the bundled embeddings.
+`detail = TRUE` adds the settings that `encode()` applies for each model:
+
+```{r models-detail}
+subset(models(detail = TRUE), select = c(model, pooling, prefix, engine))
+```
+
+Three models use CLS pooling and the rest mean pooling. Two require a text
+prefix, which `encode()` adds automatically (`"query: "` for
+`multilingual-e5-small` and `"search_document: "` for
+`nomic-embed-text-v1.5`). `potion-base-8M` is a static model: its
+embedding is a lookup and average of token vectors in R, with no ONNX
+Runtime involved, intended for corpora too large to encode with a
+transformer.
+
+## Where are models stored, and when are they downloaded?
+
+Models are stored in a per-user cache directory, located through
+`tools::R_user_dir()`. `cache_dir()` returns that path and creates
+nothing:
+
+```{r cache-dir}
+cache_dir()
+```
+
+`model_status()` reports, for each file of a model, whether it is in the
+cache and whether it passes its pinned byte-size and SHA-256 checks:
+
+```{r model-status}
+status <- model_status()
+subset(status, select = c(file, exists, valid, expected_bytes))
+```
+
+On the machine that built this page, the default model is
+`r if (with(status, all(valid))) "installed and valid" else "not installed"`.
+The two files a transformer model needs are the ONNX graph (90,405,214
+bytes for `all-MiniLM-L6-v2`) and the tokenizer.
+
+Nothing is downloaded when the package is installed, loaded, tested or
+when this vignette is built. Two downloads are explicit and happen once:
+the native ONNX Runtime used by `onnxr`, and each model. The chunk below is
+not run here:
+
+```{r setup-once, eval = FALSE}
+install_runtime()
+model_download("all-MiniLM-L6-v2")
+```
+
+After that, `encode()` computes embeddings. The bundled matrix was
+computed this way from the 600 messages of `corpus` and then rounded to
+four decimals. The first use of a model that is not yet installed asks before downloading it in an interactive session;
+scripts opt in with `options(sbert.download = TRUE)` or call
+`model_download()` first. `load_model()` loads a model explicitly, for
+example to choose the number of inference threads, and the loaded model
+is passed to `encode()`:
+
+```{r encode, eval = FALSE}
+embeddings <- with(corpus, encode(translation))
+
+model <- load_model("all-MiniLM-L6-v2", threads = 4)
+embeddings <- with(corpus, encode(translation, model = model))
+```
+
+## How similar are two messages?
+
+Because the rows are normalized, the cosine similarity of two messages is
+the dot product of their embeddings. `topic_similarity()` computes it for
+every pair of rows, and `tidy = TRUE` returns one row per pair. The first
+four messages of the corpus are:
+
+```{r first-four}
+head(corpus, 4)
+```
+
+Their pairwise similarities, each pair once:
+
+```{r similarity}
+pairs <- topic_similarity(head(feedback_embeddings, 4), tidy = TRUE)
+subset(pairs, from < to)
+```
+
+Messages 1 and 4 are the most similar pair (0.489): both ask the learner
+what a phrase means ("one more", "everyone after the first one"). Message
+3, about whether something is a person, is the least similar to messages 1
+and 2 (0.095 and 0.094), while messages 1 and 2, both about a difference
+in quantity, reach 0.361. Similarity follows what a message does and what it is
+about, not the words it shares.
+
+## Which messages are closest to a given message?
+
+Similarity search scores every text of a corpus against one query. The query
+here is the second message, a correction about the counts in two boxes.
+Its embedding is taken from the bundled matrix, its similarity to every
+message is added to the corpus as a column, and the messages above 0.8 are
+kept:
+
+```{r neighbors}
+query_text <- "There should be two more in the red than in the blue."
+query <- subset(feedback_embeddings, with(corpus, translation == query_text))
+neighbors <- transform(corpus,
+                        similarity = topic_similarity(feedback_embeddings, query))
+subset(neighbors, similarity > 0.8, select = c(translation, similarity))
+```
+
+The query matches itself with similarity 1, and the closest other
+messages are corrections of the same exercise, phrased with "more" or
+"fewer", "box" or "one", and as statements or questions. The list also
+shows what embeddings do not separate well: "There should be two fewer in
+the red one than in the blue one" scores 0.898, as high as any other
+message, although it asks for the opposite arrangement, and "There should
+be more in blue than in red" scores 0.859. Sentence embeddings capture topic and structure more
+reliably than the direction of a comparison or a negation, so a search
+that must respect such distinctions needs a check on the text itself.
+
+To search with a new text rather than a message of the corpus, the query
+is encoded with the same model (not run here):
+
+```{r new-query, eval = FALSE}
+query <- encode("Count the pictures in each box again.")
+neighbors <- transform(corpus,
+                        similarity = topic_similarity(feedback_embeddings, query))
+```
+
+## When to use which
+
+| Task | Function |
+|------|----------|
+| List the pinned models and their settings | `models()`, `models(detail = TRUE)` |
+| Install the runtime and a model, once | `install_runtime()`, `model_download()` |
+| Check or locate the cache | `model_status()`, `cache_dir()`, `cache_size()`, `model_remove()` |
+| Load a model with chosen threads or backend | `load_model()` |
+| Load an ONNX model outside the registry | `load_custom()` |
+| Compute embeddings | `encode()` |
+| Pool token vectors yourself | `pool()` |
+| Compare embeddings | `topic_similarity()` |
+| Group texts into topics | `topics()`, `compare_topics()` |
+
+The [main vignette](https://sonsoles.me/sbert/articles/sbert.html) fits
+topic models on the bundled embeddings, and the guide to
+[models, the cache, and custom models](https://sonsoles.me/sbert/articles/models-and-cache.html)
+covers the cache, custom models and inference settings in detail.
+[Verification: Python parity and determinism](https://sonsoles.me/sbert/articles/verification.html)
+compares the embeddings with those of the Python library.
+
+## References
+
+Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP 2019*,
+3982--3992. https://doi.org/10.18653/v1/D19-1410
+
+```{r restore-options, include = FALSE}
+options(old_options)
+```

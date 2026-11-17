@@ -2,7 +2,7 @@
 % Please edit documentation in R/compare.R
 \name{compare_topics}
 \alias{compare_topics}
-\title{Compare Topic Counts Before Committing to One}
+\title{Compare numbers of topics and segmentation levels}
 \usage{
 compare_topics(
   text,
@@ -25,125 +25,121 @@ compare_topics(
 )
 }
 \arguments{
-\item{text}{A character vector of documents, a data frame together with
-\code{column}, or a prepared \code{\link[=topic_corpus]{topic_corpus()}}. Passing a corpus (or letting
-\code{compare_topics()} build one internally) segments, embeds, and tokenizes
-the documents once and reuses that work across every candidate, instead
-of re-tokenizing per candidate.}
+\item{text}{Documents: a character vector, a data frame together with
+\code{column}, or a corpus prepared by \code{\link[=topic_corpus]{topic_corpus()}}.}
 
-\item{n_topics}{Integer vector of candidate topic counts, each at least 2
-and below the number of modeled units. Default \code{c(5, 10, 15, 20, 25, 30)}.}
+\item{n_topics}{Candidate numbers of topics: distinct integers of at least
+2 and below the number of modeled units. Default
+\code{c(5, 10, 15, 20, 25, 30)}.}
 
-\item{column}{When \code{text} is a data frame, the name of the column
-holding the documents to model. Every other column is carried along
-with each document in the fitted document table, and rows whose text is
-missing, blank, or a bibliographic placeholder
-(\code{"[No abstract available]"}) are dropped. Precomputed
-\code{embeddings} may keep one row per supplied row; the dropped rows are
-removed from them too. Leave \code{NULL} for a character vector.}
+\item{column}{Name of the text column when \code{text} is a data frame. The other
+columns are carried into the document table. Rows whose text is missing,
+blank, or the placeholder \code{"[No abstract available]"} are dropped, and so
+are their rows of \code{embeddings}. \code{NULL} (default) for a character vector.}
 
-\item{model}{A loaded sbert model, a pinned model name, or \code{NULL} for the
-session default. Ignored when \code{embeddings} is supplied.}
+\item{model}{The encoder: a model from \code{\link[=load_model]{load_model()}}, a pinned model name,
+or \code{NULL} (default) for the default model. Not used when \code{embeddings} are
+given.}
 
 \item{embeddings}{Optional precomputed embedding matrix, one row per
-document (or per segment when \code{segment} is not \code{"document"}); supply it
-to avoid re-encoding.}
+modeled unit. When several \code{segment} levels are compared, a list of
+matrices named by level. Default \code{NULL}.}
 
-\item{measure}{Coherence measure, \code{"npmi"} (default) or \code{"umass"}.}
+\item{measure}{Coherence measure: \code{"npmi"} (default) or \code{"umass"}.}
 
-\item{n_terms}{Top terms per topic used for coherence and topic diversity.
-Default \code{10}.}
+\item{n_terms}{Top terms per topic used for coherence and diversity
+(default 10).}
 
-\item{n_representatives}{Representative documents kept per topic in each
-retained model. Default \code{1}; raise it when the stored models are meant
-to be inspected rather than only compared.}
+\item{n_representatives}{Representative units stored per topic in each
+candidate (default 1).}
 
-\item{keep_models}{Whether to retain every fitted model so the chosen
-granularity needs no refitting. Default \code{TRUE}; set \code{FALSE} to return
-only the comparison table when memory matters.}
+\item{keep_models}{Whether to keep the fitted candidates (default \code{TRUE}).
+With \code{FALSE}, only the table is kept and \link[=fitted.sbert_topic_sweep]{fitted()}
+is not available.}
 
-\item{batch_size}{Number of texts encoded per model call when encoding is
-needed. Default \code{32}.}
+\item{batch_size}{Texts encoded per model call (default 32).}
 
-\item{cores}{Number of forked worker processes. Default \code{1} (serial). Above
-one, the shared corpus is tokenized in parallel and the candidates — which
-are independent and deterministic — are fitted in parallel, on Unix-alikes
-(serial fallback on Windows). Results are identical for any core count.}
+\item{cores}{Number of forked worker processes for tokenization and for
+fitting the candidates (default 1; Unix-alikes only). Results do not
+depend on it.}
 
-\item{segment}{The unit the candidates are fitted on, as in \code{\link[=topics]{topics()}}:
-\code{"document"} (default), \code{"sentence"}, \code{"clause"}, or \code{"phrase"}. Give
-several levels — for example \code{c("document", "sentence", "clause")} — to
-compare the segmentations as well as the counts: every level is fitted
-across every candidate, the table gains a leading \code{segment} column, the
-plot draws one line per level, and \link[=fitted.sbert_topic_sweep]{fitted()}
-takes \verb{segment =} alongside \code{n_topics}. \code{max_tokens}, \code{merge_below}, and
-\code{min_content} then apply to
-the segmented levels only. With several levels, precomputed \code{embeddings}
-are a list of matrices named by level.}
+\item{segment}{Unit or units of analysis, as in \code{\link[=topics]{topics()}}: one or more of
+\code{"document"} (default), \code{"sentence"}, \code{"clause"}, and \code{"phrase"}. With
+several levels, every level is fitted for every candidate.}
 
-\item{max_tokens}{Optional cap on segment length, passed to \code{\link[=segment]{segment()}}.
-When a \code{model} is used, the budget counts that model's exact tokens; with
-precomputed \code{embeddings} it counts words. Only with a segmented fit.}
+\item{max_tokens, merge_below, min_content}{Segmentation options passed to
+\code{\link[=segment]{segment()}}, for segmented fits only: the maximum segment length (in the
+model's tokens, or in words with precomputed \code{embeddings}; default
+\code{NULL}, no limit), the number of words below which a segment is joined to
+its neighbor (default 0), and the minimum share of letters for a segment
+to be kept (default 0; see \code{\link[=content_ratio]{content_ratio()}}).}
 
-\item{merge_below}{Re-join segments shorter than this many words into their
-neighbor, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
+\item{coherence_weight}{How the coherences of a candidate's topics are
+averaged: \code{"none"} (default), every topic equally, or \code{"size"}, each
+topic in proportion to its number of units, so a very small topic cannot
+decide the comparison.}
 
-\item{min_content}{Minimum alphabetic-content ratio for a segment to be
-kept, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
-
-\item{coherence_weight}{How each candidate's topic coherences are averaged:
-\code{"none"} (default) gives every topic the same weight; \code{"size"} weights
-each topic by its number of modeled units, so a tiny topic of a few
-near-identical texts (which scores very high) cannot decide the
-comparison. Passed to \code{\link[=coherence]{coherence()}} as \code{weight}.}
-
-\item{...}{Further arguments passed to \code{\link[=topics]{topics()}} (for example
-\code{stop_words} or \code{weighting}).}
+\item{...}{Further arguments to \code{\link[=topics]{topics()}}, for example \code{stop_words} or
+\code{weighting}.}
 }
 \value{
-A base data frame with one row per candidate and columns
-\code{n_topics}, \code{coherence} (mean over the topics with at least two scorable
-terms, as in \link[=summary.sbert_topic_model]{summary()}, weighted as
-\code{coherence_weight} says; \code{NA} only when no topic can be scored),
-\code{topic_diversity}, and \code{explained} (between-topic share of total
-variance), preceded by \code{segment} when several levels were compared. The
-coherence measure is recorded in the \code{measure} attribute and the averaging
-in the \code{coherence_weight} attribute. When \code{keep_models = TRUE} the result also carries
-class \code{sbert_topic_sweep} and the fitted models, which
-\link[=fitted.sbert_topic_sweep]{fitted()} extracts,
-\link[=as.data.frame.sbert_topic_sweep]{as.data.frame()} strips, and
-\code{\link[=plot.sbert_topic_sweep]{plot.sbert_topic_sweep()}} draws.
+An object of class \code{sbert_topic_sweep}: a data frame with one row
+per candidate and columns \code{n_topics}, \code{coherence} (the mean over the
+topics that can be scored, averaged as \code{coherence_weight} says; \code{NA} when
+no topic can be scored), \code{topic_diversity}, \code{explained} (the
+between-topic share of the variance), and \code{converged}, preceded by
+\code{segment} when several levels are compared. The coherence measure and the
+weighting are kept as the attributes \code{measure} and \code{coherence_weight}.
+\link[=summary.sbert_topic_sweep]{summary()} gives the most coherent candidate
+per level, \link[=plot.sbert_topic_sweep]{plot()} draws the measures, and
+\link[=fitted.sbert_topic_sweep]{fitted()} returns a fitted candidate.
 }
 \description{
-Fits \code{\link[=topics]{topics()}} once per candidate topic count — deterministically,
-on one shared set of embeddings — and returns the quality metrics that
-justify a granularity choice: mean topic coherence, topic diversity, and
-the share of embedding variance separated between topics. The verb
-compares; it never chooses for you. Take the count you want out of the
-comparison with \link[=fitted.sbert_topic_sweep]{fitted()}.
-}
-\details{
-There is no single correct topic count; this verb replaces the habit of
-picking one by feel with a table you can defend. Coherence typically falls
-as counts grow while separation rises, so look for the count after which
-coherence stops improving (or starts degrading) rather than a global
-maximum.
-}
-\examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
-comparison
-fitted(comparison, n_topics = 2)
+\code{compare_topics()} fits \code{\link[=topics]{topics()}} for every candidate number of topics, and
+for every segmentation level in \code{segment}, on one shared set of embeddings,
+and reports measures of the quality of each fit. The number of topics, like
+the unit of analysis (the whole document or its sentences, clauses, or
+phrases), sets the granularity of a topic model and has no single correct
+value: fewer topics give broad themes, more topics give narrower ones, until
+some of them split a theme into near-duplicates.
 
-# Documents against sentences, in one table and one plot (offline: one
-# embedding matrix per level, one row per unit of that level).
+Three measures are reported per candidate: the mean coherence of the topics'
+terms (\code{\link[=coherence]{coherence()}}), the diversity of the terms across topics
+(\code{\link[=topic_diversity]{topic_diversity()}}), and the share of the embedding variance that lies
+between topics. Coherence tends to fall and between-topic variance to rise as
+the number of topics grows, so a useful candidate is often the count after
+which coherence stops improving rather than the count with the highest
+coherence. Comparing candidates on such measures is a better basis for the
+choice than fixing a number in advance. The function compares; it does not
+choose.
+
+The result is a table of class \code{sbert_topic_sweep} with one row per
+candidate. The fitted candidates are kept, so a chosen one is taken out with
+\link[=fitted.sbert_topic_sweep]{fitted()} without refitting.
+
+The measures are a guide; the choice should also rest on reading the
+representative texts of the candidate models.
+}
+\section{Conditions}{
+
+Errors of class \code{sbert_bad_input} when fewer than three units are
+modeled, a candidate is not below the number of units, a list of
+embeddings is given for a single level, several levels are given with a
+prepared corpus or with embeddings that are not a list named by level;
+and the conditions of \code{\link[=topics]{topics()}} for each candidate.
+Non-convergence of a candidate is recorded in the \code{converged} column.
+}
+
+\examples{
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+comparison <- compare_topics(corpus, n_topics = c(4, 6, 8),
+                             column = "translation",
+                             embeddings = feedback_embeddings)
+comparison
+summary(comparison)
+fitted(comparison, n_topics = 6)
+
+# Documents against sentences (one embedding matrix per level)
 documents <- c(
   "Cats chase mice. Stocks and bonds trade.",
   "Dogs chase balls. Markets price shares.",
@@ -163,9 +159,9 @@ levels <- compare_topics(
   n_terms = 2
 )
 levels
-fitted(levels, n_topics = 2, segment = "sentence")
 }
 \seealso{
-\link[=fitted.sbert_topic_sweep]{fitted()} to pull one fitted model out
-of the comparison.
+\code{\link[=topics]{topics()}} to fit one model; \code{\link[=coherence]{coherence()}} and
+\code{\link[=topic_diversity]{topic_diversity()}} for the measures; \code{\link[=topic_hierarchy]{topic_hierarchy()}} and
+\code{\link[=reduce_topics]{reduce_topics()}} to merge the topics of a fit.
 }

@@ -1,45 +1,66 @@
-#' Load a Pinned Sentence-BERT Model
+#' Load an installed pinned model
 #'
-#' Loads already-downloaded model artifacts. The function never downloads
-#' model files or native libraries. See [models()] for the available
-#' pinned models.
+#' @description
+#' `load_model()` reads an installed pinned model from the cache, verifies its
+#' files against the pinned sizes and hashes, and returns the model ready for
+#' inference: the tokenizer and the ONNX session (or, for the static
+#' `potion-base-8M`, its embedding table). An embedding model is defined by its
+#' network weights, its tokenizer, and the rules applied around them (pooling,
+#' input prefix, maximum input length); the package pins each supported model to
+#' an immutable Hugging Face revision with known file sizes and SHA-256 hashes,
+#' so that the same name always means the same model and the same text always
+#' receives the same embedding.
 #'
-#' @param model Name of a pinned model listed by [models()].
-#' @param cache_dir Cache root returned by [cache_dir()].
-#' @param backend ONNX execution backend accepted by [onnxr::onnx_model()].
-#' @param threads Positive number of inference threads, or `"auto"` to use the
-#'   machine's performance-core count. Inference is the dominant cost of
-#'   [encode()] — about 88% of a batch — and it is the only part of the package
-#'   that threads. The default `1` is deliberate: it keeps runs reproducible
-#'   across machines and keeps the package within the two-core limit that check
-#'   environments impose.
+#' It never downloads anything; the files must first be installed with
+#' [model_download()], and transformer models also need ONNX Runtime from
+#' [install_runtime()]. The result is an object of class `sbert_model`.
 #'
-#'   Raising it is free of numerical consequence — output was `identical()` at
-#'   1, 2, 4, 6 and 8 threads across all 45 measured runs — but expect a modest
-#'   gain, bounded by *performance* cores rather than logical ones. Over three
-#'   repetitions at 200, 600 and 1,500 documents on an Apple M4 (4 performance +
-#'   6 efficiency), median speedups against a single thread were 1.22x at two
-#'   threads, 1.29x at four, 1.22x at six and 1.18x at eight. Four threads was
-#'   fastest at the two larger sizes (1.34x at 1,500 documents); beyond that the
-#'   efficiency cores add contention rather than throughput. Threaded timings are
-#'   also noisy — run-to-run spread reached 26% at the smallest size against
-#'   under 3% single-threaded — so benchmark with repetition before tuning.
-#'   Set `threads = "auto"` for the knee of that curve, or an integer to pin it.
-#' @param verify Whether to verify file sizes and SHA-256 hashes before loading.
+#' Most verbs accept a model name and load it themselves, keeping it for the
+#' rest of the session, so an explicit `load_model()` is needed mainly to set
+#' `backend` or `threads`. For a model outside the pinned list, use
+#' [load_custom()].
+#'
+#' @param model Name of a pinned model, as listed by [models()] (default
+#'   `"all-MiniLM-L6-v2"`).
+#' @param cache_dir Cache root (default [cache_dir()]).
+#' @param backend ONNX execution backend: `"cpu"` (default), `"coreml"`,
+#'   `"cuda"`, `"xnnpack"` or `"openvino"`, as accepted by
+#'   [onnxr::onnx_model()].
+#' @param threads Number of inference threads, or `"auto"` for the machine's
+#'   performance-core count (default 1). Results do not depend on the thread
+#'   count; the gain in speed is modest and bounded by the number of
+#'   performance cores. The default of one keeps runs within the two-core
+#'   limit of check environments.
+#' @param verify Check file sizes and SHA-256 hashes before loading (default
+#'   `TRUE`).
 #' @return An object of class `sbert_model` (class
 #'   `c("sbert_static_model", "sbert_model")` for `potion-base-8M`): a list
 #'   holding the model's identity (`id`, `short_name`, `revision`), its
 #'   encoding settings (`dimension`, `max_length`, `pooling`, `prefix`), the
 #'   `backend` and `threads` it runs with, and the loaded tokenizer and model.
-#'   Pass it to the `model` argument of [encode()] and the topic verbs.
+#'   Pass it to the `model` argument of [encode()] and of the topic verbs;
+#'   its print method shows the identity.
+#' @section Conditions:
+#'   `sbert_unknown_model` when `model` names no pinned model;
+#'   `sbert_model_not_installed` when its files are missing;
+#'   `sbert_cache_invalid` when they fail size or hash verification;
+#'   `sbert_runtime_missing` when ONNX Runtime is not installed (transformer
+#'   models only); `sbert_missing_package` when the static model is loaded
+#'   without jsonlite; `sbert_model_error` when the tokenizer or model cannot
+#'   be loaded.
+#' @seealso [models()] for the pinned models; [model_download()] and
+#'   [install_runtime()] to install them; [model_status()] to check an
+#'   installation; [load_custom()] for other Hugging Face models; [encode()]
+#'   to use the model.
 #' @export
 #' @examples
-#' # Pinned models that can be loaded.
+#' # The pinned models that load_model() accepts.
 #' models()
 #'
 #' \donttest{
 #' if (interactive()) {
 #'   model <- load_model()
+#'   model
 #' }
 #' }
 load_model <- function(
@@ -73,15 +94,15 @@ load_model <- function(
 
   status <- model_status(cache_dir, model = manifest$short_name)
   if (!all(status$exists)) {
-    stop(
+    sbert_abort(
       "Model files are missing. Run model_download() explicitly first.",
-      call. = FALSE
+      class = "sbert_model_not_installed"
     )
   }
   if (verify && !all(status$valid)) {
-    stop(
+    sbert_abort(
       "Model files failed size or SHA-256 validation. Remove and download them again.",
-      call. = FALSE
+      class = "sbert_cache_invalid"
     )
   }
   if (identical(manifest$type, "static")) {
@@ -90,9 +111,9 @@ load_model <- function(
     return(load_sbert_static_model(manifest, static_paths))
   }
   if (!sbert_onnx_is_installed()) {
-    stop(
+    sbert_abort(
       "ONNX Runtime is not installed. Run install_runtime() explicitly first.",
-      call. = FALSE
+      class = "sbert_runtime_missing"
     )
   }
 
@@ -101,9 +122,9 @@ load_model <- function(
   tokenizer_instance <- tryCatch(
     load_sbert_tokenizer(paths[["tokenizer.json"]]),
     error = function(error_condition) {
-      stop(
+      sbert_abort(
         sprintf("Could not load tokenizer.json: %s", conditionMessage(error_condition)),
-        call. = FALSE
+        class = "sbert_model_error"
       )
     }
   )
@@ -114,9 +135,9 @@ load_model <- function(
       threads = as.integer(threads)
     ),
     error = function(error_condition) {
-      stop(
+      sbert_abort(
         sprintf("Could not load the ONNX model: %s", conditionMessage(error_condition)),
-        call. = FALSE
+        class = "sbert_model_error"
       )
     }
   )
@@ -212,18 +233,26 @@ load_sbert_onnx_model <- function(path, backend, threads) {
   )
 }
 
-#' Print a Loaded Model
+#' Print a loaded model
 #'
-#' Shows the model's identity and the settings inference will run under:
-#' Hugging Face id, pinned revision, embedding dimensions, and backend.
+#' @description
+#' `print()` shows a loaded model: the repository id, the pinned revision, the
+#' number of embedding dimensions, and the backend. A loaded model is identified
+#' by its Hugging Face repository and the revision it is pinned to; together
+#' with the embedding dimension and the execution backend, these are what a
+#' report needs to state which model produced a set of embeddings.
 #'
-#' @param x An `sbert_model` object.
+#' For the full list of settings of every pinned model, including pooling and
+#' prefix, use `models(detail = TRUE)`.
+#'
+#' @param x An `sbert_model` from [load_model()] or [load_custom()].
 #' @param ... Ignored.
-#' @return The model object, invisibly.
+#' @return `x`, invisibly.
+#' @seealso [load_model()]; [models()] for the settings of all pinned models.
 #' @export
 #' @examples
-#' # Pinned models that can be loaded and printed.
-#' models()
+#' # Repository ids and revisions of the pinned models, without loading one.
+#' models(detail = TRUE)
 #'
 #' \donttest{
 #' if (interactive()) {

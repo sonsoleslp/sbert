@@ -15,13 +15,13 @@ assign_topic_embeddings <- function(embeddings, centers) {
     is.numeric(centers)
   )
   if (ncol(embeddings) != ncol(centers)) {
-    stop(
+    sbert_abort(
       sprintf(
         "Embeddings have %d dimensions but the topic model was fitted with %d.",
         ncol(embeddings),
         ncol(centers)
       ),
-      call. = FALSE
+      class = "sbert_dimension_mismatch"
     )
   }
 
@@ -51,7 +51,10 @@ resolve_new_embeddings <- function(
   sort_by_length = FALSE
 ) {
   if (!is.null(model) && !is.null(embeddings)) {
-    stop("Supply model or embeddings, not both.", call. = FALSE)
+    sbert_abort(
+      "Supply model or embeddings, not both.",
+      class = "sbert_bad_input"
+    )
   }
   if (is.null(embeddings)) {
     embeddings <- encode(
@@ -69,51 +72,96 @@ resolve_new_embeddings <- function(
       anyNA(embeddings) ||
       any(!is.finite(embeddings))
   ) {
-    stop(
+    sbert_abort(
       sprintf(
         "embeddings must be a finite numeric matrix with %d rows (one per unit).",
         n_expected
       ),
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   embeddings
 }
 
-#' Assign New Documents to Fitted Topics
+#' Assign new documents to fitted topics
 #'
-#' Predicts the topic of unseen documents by embedding them and assigning each
-#' to the nearest stored topic centroid under cosine distance. The fitted
-#' model is not modified. Supply either a loaded `model` (to embed `text`) or
-#' a precomputed embedding matrix whose rows align with `text`.
+#' @description
+#' `predict()` assigns new documents to the topics of a fitted model without
+#' fitting again: it embeds the new texts (or takes their embeddings) and
+#' assigns each to the topic whose center has the highest cosine similarity with
+#' it, after scaling the centers to unit length. A fitted topic model defines
+#' its topics by their centers in the embedding space, so new texts (later
+#' responses, a held-out sample, another cohort) can be placed in the same
+#' topics, which keeps the topics and their labels fixed and makes the counts
+#' comparable across samples.
 #'
-#' @param object A fitted [topics()] model.
-#' @param text Character vector of new documents. A model fitted with
-#'   `segment = "sentence"`, `"clause"`, or `"phrase"` splits them the same
-#'   way first (with the fitted `max_tokens`, `merge_below`, and
-#'   `min_content`) and assigns every segment.
-#' @param model A loaded [sbert_model][load_model()], a pinned model
-#'   name, or `NULL` for the default model; ignored when `embeddings` are
-#'   supplied. The embedding dimension must match the fitted model.
-#' @param embeddings Optional numeric matrix with one row per document, or
-#'   one row per segment for a segmented model.
-#' @param batch_size Batch size passed to [encode()] when `model` is
-#'   used.
-#' @param ... Unused; included for S3 compatibility.
+#' `distance` is one minus that similarity. A model fitted on segments splits
+#' the new texts with the same segmentation settings first and assigns each
+#' segment. The fitted model is not changed. The result is a data frame with one
+#' row per document, or per segment for a segmented model.
+#'
+#' This rule differs from the one that formed the topics: [topics()] fits
+#' Lloyd's k-means, which assigns each unit to the nearest raw mean of the
+#' normalized embeddings by squared Euclidean distance, and those means are
+#' shorter than unit length by different amounts. On the units a model was
+#' fitted on, the two rules agree for almost every unit but can differ for a
+#' few units on topic boundaries, so `predict()` on the training texts need
+#' not reproduce the fitted topics exactly; read the fitted assignment with
+#' `as.data.frame(fit, what = "documents")`. For graded rather than single
+#' assignments use [topic_membership()]; for the topic mixture of long
+#' documents, [topic_gamma()].
+#'
+#' @param object A fitted model from [topics()].
+#' @param text Character vector of new documents.
+#' @param model A model from [load_model()], a pinned model name, or `NULL`
+#'   (default) for the default model, used to embed `text`; ignored when
+#'   `embeddings` are given. Its dimension must match the fitted model.
+#' @param embeddings Numeric matrix with one row per document (one per
+#'   segment for a segmented model), or `NULL` (default) to encode `text`.
+#' @param batch_size Texts per model call when encoding (default 32).
+#' @param ... Unused.
 #' @return A base data frame with one row per document and columns
 #'   `document_id`, `document_name`, `text`, `topic`, `label` (the fitted
-#'   topic label), and `distance` (cosine distance to the assigned centroid).
-#'   For a segmented model, one row per segment, with `document_id` naming
-#'   the source document and `segment` its position within it.
+#'   topic label), and `distance` (cosine distance to the assigned center).
+#'   For a segmented model, one row per segment, with `segment` (position in
+#'   the document) after `document_name`.
+#' @section Conditions:
+#'   `sbert_dimension_mismatch` when the embeddings have a different number
+#'   of columns from the fitted model; `sbert_bad_input` when both `model` and
+#'   `embeddings` are given, when `embeddings` has the wrong number of rows or
+#'   non-finite values or a zero row, or when segmentation yields no segment;
+#'   when encoding, the conditions of [encode()].
+#' @seealso [topics()] for the fit; [topic_membership()] for graded
+#'   membership; [topic_gamma()] for document mixtures; [representatives()]
+#'   for the clearest examples of each topic.
 #' @export
 #' @examples
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#'
+#' # Assign three messages, giving their precomputed embeddings.
+#' new_messages <- head(corpus, 3)
+#' with(new_messages,
+#'      predict(topic_model, translation,
+#'              embeddings = head(feedback_embeddings, 3)))
+#'
+#' # A small model on toy two-dimensional embeddings.
 #' text <- c(
 #'   "Cats chase mice", "Dogs chase balls",
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' fitted <- topics(text, 2, embeddings = embeddings)
-#' predict(fitted, "Bulls and bears move markets", embeddings = rbind(c(0.2, 0.8)))
+#' toy_model <- topics(text, 2, embeddings = embeddings)
+#' predict(toy_model, "Bulls and bears move markets",
+#'         embeddings = rbind(c(0.2, 0.8)))
+#'
+#' \donttest{
+#' if (interactive()) {
+#'   predict(topic_model, c("The pictures were too small.",
+#'                          "I liked the counting game."))
+#' }
+#' }
 predict.sbert_topic_model <- function(
   object,
   text,
@@ -188,38 +236,65 @@ predict.sbert_topic_model <- function(
   )
 }
 
-#' Soft Topic Membership Probabilities
+#' Compute graded topic membership
 #'
-#' Computes fuzzy-c-means-style membership of every document in every topic
-#' from cosine distances to the stored centroids, without changing the
-#' deterministic hard clustering. In high-dimensional embedding spaces
-#' distances concentrate, so the textbook fuzzifier `sharpness = 2` collapses
-#' memberships toward the uniform `1/k`; the default `sharpness = 1.15`
-#' preserves contrast. The membership ranking of topics within a document is
-#' invariant to `sharpness`; the probability magnitudes are not, and should be
-#' interpreted relative to the chosen value.
+#' @description
+#' `topic_membership()` computes graded (fuzzy) topic membership: a
+#' probability-like weight of every unit on every topic, so that units on a
+#' boundary and units squarely inside a topic can be told apart, whereas a hard
+#' assignment places each unit in one topic. The weights follow the membership
+#' function of fuzzy c-means (Bezdek, 1981): a unit's weight on a topic falls
+#' with its distance to that topic's center relative to its distances to the
+#' other centers.
 #'
-#' @param object A fitted [topics()] model.
-#' @param embeddings Optional numeric matrix of document embeddings. When
-#'   omitted, the embeddings stored by `topics(keep_embeddings = TRUE)`
-#'   are used.
-#' @param sharpness Fuzzy-c-means fuzzifier `m`. Must be greater than 1;
-#'   values close to 1 give crisper memberships.
-#' @return A base data frame with one row per document-topic pair and columns
-#'   `document_id`, `topic`, `probability`, and `rank` (1 is the strongest
-#'   topic of the document). Probabilities sum to 1 within each document.
+#' The weights are computed from the cosine distance of each unit to each topic
+#' center, after scaling the centers to unit length:
+#' \eqn{u_{ij} \propto d_{ij}^{-2/(m-1)}}{u_ij ~ d_ij^(-2/(m-1))}, normalized to
+#' sum to one over topics, with \eqn{m} the `sharpness`. The topics themselves
+#' are not refitted. In high-dimensional embedding spaces distances are similar
+#' in size, so the usual \eqn{m = 2} gives nearly uniform weights; the default
+#' 1.15 keeps them distinct. The order of topics within a unit does not depend
+#' on `sharpness`; the size of the weights does, and should be read relative to
+#' the chosen value. The result is a data frame with one row per unit-topic
+#' pair, with weights that sum to one within each unit.
+#'
+#' The rank-1 topic is the topic [predict()][predict.sbert_topic_model] assigns,
+#' by cosine similarity to the unit-length centers. [topics()] fits Lloyd's
+#' k-means, which assigns by squared Euclidean distance to the raw means of the
+#' normalized embeddings; on the fitted units the two rules agree for almost
+#' every unit but can differ for a few units on topic boundaries. For the share
+#' of a long document's segments in each topic, use [topic_gamma()].
+#'
+#' @param object A fitted model from [topics()].
+#' @param embeddings Numeric matrix of embeddings, one row per unit, or `NULL`
+#'   (default) for the embeddings stored in the model (fitted with
+#'   `keep_embeddings = TRUE`, the default).
+#' @param sharpness The fuzzifier \eqn{m}, greater than 1 (default 1.15);
+#'   values near 1 give crisper weights.
+#' @return A base data frame with one row per unit-topic pair and columns
+#'   `document_id` (row of `embeddings`, or of the fitted units), `topic`,
+#'   `probability`, and `rank` (1 for the unit's highest weight), ordered by
+#'   unit and rank. Probabilities sum to one within each unit.
+#' @section Conditions:
+#'   `sbert_no_embeddings` when `embeddings` is `NULL` and the model stores
+#'   none; `sbert_dimension_mismatch` when the embeddings have a different
+#'   number of columns from the fitted model; `sbert_bad_input` when an
+#'   embedding row is zero.
+#' @seealso [predict()][predict.sbert_topic_model] for single assignments;
+#'   [topic_gamma()] for document mixtures from segments; [topics()] for the
+#'   fit.
 #' @references Bezdek, J. C. (1981). *Pattern Recognition with Fuzzy
 #'   Objective Function Algorithms*. Plenum Press, New York.
 #'   \doi{10.1007/978-1-4757-0450-1}
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' fitted <- topics(text, 2, embeddings = embeddings, keep_embeddings = TRUE)
-#' topic_membership(fitted)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' head(topic_membership(topic_model), 12)
+#'
+#' # The textbook fuzzifier spreads the weights more evenly.
+#' head(topic_membership(topic_model, sharpness = 2), 6)
 topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
   stopifnot(
     inherits(object, "sbert_topic_model"),
@@ -231,12 +306,12 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
   if (is.null(embeddings)) {
     embeddings <- object$embeddings
     if (is.null(embeddings)) {
-      stop(
+      sbert_abort(
         paste0(
           "The model stores no embeddings. Refit with keep_embeddings = TRUE ",
           "or supply embeddings."
         ),
-        call. = FALSE
+        class = "sbert_no_embeddings"
       )
     }
   }
@@ -266,72 +341,70 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 }
 
 
-#' Document-Topic Distributions from Segment Assignments
+#' Compute document-topic mixtures from segments
 #'
-#' Computes `gamma`, the distribution of every document over the fitted
-#' topics, by segmenting each document with [segment()], assigning each
-#' segment to its nearest topic centroid, and normalizing the per-document
-#' segment counts. This yields parameter-free mixed membership: a document
-#' that discusses two topics in different sentences receives weight on both,
-#' which the single-embedding hard assignment cannot express.
+#' @description
+#' `topic_gamma()` returns, for each document, its mixture over topics: the
+#' share of its segments assigned to each topic, the document-topic distribution
+#' conventionally called gamma. A document that discusses two subjects in
+#' different sentences belongs partly to two topics, which a single embedding of
+#' the whole document cannot express; counting the topics of its segments gives
+#' the mixture without any additional parameter.
 #'
-#' @param object A fitted [topics()] model.
-#' @param text Either `NULL`, a character vector of documents (segmented here
-#'   at `level`), or the data frame returned by [segment()] (used as-is).
-#'   `NULL` — the default — works for a model fitted with `segment =
-#'   "sentence"`, `"clause"`, or `"phrase"`: its own segments and their topic
-#'   assignments are already stored, so the mixture of every fitted document
-#'   comes back with no encoding at all. Passing your own segmentation keeps
-#'   every segment option in [segment()] and lets you reuse one set of segment
-#'   embeddings across this and other verbs. A data frame must have
-#'   `document_id` and `text` columns; `gamma` is then computed per
-#'   `document_id`.
-#' @param model A loaded [sbert_model][load_model()], a pinned model
-#'   name, or `NULL` for the default model, used to embed the segments;
-#'   ignored when `embeddings` are supplied.
-#' @param embeddings Optional precomputed numeric matrix of segment
-#'   embeddings, one row per segment. When `text` is raw documents the rows must
-#'   align with `segment(text, level = level)`; when `text` is a [segment()]
-#'   data frame they must align with its rows — which is automatic, since no
-#'   re-segmentation happens.
-#' @param level Segmentation granularity passed to [segment()] when `text` is
-#'   a character vector: `"clause"`, `"sentence"`, or `"phrase"`. `NULL` (the
-#'   default) uses the fitted segmentation — level, `max_tokens`,
-#'   `merge_below`, and `min_content` — for a segmented model, so new
-#'   documents are cut exactly as the fitted ones were, and `"clause"` for a
-#'   document-level model. Ignored when `text` is already a [segment()] data
-#'   frame.
-#' @param batch_size Batch size passed to [encode()] when `model` is
-#'   used.
-#' @param cores Number of forked worker processes used to split documents into
-#'   segments (passed to [segment()]). Default `1`. Segmenting a large corpus
-#'   dominates the non-encoding cost, so `cores > 1` can noticeably speed up
-#'   sentence- and clause-level gamma; the result is identical for any count.
-#'   Encoding itself is parallelized separately, via `load_model(threads =)`.
-#'   Ignored when `text` is already a [segment()] data frame.
-#' @param dedupe_segments When `TRUE`, encode each distinct segment only once
-#'   and expand the embeddings back by position, rather than encoding every
-#'   occurrence. Real corpora are often close to half duplicate segments, so
-#'   this can roughly halve encoding time (the dominant cost). Only applies when
-#'   `embeddings` are not supplied. Assignments match encoding every occurrence
-#'   up to the ~1e-7 floating-point effect of encoding a smaller batched set,
-#'   which can flip a rare borderline segment; it is therefore opt-in and off by
-#'   default. With the static `potion-base-8M` model, encoding has no batch
-#'   effect and the result is identical.
-#' @param sort_by_length Passed to [encode()]. Groups segments of similar length
-#'   into the same batch so the model computes over less padding. Segment
-#'   lengths vary far more than document lengths — at clause level 60.1% of
-#'   token work is padding in input order against 1.6% when sorted — so this is
-#'   the single largest saving available on this verb, measured at 1.9x. Off by
-#'   default for the same ~1e-7 reason as `dedupe_segments`.
+#' For a model fitted on segments (`segment =` in [topics()]) and `text = NULL`,
+#' it counts the fitted assignments, with no encoding. Otherwise it segments the
+#' given documents (with the fitted segmentation, or at `level`), or takes a
+#' [segment()] data frame as it is, embeds the segments, and assigns each to the
+#' topic whose unit-length center has the highest cosine similarity, as
+#' [predict()][predict.sbert_topic_model] does. The result is a data frame with
+#' one row per document-topic pair.
+#'
+#' The fitted assignments come from Lloyd's k-means in [topics()], which uses
+#' squared Euclidean distance to the raw means of the normalized embeddings;
+#' for a few segments on topic boundaries this can differ from the
+#' cosine-similarity rule applied to new text. For graded membership of
+#' single units, use [topic_membership()].
+#'
+#' @param object A fitted model from [topics()].
+#' @param text `NULL` (default) for the fitted segments of a segmented model;
+#'   a character vector of documents to segment; or a data frame from
+#'   [segment()] (columns `document_id` and `text`), used as it is.
+#' @param model A model from [load_model()], a pinned model name, or `NULL`
+#'   (default) for the default model, used to embed the segments; ignored
+#'   when `embeddings` are given.
+#' @param embeddings Numeric matrix of segment embeddings, one row per
+#'   segment of `text` (in the order of [segment()]), or `NULL` (default) to
+#'   encode them.
+#' @param level `"clause"`, `"sentence"`, or `"phrase"` for segmenting a
+#'   character `text`, or `NULL` (default) for the fitted segmentation of a
+#'   segmented model and `"clause"` otherwise.
+#' @param batch_size Texts per model call when encoding (default 32).
+#' @param cores Number of forked processes for segmenting (default 1), passed
+#'   to [segment()]; the result does not depend on it.
+#' @param dedupe_segments Encode each distinct segment once (default `FALSE`).
+#'   Saves time on corpora with many repeated segments; the values can differ
+#'   from encoding every occurrence by floating-point rounding.
+#' @param sort_by_length Batch segments of similar length together when
+#'   encoding (default `FALSE`); see [encode()].
 #' @param top `NULL` (default) for every topic of every document, or a whole
-#'   number: each document's `top` largest topic shares, largest first. Topics
-#'   with a zero share are left out, so a document can list fewer.
+#'   number: each document's `top` largest non-zero shares.
 #' @return A base data frame with one row per document-topic pair and columns
-#'   `document_id`, `topic`, `gamma`, and `n_segments`. `gamma` sums to 1
-#'   within each document; documents with no segments contribute no rows.
-#'   With `top`, only each document's `top` largest non-zero shares, ordered
-#'   by document and then by share, with a `rank` column after `document_id`.
+#'   `document_id`, `topic`, `gamma` (the share of the document's segments in
+#'   the topic), and `n_segments`. `gamma` sums to one within each document;
+#'   documents without segments have no rows. With `top`, only the largest
+#'   non-zero shares, ordered by document and share, with a `rank` column
+#'   after `document_id`.
+#' @section Conditions:
+#'   `sbert_bad_input` when `text` is `NULL` for a model fitted on whole
+#'   documents, when `model`, `embeddings` or `level` is given without
+#'   `text`, when a data frame lacks `document_id` or `text`, when no segment
+#'   results, or when `embeddings` has the wrong number of rows;
+#'   `sbert_dimension_mismatch` when the embeddings have a different number of
+#'   columns from the fitted model; when encoding, the conditions of
+#'   [encode()].
+#' @seealso [segment()] for the segments; [topic_membership()] for graded
+#'   membership; [predict()][predict.sbert_topic_model] for single
+#'   assignments; [topic_sizes()] for topic totals.
 #' @export
 #' @examples
 #' text <- c(
@@ -340,11 +413,13 @@ topic_membership <- function(object, embeddings = NULL, sharpness = 1.15) {
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 #' fitted <- topics(text, 2, embeddings = embeddings)
+#'
+#' # A new document with one sentence on each topic.
 #' mixed <- "Cats chase mice. Stocks and bonds trade."
 #' segment_embeddings <- rbind(c(1, 0), c(0, 1))
 #' topic_gamma(fitted, mixed, embeddings = segment_embeddings)
 #'
-#' # Segment once (with any options), reuse the segments and their embeddings:
+#' # Segment once, then reuse the segments and their embeddings.
 #' segments <- segment(mixed, level = "sentence")
 #' topic_gamma(fitted, segments, embeddings = segment_embeddings)
 #'
@@ -397,18 +472,18 @@ topic_gamma <- function(
   # topic, so the mixture is a count, not an encoding.
   if (is.null(text)) {
     if (!segmented) {
-      stop(
+      sbert_abort(
         "topic_gamma: supply `text` to segment and assign, or fit the model ",
         "with segment = \"sentence\", \"clause\", or \"phrase\" so its own ",
         "segments carry each document's topic mixture.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     if (!is.null(model) || !is.null(embeddings) || !is.null(level)) {
-      stop(
+      sbert_abort(
         "topic_gamma: model, embeddings, and level apply only when `text` ",
         "is supplied.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     return(top_topic_gamma(
@@ -427,12 +502,12 @@ topic_gamma <- function(
   # up with the segments.
   if (is.data.frame(text)) {
     if (!all(c("document_id", "text") %in% names(text))) {
-      stop(
+      sbert_abort(
         paste0(
           "A pre-segmented data frame must have `document_id` and `text` ",
           "columns, as returned by segment()."
         ),
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     segments <- text
@@ -469,7 +544,7 @@ topic_gamma <- function(
     }
   }
   if (nrow(segments) == 0L) {
-    stop("No document produced any segment.", call. = FALSE)
+    sbert_abort("No document produced any segment.", class = "sbert_bad_input")
   }
   if (dedupe_segments && is.null(embeddings)) {
     # Repeated segments ("See Fig. 3.", boilerplate sentences) are common; a
@@ -550,49 +625,80 @@ gamma_from_assignments <- function(document_id, topic, n_topics) {
   )
 }
 
-#' Representative Text Units for Every Topic
+#' Select representative texts for each topic
 #'
-#' Selects, for each fitted topic, the text units (documents, sentences, or
-#' clause segments) that best evidence it. The default ranking is by
-#' *distinctiveness margin* — the unit's cosine distance to its second-best
-#' centroid minus the distance to its own — rather than by raw closeness.
-#' Raw closeness systematically favors long units, because topic centroids
-#' are averages of whole-document embeddings and long units resemble whole
-#' documents; the margin instead rewards units that are unambiguously about
-#' one topic and no other, which are naturally short and pointed. Ties break
-#' toward the shorter unit, then alphabetically, so the selection is fully
-#' deterministic.
+#' @description
+#' `representatives()` selects representative texts for each topic of a fitted
+#' model: it ranks the units of each topic and returns the first `n`. A topic in
+#' an embedding model is a region of meaning, and it is read most directly from
+#' the texts it contains.
 #'
-#' @param object A fitted [topics()] model.
-#' @param text Character vector of candidate units, for example the `text`
-#'   column of [segment()]. `NULL` (the default) ranks the units the model
-#'   was fitted on — its documents, or its segments for a model fitted with
-#'   `segment =` — from their stored embeddings, with no encoding.
-#' @param model A loaded [sbert_model][load_model()], a pinned model
-#'   name, or `NULL` for the default model; ignored when `embeddings` are
-#'   supplied.
-#' @param embeddings Optional numeric matrix with one row per unit.
-#' @param n Number of units returned per topic.
-#' @param rank `"margin"` (default) or `"distance"` (raw closeness to the
-#'   topic centroid).
-#' @param batch_size Batch size passed to [encode()] when `model` is
-#'   used.
-#' @return A base data frame with columns `topic`, `rank`, `text`,
-#'   `distance` (to the unit's own centroid), and `margin`, ordered by topic
-#'   and rank. When the fitted units are ranked (`text = NULL`), `document_id`
-#'   — and `segment`, for a segmented model — sit between `rank` and `text`
-#'   so every example can be traced to its source. Topics to which no unit is
-#'   assigned contribute no rows.
+#' Each unit is assigned to the topic whose unit-length center has the highest
+#' cosine similarity with it. The texts closest to a topic's center are typical
+#' of it but tend to be long, because long texts resemble the average of many
+#' texts; texts that are clearly about one topic and no other are usually more
+#' telling. With `rank = "margin"`, the default, units are ranked by their
+#' margin: the cosine distance to the second-nearest center minus the distance
+#' to their own. With `rank = "distance"` they are ranked by closeness to their
+#' own center. Ties go to the shorter text; repeated texts and texts without a
+#' word of two or more letters are skipped. By default the units the model was
+#' fitted on are ranked, from their stored embeddings; given `text`, any
+#' candidate texts are. The result is a data frame with one row per selected
+#' text, ordered by topic and rank.
+#'
+#' Because the assignment uses cosine similarity to the unit-length centers,
+#' while [topics()] fits Lloyd's k-means (squared Euclidean distance to the
+#' raw means of the normalized embeddings), a few fitted units on topic
+#' boundaries can be ranked under a different topic from the one they were
+#' fitted to. The representatives stored at fitting time, shown by
+#' `as.data.frame(fit, what = "representatives")`, are the units of each
+#' fitted topic closest to its center. For topic words use
+#' [terms()][terms.sbert_topic_model] or [keywords()].
+#'
+#' @param object A fitted model from [topics()].
+#' @param text Character vector of candidate texts, or `NULL` (default) for
+#'   the documents or segments the model was fitted on.
+#' @param model A model from [load_model()], a pinned model name, or `NULL`
+#'   (default) for the default model, used to embed `text`; ignored when
+#'   `embeddings` are given.
+#' @param embeddings Numeric matrix with one row per candidate, or `NULL`
+#'   (default): the stored embeddings when `text` is `NULL`, else encode
+#'   `text`.
+#' @param n Number of texts per topic (default 3).
+#' @param rank `"margin"` (default) or `"distance"`.
+#' @param batch_size Texts per model call when encoding (default 32).
+#' @return A base data frame with one row per selected text and columns
+#'   `topic`, `rank`, `text`, `distance` (cosine distance to the unit's own
+#'   center), and `margin`, ordered by topic and rank. When the fitted units
+#'   are ranked, `document_id` (and `segment`, for a segmented model) follow
+#'   `rank`. Topics without units have no rows.
+#' @section Conditions:
+#'   `sbert_no_embeddings` when `text` is `NULL` and the model stores no
+#'   embeddings; `sbert_dimension_mismatch` when the embeddings have a
+#'   different number of columns from the fitted model; `sbert_bad_input` when
+#'   both `model` and `embeddings` are given or `embeddings` has the wrong
+#'   number of rows; when encoding, the conditions of [encode()].
+#' @seealso [terms()][terms.sbert_topic_model] and [keywords()] for topic
+#'   words; [name_topics()] to label topics; `plot(fit, type =
+#'   "representatives")` to draw them; [topic_membership()] for graded
+#'   membership.
 #' @export
 #' @examples
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' representatives(topic_model, n = 2)
+#' representatives(topic_model, n = 2, rank = "distance")
+#'
+#' # Rank new candidate texts, giving their embeddings.
 #' text <- c(
 #'   "Cats chase mice", "Dogs chase balls",
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' fitted <- topics(text, 2, embeddings = embeddings)
+#' toy_model <- topics(text, 2, embeddings = embeddings)
 #' representatives(
-#'   fitted,
+#'   toy_model,
 #'   c("kittens pounce", "bond yields", "pets and prices"),
 #'   embeddings = rbind(c(1, 0.1), c(0.1, 1), c(0.7, 0.7)),
 #'   n = 1
@@ -622,10 +728,10 @@ representatives <- function(
     if (is.null(embeddings)) {
       embeddings <- object$embeddings
       if (is.null(embeddings)) {
-        stop(
+        sbert_abort(
           "representatives: this model kept no embeddings. Refit with ",
           "topics(..., keep_embeddings = TRUE), or supply 'text'.",
-          call. = FALSE
+          class = "sbert_no_embeddings"
         )
       }
     }

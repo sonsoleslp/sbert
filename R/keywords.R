@@ -69,46 +69,62 @@ mmr_select <- function(relevance, candidate_similarity, n, topic_diversity) {
   state$chosen
 }
 
-#' Extract Keywords from Documents by Embedding Similarity
+#' Extract the keywords of documents
 #'
-#' Ranks each document's own words and phrases by cosine similarity between
-#' their embeddings and the document embedding, computed with the same model,
-#' and selects the top `n` by maximal marginal relevance so the keywords are
-#' relevant without being redundant (the KeyBERT design).
+#' @description
+#' `keywords()` extracts the keywords of each document: the words and short
+#' phrases that best express what it is about. Embedding-based keyword
+#' extraction compares the meaning of each candidate phrase with the meaning of
+#' the whole document, and a phrase whose embedding is close to the document's
+#' embedding summarizes it well; because picking the closest phrases alone tends
+#' to return near-synonyms, the selection also rewards phrases that differ from
+#' those already chosen, by maximal marginal relevance (Carbonell and Goldstein
+#' 1998), as in KeyBERT (Grootendorst 2020).
 #'
-#' Candidates are consecutive-token n-grams (lengths `1` to `ngrams`) drawn
-#' from the document after stop-word removal, so a candidate phrase never
-#' crosses a removed stop word silently: "analysis of networks" yields the
-#' candidates "analysis", "networks", and "analysis networks".
+#' The candidates are the words and phrases of up to `ngrams` consecutive words
+#' of each document after stop words are removed; the documents and the
+#' candidates are encoded with the same model, and up to `n` keywords per
+#' document are selected. The result is a data frame with one row per keyword.
+#' `keywords()` describes single documents; to describe topics, use
+#' [terms()][terms.sbert_topic_model], which compares the words of a topic with
+#' those of the other topics.
 #'
-#' @param text A character vector of documents. Names, when present, are
-#'   carried into the `document_name` column.
-#' @param model A loaded sbert model, a pinned model name, or `NULL` for the
-#'   session default.
-#' @param n Maximum keywords returned per document. Default `10`.
-#' @param ngrams Maximum phrase length in tokens. Default `2` (unigrams and
-#'   bigrams).
-#' @param topic_diversity Maximal-marginal-relevance trade-off in `[0, 1)`: `0`
-#'   ranks purely by similarity, larger values penalize keywords similar to
-#'   ones already selected. Default `0.3`.
-#' @param stop_words Words excluded from candidates. Defaults to
+#' `keywords()` encodes text, so it needs a downloaded model.
+#'
+#' @param text Documents: a character vector. Names, if any, are carried into
+#'   `document_name`.
+#' @param model The encoder: a model from [load_model()], a pinned model name,
+#'   or `NULL` (default) for the default model.
+#' @param n Maximum number of keywords per document (default 10).
+#' @param ngrams Maximum length of a candidate phrase, in words (default 2).
+#' @param topic_diversity Trade-off between relevance and diversity, in
+#'   `[0, 1)`: 0 ranks by similarity to the document alone, and larger values
+#'   penalize candidates similar to those already chosen (default 0.3).
+#' @param stop_words Words excluded from the candidates; default
 #'   [stop_words()].
-#' @param min_token_length Minimum character length of a candidate token.
-#'   Default `3`.
-#' @param batch_size Number of texts encoded per model call. Default `32`.
+#' @param min_token_length Minimum length of a candidate word, in characters
+#'   (default 3).
+#' @param batch_size Texts encoded per model call (default 32).
 #' @return A base data frame with one row per keyword and columns
-#'   `document_id`, `document_name`, `rank`, `keyword`, and `topic_similarity`
-#'   (cosine similarity between the keyword and its document).
-#' @references Carbonell, J. and Goldstein, J. (1998). The use of MMR,
-#'   diversity-based reranking for reordering documents and producing
-#'   summaries. *Proceedings of SIGIR 1998*, 335--336.
-#'   \doi{10.1145/290941.291025}
+#'   `document_id`, `document_name`, `rank`, `keyword`, and
+#'   `topic_similarity` (the cosine similarity between the keyword and its
+#'   document).
+#' @section Conditions:
+#'   An error of class `sbert_no_terms` when no candidate is left after stop
+#'   words and short words are removed; the errors of [load_model()] and
+#'   [encode()].
+#' @seealso [terms()][terms.sbert_topic_model] for the terms of topics;
+#'   [stop_words()]; [model_download()] to download a model.
+#' @references
+#' Carbonell, J. and Goldstein, J. (1998). The use of MMR, diversity-based
+#' reranking for reordering documents and producing summaries. *Proceedings
+#' of SIGIR 1998*, 335--336. \doi{10.1145/290941.291025}
 #'
 #' Grootendorst, M. (2020). KeyBERT: Minimal keyword extraction with BERT.
 #' \doi{10.5281/zenodo.4461265}
 #' @export
 #' @examples
-#' # Pinned models that can encode the text.
+#' # Pinned models that can encode the text
 #' models()
 #'
 #' \donttest{
@@ -165,10 +181,10 @@ keywords <- function(
   candidate_lists <- lapply(token_lists, token_ngrams, max_length = ngrams)
   all_candidates <- sort(unique(unlist(candidate_lists, use.names = FALSE)))
   if (length(all_candidates) == 0L) {
-    stop(
+    sbert_abort(
       "No keyword candidates survive tokenization; ",
       "lower min_token_length or supply fewer stop_words.",
-      call. = FALSE
+      class = "sbert_no_terms"
     )
   }
 

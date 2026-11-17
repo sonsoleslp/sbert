@@ -2,49 +2,57 @@
 % Please edit documentation in R/hierarchy.R
 \name{reduce_topics}
 \alias{reduce_topics}
-\title{Reduce a Fitted Topic Model to Fewer Topics}
+\title{Merge the topics of a model into fewer topics}
 \usage{
 reduce_topics(object, n_topics, embeddings = NULL, method = "average")
 }
 \arguments{
-\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
+\item{object}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
-\item{n_topics}{Target number of topics, at least 2 and below the
-current count.}
+\item{n_topics}{Number of topics after merging: at least 2 and below the
+current number.}
 
-\item{embeddings}{The document embedding matrix used to fit \code{object}.
-Only needed when the model was fitted with \code{keep_embeddings = FALSE};
-models fitted with \code{keep_embeddings = TRUE} carry their embeddings.}
+\item{embeddings}{The embedding matrix the model was fitted on. Needed only
+for a model fitted with \code{keep_embeddings = FALSE}. Default \code{NULL}.}
 
-\item{method}{Agglomeration method passed to \code{\link[stats:hclust]{stats::hclust()}}. Default
-\code{"average"}.}
+\item{method}{Agglomeration method passed to \code{\link[stats:hclust]{stats::hclust()}} (default
+\code{"average"}).}
 }
 \value{
-An \code{sbert_topic_model} with \code{n_topics} topics and the same
-structure as a \code{\link[=topics]{topics()}} fit. Names given with \code{\link[=name_topics]{name_topics()}} are
-dropped, because the merged topics need new ones.
+A topic model of class \code{sbert_topic_model} with \code{n_topics} topics,
+structured as a \code{\link[=topics]{topics()}} fit.
 }
 \description{
-Cuts the topic hierarchy (see \code{\link[=topic_hierarchy]{topic_hierarchy()}}) at the requested
-count and rebuilds the model: documents keep their cluster memberships
-(merged, never re-clustered), centroids are recomputed from the member
-documents, and terms, labels, sizes, and representatives are derived
-afresh for the merged topics. The result is a full \code{sbert_topic_model}
-— every downstream verb (\code{summary()}, \code{coherence()}, \code{predict()},
-\code{\link[=representatives]{representatives()}}, plots) works unchanged.
+\code{reduce_topics()} merges the closest topics of a fitted model into \code{n_topics}
+topics, giving a coarser model in which every document keeps its place:
+documents that shared a topic still share one. A model with more topics than
+the data support has near-duplicate topics that divide one theme between
+them; merging them differs from fitting a new model with fewer topics, in
+which documents may be regrouped.
+
+It cuts the hierarchy of \code{\link[=topic_hierarchy]{topic_hierarchy()}} into \code{n_topics} groups and
+merges the topics within each group. The new topic centers are the normalized
+means of their members' embeddings, and the terms, labels, sizes,
+representatives, and sums of squares are computed again for the merged
+topics. The result is a topic model like any other, so every verb applies to
+it. Names given with \code{\link[=name_topics]{name_topics()}} are dropped, because the merged topics
+need new ones.
 }
+\section{Conditions}{
+
+Errors of class \code{sbert_bad_input} when \code{n_topics} is not below the
+current number of topics, and \code{sbert_no_embeddings} when the model holds
+no embeddings and none are given.
+}
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-topic_model <- topics(
-  text, 3,
-  embeddings = embeddings, n_terms = 3, keep_embeddings = TRUE
-)
-reduce_topics(topic_model, 2)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+reduced <- reduce_topics(topic_model, n_topics = 4)
+topic_sizes(reduced, weights = "n")
+}
+\seealso{
+\code{\link[=topic_hierarchy]{topic_hierarchy()}} to see which topics would merge;
+\code{\link[=compare_topics]{compare_topics()}} to compare fits with different numbers of topics.
 }

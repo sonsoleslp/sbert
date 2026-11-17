@@ -2,7 +2,7 @@
 % Please edit documentation in R/corpus.R
 \name{clean_corpus}
 \alias{clean_corpus}
-\title{Clean a Text Corpus Before Encoding}
+\title{Clean a corpus before encoding}
 \usage{
 clean_corpus(
   text,
@@ -18,68 +18,72 @@ clean_corpus(
 \arguments{
 \item{text}{A character vector, or a data frame together with \code{column}.}
 
-\item{column}{When \code{text} is a data frame, the name of the text column to
-clean. Every other column rides along and is filtered in step.}
+\item{column}{Name of the text column when \code{text} is a data frame; \code{NULL}
+(default) for a character vector.}
 
-\item{list_markers}{Remove enumeration and list markers (\code{1.}, \code{(i)},
-\code{(a)}); default \code{TRUE}. See \code{\link[=strip_list_markers]{strip_list_markers()}}.}
+\item{list_markers}{Remove list and enumeration markers (default \code{TRUE});
+see \code{\link[=strip_list_markers]{strip_list_markers()}}.}
 
-\item{section_numbers}{Remove multi-level indices (\verb{1.2.3}) and enumeration
-markers; default \code{TRUE}.}
+\item{section_numbers}{Remove section numbering such as \verb{1.2.3} and
+\code{II.2} (default \code{TRUE}).}
 
-\item{numbers}{Remove stand-alone numeric tokens (years, counts) while
-keeping alphanumerics such as \code{covid19}; default \code{FALSE}.}
+\item{numbers}{Remove stand-alone numbers such as years and counts, keeping
+words with digits such as \code{covid19} (default \code{FALSE}).}
 
-\item{roman_numerals}{Remove stand-alone Roman-numeral tokens (\code{ii}, \code{iv},
-up to 100); default \code{FALSE}. A few numerals that are also words (\code{iv},
-\code{vi}) go too.}
+\item{roman_numerals}{Remove stand-alone Roman numerals of two or more
+letters, such as \code{ii} and \code{xiv} (default \code{FALSE}).}
 
-\item{remove}{Optional character vector of custom Perl-compatible regular
-expressions. Each match is replaced with a space, before the other steps.
-The extension point for domain-specific noise the generic cleaners leave —
-for example \code{remove = "OJ No L?\\\\s*\\\\d+"} for European Union Official
-Journal references, or a journal-citation pattern. Matching is
-case-insensitive.}
+\item{remove}{Optional character vector of Perl-compatible regular
+expressions, matched case-insensitively; each match is replaced by a
+space. Default \code{NULL}.}
 
-\item{min_content}{Minimum alphabetic-content ratio, in \verb{[0, 1]}, for a
-document to be kept (see \code{\link[=content_ratio]{content_ratio()}}). Documents below the floor —
-citation lists, reference footnotes, number tables — are dropped. \code{0}
-(default) keeps every non-empty document.}
+\item{min_content}{Minimum share of letters for a document to be kept,
+between 0 and 1 (default 0, keep every non-empty document).}
 }
 \value{
-If \code{text} is a character vector, the cleaned vector with dropped
-documents removed. If a data frame, the surviving rows with the \code{column}
-cleaned in place.
+For a character vector, the cleaned texts that are kept. For a data
+frame, the rows that are kept, with \code{column} cleaned.
 }
 \description{
-One place for the text-level cleaning that should happen \emph{before} embedding,
-so the same clean text feeds the encoder, the topic terms, and the
-representative examples. Junk characters are always repaired; the structured
-removals are opt-in. Because cleaning happens up front, encode the result and
-pass those embeddings on — nothing downstream needs to re-clean.
+\code{clean_corpus()} removes material without topical meaning from a corpus
+before encoding: markup, links, citation numbers, list markers, and broken
+characters. Text exported from web pages, databases, and documents carries
+such material; left in place, it shifts the embeddings, appears among the
+topic terms, and can form topics of its own. Cleaning the text once, before
+encoding, means that the encoder, the topic terms, and the representative
+texts all see the same clean text.
+
+It always repairs broken characters and removes markup, links, e-mail
+addresses, DOIs, and bracketed citation numbers. It removes list markers and
+section numbering by default, and on request numbers, Roman numerals, and the
+matches of patterns of one's own (\code{remove}). Words, author citations, dates,
+decimals, and numbers within sentences are kept. Documents left empty, or
+with a share of letters below \code{min_content} (see \code{\link[=content_ratio]{content_ratio()}}), are
+dropped. For a data frame, the dropped rows are removed whole, so other
+columns stay aligned with the text. It returns the cleaned texts that are
+kept or, for a data frame, the kept rows with \code{column} cleaned.
+
+The \code{numbers}, \code{roman_numerals}, and \code{section_numbers} arguments of
+\code{\link[=topics]{topics()}}, by contrast, filter only the topic terms and leave the text
+unchanged.
 }
-\details{
-The operations, in order: repair junk and strip non-content markup (decode
-HTML entities and tags; remove URLs, DOIs, emails, and bracketed numeric
-citations such as \verb{[12]}; normalize curly quotes, dashes, and bullets; drop
-control, zero-width, BOM, and replacement characters; normalize whitespace);
-strip list and section numbering; optionally remove numeric and Roman-numeral
-tokens; then drop documents that fall below \code{min_content} (see
-\code{\link[=content_ratio]{content_ratio()}}) or are left empty. Content-bearing text — real words,
-author citations, dates, decimals, inline numbers — is left intact. When
-\code{text} is a data frame the surviving rows are returned whole, so metadata
-stays aligned.
+\section{Conditions}{
+
+An error of class \code{sbert_bad_input} when \code{column} is given for a
+character vector.
 }
+
 \examples{
 clean_corpus(c(
   "1. The directive entered into force in 2020.",
   "OJ No L 297, 24.11.1979, p. 1."
 ), min_content = 0.5)
 
-# strip a domain-specific reference form the generic cleaner leaves
+# Remove a reference form of one's own corpus
 clean_corpus("as set out in OJ No L 313 it applies.",
              remove = "OJ No L?\\\\s*\\\\d+")
 }
 \seealso{
-\code{\link[=strip_list_markers]{strip_list_markers()}}, \code{\link[=content_ratio]{content_ratio()}}, \code{\link[=dedupe]{dedupe()}}.
+\code{\link[=strip_list_markers]{strip_list_markers()}} and \code{\link[=content_ratio]{content_ratio()}}, which it uses;
+\code{\link[=dedupe]{dedupe()}} to collapse repeated texts after cleaning.
 }

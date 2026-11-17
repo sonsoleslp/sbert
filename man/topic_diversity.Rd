@@ -2,36 +2,47 @@
 % Please edit documentation in R/evaluate.R
 \name{topic_diversity}
 \alias{topic_diversity}
-\title{Measure Topic Diversity}
+\title{Measure the diversity of topic terms}
 \usage{
 topic_diversity(object, n_terms = 10L)
 }
 \arguments{
-\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
+\item{object}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
-\item{n_terms}{Number of top terms per topic to pool. Capped at the number
-of terms available for each topic.}
+\item{n_terms}{Top terms per topic to pool (default 10), capped at the
+terms a topic has.}
 }
 \value{
-A single proportion in \verb{(0, 1]}.
+A single number between 0 and 1.
 }
 \description{
-Reports the proportion of distinct terms among the pooled top terms of every
-topic. A value near one indicates topics described by largely different
-vocabulary; a low value indicates redundant topics that repeat the same
-words (Dieng et al. 2020).
+\code{topic_diversity()} measures the diversity of topic terms (Dieng et al.
+2020): it pools the top \code{n_terms} terms of every topic and returns the
+proportion of them that are distinct. A value near one means that the topics
+are described by different words; a low value means that several topics
+repeat the same words and may be redundant.
+
+It returns a single number between 0 and 1 and complements \code{\link[=coherence]{coherence()}},
+which scores each topic on its own.
 }
+\section{Conditions}{
+
+An error of class \code{sbert_no_terms} when the model has no terms.
+}
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
 topic_diversity(topic_model)
+topic_diversity(topic_model, n_terms = 5)
 }
 \references{
-Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic
-modeling in embedding spaces. \emph{Transactions of the Association for
-Computational Linguistics}, 8, 439--453. \doi{10.1162/tacl_a_00325}
+Dieng, A. B., Ruiz, F. J. R., and Blei, D. M. (2020). Topic modeling in
+embedding spaces. \emph{Transactions of the Association for Computational
+Linguistics}, 8, 439--453. \doi{10.1162/tacl_a_00325}
+}
+\seealso{
+\code{\link[=coherence]{coherence()}}; \link[=summary.sbert_topic_model]{summary()};
+\code{\link[=compare_topics]{compare_topics()}}, which reports both measures per candidate.
 }

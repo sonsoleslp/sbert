@@ -1,12 +1,24 @@
 #' Install ONNX Runtime
 #'
-#' Explicitly downloads the native ONNX Runtime used by the CRAN package
-#' `onnxr`. This is never called during package installation or loading.
+#' @description
+#' `install_runtime()` downloads and installs ONNX Runtime, the native inference
+#' library on which transformer models run, through [onnxr::onnx_install()]: the
+#' portable CPU build, a CUDA build where supported, or the build chosen by
+#' automatic detection. The CRAN package onnxr provides the R interface but
+#' leaves the library itself, a large platform-specific binary that is not part
+#' of R, to be installed on request.
 #'
-#' @param cuda Passed to [onnxr::onnx_install()]. Use `FALSE` for the portable
-#'   CPU runtime, `TRUE` to request CUDA on supported systems, or `NULL` for
-#'   automatic detection.
-#' @return The result returned by [onnxr::onnx_install()], invisibly.
+#' Nothing is installed when the package is installed or loaded; this function
+#' is the only path. Run it once per R library before [load_model()] or
+#' [load_custom()]. The static `potion-base-8M` model does not need it. Model
+#' files are installed separately with [model_download()].
+#'
+#' @param cuda `FALSE` for the CPU runtime, `TRUE` to request CUDA on
+#'   supported systems, or `NULL` (default) for automatic detection; passed
+#'   to [onnxr::onnx_install()].
+#' @return The value of [onnxr::onnx_install()], invisibly.
+#' @seealso [load_model()], which needs the runtime; [model_download()] for
+#'   the model files; [onnxr::onnx_is_installed()] to check the installation.
 #' @export
 #' @examples
 #' # Whether the ONNX Runtime is already available; nothing is installed here.

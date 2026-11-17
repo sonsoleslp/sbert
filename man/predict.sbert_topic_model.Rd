@@ -2,49 +2,98 @@
 % Please edit documentation in R/inference.R
 \name{predict.sbert_topic_model}
 \alias{predict.sbert_topic_model}
-\title{Assign New Documents to Fitted Topics}
+\title{Assign new documents to fitted topics}
 \usage{
 \method{predict}{sbert_topic_model}(object, text, model = NULL, embeddings = NULL, batch_size = 32L, ...)
 }
 \arguments{
-\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
+\item{object}{A fitted model from \code{\link[=topics]{topics()}}.}
 
-\item{text}{Character vector of new documents. A model fitted with
-\code{segment = "sentence"}, \code{"clause"}, or \code{"phrase"} splits them the same
-way first (with the fitted \code{max_tokens}, \code{merge_below}, and
-\code{min_content}) and assigns every segment.}
+\item{text}{Character vector of new documents.}
 
-\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
-name, or \code{NULL} for the default model; ignored when \code{embeddings} are
-supplied. The embedding dimension must match the fitted model.}
+\item{model}{A model from \code{\link[=load_model]{load_model()}}, a pinned model name, or \code{NULL}
+(default) for the default model, used to embed \code{text}; ignored when
+\code{embeddings} are given. Its dimension must match the fitted model.}
 
-\item{embeddings}{Optional numeric matrix with one row per document, or
-one row per segment for a segmented model.}
+\item{embeddings}{Numeric matrix with one row per document (one per
+segment for a segmented model), or \code{NULL} (default) to encode \code{text}.}
 
-\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is
-used.}
+\item{batch_size}{Texts per model call when encoding (default 32).}
 
-\item{...}{Unused; included for S3 compatibility.}
+\item{...}{Unused.}
 }
 \value{
 A base data frame with one row per document and columns
 \code{document_id}, \code{document_name}, \code{text}, \code{topic}, \code{label} (the fitted
-topic label), and \code{distance} (cosine distance to the assigned centroid).
-For a segmented model, one row per segment, with \code{document_id} naming
-the source document and \code{segment} its position within it.
+topic label), and \code{distance} (cosine distance to the assigned center).
+For a segmented model, one row per segment, with \code{segment} (position in
+the document) after \code{document_name}.
 }
 \description{
-Predicts the topic of unseen documents by embedding them and assigning each
-to the nearest stored topic centroid under cosine distance. The fitted
-model is not modified. Supply either a loaded \code{model} (to embed \code{text}) or
-a precomputed embedding matrix whose rows align with \code{text}.
+\code{predict()} assigns new documents to the topics of a fitted model without
+fitting again: it embeds the new texts (or takes their embeddings) and
+assigns each to the topic whose center has the highest cosine similarity with
+it, after scaling the centers to unit length. A fitted topic model defines
+its topics by their centers in the embedding space, so new texts (later
+responses, a held-out sample, another cohort) can be placed in the same
+topics, which keeps the topics and their labels fixed and makes the counts
+comparable across samples.
+
+\code{distance} is one minus that similarity. A model fitted on segments splits
+the new texts with the same segmentation settings first and assigns each
+segment. The fitted model is not changed. The result is a data frame with one
+row per document, or per segment for a segmented model.
+
+This rule differs from the one that formed the topics: \code{\link[=topics]{topics()}} fits
+Lloyd's k-means, which assigns each unit to the nearest raw mean of the
+normalized embeddings by squared Euclidean distance, and those means are
+shorter than unit length by different amounts. On the units a model was
+fitted on, the two rules agree for almost every unit but can differ for a
+few units on topic boundaries, so \code{predict()} on the training texts need
+not reproduce the fitted topics exactly; read the fitted assignment with
+\code{as.data.frame(fit, what = "documents")}. For graded rather than single
+assignments use \code{\link[=topic_membership]{topic_membership()}}; for the topic mixture of long
+documents, \code{\link[=topic_gamma]{topic_gamma()}}.
 }
+\section{Conditions}{
+
+\code{sbert_dimension_mismatch} when the embeddings have a different number
+of columns from the fitted model; \code{sbert_bad_input} when both \code{model} and
+\code{embeddings} are given, when \code{embeddings} has the wrong number of rows or
+non-finite values or a zero row, or when segmentation yields no segment;
+when encoding, the conditions of \code{\link[=encode]{encode()}}.
+}
+
 \examples{
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+
+# Assign three messages, giving their precomputed embeddings.
+new_messages <- head(corpus, 3)
+with(new_messages,
+     predict(topic_model, translation,
+             embeddings = head(feedback_embeddings, 3)))
+
+# A small model on toy two-dimensional embeddings.
 text <- c(
   "Cats chase mice", "Dogs chase balls",
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-fitted <- topics(text, 2, embeddings = embeddings)
-predict(fitted, "Bulls and bears move markets", embeddings = rbind(c(0.2, 0.8)))
+toy_model <- topics(text, 2, embeddings = embeddings)
+predict(toy_model, "Bulls and bears move markets",
+        embeddings = rbind(c(0.2, 0.8)))
+
+\donttest{
+if (interactive()) {
+  predict(topic_model, c("The pictures were too small.",
+                         "I liked the counting game."))
+}
+}
+}
+\seealso{
+\code{\link[=topics]{topics()}} for the fit; \code{\link[=topic_membership]{topic_membership()}} for graded
+membership; \code{\link[=topic_gamma]{topic_gamma()}} for document mixtures; \code{\link[=representatives]{representatives()}}
+for the clearest examples of each topic.
 }

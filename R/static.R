@@ -15,9 +15,9 @@ read_safetensors_tensor <- function(path, name) {
     length(name) == 1L
   )
   if (!requireNamespace("jsonlite", quietly = TRUE)) {
-    stop(
+    sbert_abort(
       "Reading safetensors requires the 'jsonlite' package.",
-      call. = FALSE
+      class = "sbert_missing_package"
     )
   }
   connection <- file(path, "rb")
@@ -31,20 +31,20 @@ read_safetensors_tensor <- function(path, name) {
   )
   entry <- header[[name]]
   if (is.null(entry)) {
-    stop(
+    sbert_abort(
       sprintf(
         "Tensor '%s' not found in %s (available: %s).",
         name,
         basename(path),
         paste(setdiff(names(header), "__metadata__"), collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
   if (!identical(entry$dtype, "F32")) {
-    stop(
+    sbert_abort(
       sprintf("Tensor '%s' has dtype %s; only F32 is supported.", name, entry$dtype),
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
   shape <- as.integer(entry$shape)
@@ -68,13 +68,13 @@ load_sbert_static_model <- function(manifest, paths) {
     "embeddings"
   )
   if (ncol(embedding_matrix) != manifest$dimension) {
-    stop(
+    sbert_abort(
       sprintf(
         "Static embedding matrix has %d dimensions; the manifest pins %d.",
         ncol(embedding_matrix),
         manifest$dimension
       ),
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
   structure(

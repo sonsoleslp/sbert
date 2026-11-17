@@ -2,28 +2,42 @@
 % Please edit documentation in R/manifest.R
 \name{models}
 \alias{models}
-\title{List the Available Pinned Sentence-BERT Models}
+\title{List the pinned models}
 \usage{
 models(detail = FALSE)
 }
 \arguments{
-\item{detail}{Whether to include the technical columns. The default
-\code{FALSE} returns the menu (\code{model}, \code{dimensions}, \code{max_tokens},
-\code{languages}, \code{size_mb}); \code{TRUE} adds \code{pooling} (\code{"mean"} or \code{"cls"}),
-\code{prefix} (text automatically prepended by \code{\link[=encode]{encode()}}), \code{engine}
-(\code{"onnx"} or \code{"static"}), \code{license}, \code{id}, and \code{revision}.}
+\item{detail}{\code{FALSE} (default) for the columns \code{model}, \code{dimensions},
+\code{max_tokens}, \code{languages} and \code{size_mb}; \code{TRUE} adds \code{pooling} (\code{"mean"}
+or \code{"cls"}), \code{prefix} (text prepended by \code{\link[=encode]{encode()}}), \code{engine} (\code{"onnx"}
+or \code{"static"}), \code{license}, \code{id} and \code{revision}.}
 }
 \value{
 A base data frame with one row per pinned model and the columns
-described under \code{detail}.
+described under \code{detail}. \code{size_mb} is the download size in megabytes.
 }
 \description{
-Every supported model is locked to an immutable Hugging Face revision and
-verified by byte size and SHA-256 before use. Pass the \code{model} column value
-to any verb that takes a model, for example
-\code{encode(text, model = "bge-small-en-v1.5")}.
+\code{models()} lists the pinned embedding models as a table: by default the
+columns needed to choose a model, and with \code{detail = TRUE} also the settings
+the package applies when encoding (pooling rule and input prefix), the
+inference engine, the license, and the repository and revision. Embedding
+models differ in the languages they cover, the length of input they read, the
+size of their vectors, and the disk and time they cost.
+
+The package supports a fixed set of models, each pinned to an immutable
+Hugging Face revision and verified by file size and SHA-256 hash, so a model
+name identifies exactly one model. The result has one row per pinned model.
+
+Pass a value of the \code{model} column to any argument that takes a model, for
+example \code{encode(text, model = "bge-small-en-v1.5")}, or to \code{\link[=load_model]{load_model()}}
+and \code{\link[=model_download]{model_download()}}. For a model outside the list, see \code{\link[=load_custom]{load_custom()}}.
 }
 \examples{
 models()
 models(detail = TRUE)
+}
+\seealso{
+\code{\link[=load_model]{load_model()}} and \code{\link[=model_download]{model_download()}} to use a model;
+\code{\link[=model_status]{model_status()}} to check an installation; \code{\link[=load_custom]{load_custom()}} for other
+models.
 }

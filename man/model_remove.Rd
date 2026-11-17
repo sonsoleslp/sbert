@@ -2,24 +2,42 @@
 % Please edit documentation in R/cache.R
 \name{model_remove}
 \alias{model_remove}
-\title{Remove an Installed Model from the Cache}
+\title{Remove a pinned model from the cache}
 \usage{
 model_remove(cache_dir = default_cache_dir(), model = "all-MiniLM-L6-v2")
 }
 \arguments{
-\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
+\item{cache_dir}{Cache root (default \code{\link[=cache_dir]{cache_dir()}}).}
 
-\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
+\item{model}{Name of a pinned model, as listed by \code{\link[=models]{models()}} (default
+\code{"all-MiniLM-L6-v2"}).}
 }
 \value{
-Invisibly, whether the model directory no longer exists.
+Invisibly, \code{TRUE} when the model's directory no longer exists.
 }
 \description{
-Deletes the cached files of one pinned model. Other models and the rest
-of the cache are left untouched; a model that is not installed is not an
-error.
+\code{model_remove()} deletes the cached directory of one pinned model at its
+pinned revision, freeing its disk space. Downloaded models stay in the user
+cache until removed; a removed model can be installed again at the same
+pinned revision with \code{\link[=model_download]{model_download()}}, giving identical files.
+
+Other models and the rest of the cache are left in place, and a model that is
+not installed is not an error. It returns \code{TRUE}, invisibly, when the model's
+directory no longer exists.
+
+Custom models from \code{\link[=load_custom]{load_custom()}} are stored under the \code{custom}
+subdirectory of the cache and are not removed by this function.
 }
+\section{Conditions}{
+
+\code{sbert_unknown_model} when \code{model} names no pinned model.
+}
+
 \examples{
 cache <- file.path(tempdir(), "sbert-example-cache")
 model_remove(cache)
+}
+\seealso{
+\code{\link[=cache_size]{cache_size()}} for disk use; \code{\link[=model_status]{model_status()}} to check a model;
+\code{\link[=model_download]{model_download()}} to install it again.
 }

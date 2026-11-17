@@ -2,7 +2,7 @@
 % Please edit documentation in R/model.R
 \name{load_model}
 \alias{load_model}
-\title{Load a Pinned Sentence-BERT Model}
+\title{Load an installed pinned model}
 \usage{
 load_model(
   model = "all-MiniLM-L6-v2",
@@ -13,32 +13,23 @@ load_model(
 )
 }
 \arguments{
-\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
+\item{model}{Name of a pinned model, as listed by \code{\link[=models]{models()}} (default
+\code{"all-MiniLM-L6-v2"}).}
 
-\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
+\item{cache_dir}{Cache root (default \code{\link[=cache_dir]{cache_dir()}}).}
 
-\item{backend}{ONNX execution backend accepted by \code{\link[onnxr:onnx_model]{onnxr::onnx_model()}}.}
+\item{backend}{ONNX execution backend: \code{"cpu"} (default), \code{"coreml"},
+\code{"cuda"}, \code{"xnnpack"} or \code{"openvino"}, as accepted by
+\code{\link[onnxr:onnx_model]{onnxr::onnx_model()}}.}
 
-\item{threads}{Positive number of inference threads, or \code{"auto"} to use the
-machine's performance-core count. Inference is the dominant cost of
-\code{\link[=encode]{encode()}} — about 88\% of a batch — and it is the only part of the package
-that threads. The default \code{1} is deliberate: it keeps runs reproducible
-across machines and keeps the package within the two-core limit that check
-environments impose.
+\item{threads}{Number of inference threads, or \code{"auto"} for the machine's
+performance-core count (default 1). Results do not depend on the thread
+count; the gain in speed is modest and bounded by the number of
+performance cores. The default of one keeps runs within the two-core
+limit of check environments.}
 
-Raising it is free of numerical consequence — output was \code{identical()} at
-1, 2, 4, 6 and 8 threads across all 45 measured runs — but expect a modest
-gain, bounded by \emph{performance} cores rather than logical ones. Over three
-repetitions at 200, 600 and 1,500 documents on an Apple M4 (4 performance +
-6 efficiency), median speedups against a single thread were 1.22x at two
-threads, 1.29x at four, 1.22x at six and 1.18x at eight. Four threads was
-fastest at the two larger sizes (1.34x at 1,500 documents); beyond that the
-efficiency cores add contention rather than throughput. Threaded timings are
-also noisy — run-to-run spread reached 26\% at the smallest size against
-under 3\% single-threaded — so benchmark with repetition before tuning.
-Set \code{threads = "auto"} for the knee of that curve, or an integer to pin it.}
-
-\item{verify}{Whether to verify file sizes and SHA-256 hashes before loading.}
+\item{verify}{Check file sizes and SHA-256 hashes before loading (default
+\code{TRUE}).}
 }
 \value{
 An object of class \code{sbert_model} (class
@@ -46,20 +37,54 @@ An object of class \code{sbert_model} (class
 holding the model's identity (\code{id}, \code{short_name}, \code{revision}), its
 encoding settings (\code{dimension}, \code{max_length}, \code{pooling}, \code{prefix}), the
 \code{backend} and \code{threads} it runs with, and the loaded tokenizer and model.
-Pass it to the \code{model} argument of \code{\link[=encode]{encode()}} and the topic verbs.
+Pass it to the \code{model} argument of \code{\link[=encode]{encode()}} and of the topic verbs;
+its print method shows the identity.
 }
 \description{
-Loads already-downloaded model artifacts. The function never downloads
-model files or native libraries. See \code{\link[=models]{models()}} for the available
-pinned models.
+\code{load_model()} reads an installed pinned model from the cache, verifies its
+files against the pinned sizes and hashes, and returns the model ready for
+inference: the tokenizer and the ONNX session (or, for the static
+\verb{potion-base-8M}, its embedding table). An embedding model is defined by its
+network weights, its tokenizer, and the rules applied around them (pooling,
+input prefix, maximum input length); the package pins each supported model to
+an immutable Hugging Face revision with known file sizes and SHA-256 hashes,
+so that the same name always means the same model and the same text always
+receives the same embedding.
+
+It never downloads anything; the files must first be installed with
+\code{\link[=model_download]{model_download()}}, and transformer models also need ONNX Runtime from
+\code{\link[=install_runtime]{install_runtime()}}. The result is an object of class \code{sbert_model}.
+
+Most verbs accept a model name and load it themselves, keeping it for the
+rest of the session, so an explicit \code{load_model()} is needed mainly to set
+\code{backend} or \code{threads}. For a model outside the pinned list, use
+\code{\link[=load_custom]{load_custom()}}.
 }
+\section{Conditions}{
+
+\code{sbert_unknown_model} when \code{model} names no pinned model;
+\code{sbert_model_not_installed} when its files are missing;
+\code{sbert_cache_invalid} when they fail size or hash verification;
+\code{sbert_runtime_missing} when ONNX Runtime is not installed (transformer
+models only); \code{sbert_missing_package} when the static model is loaded
+without jsonlite; \code{sbert_model_error} when the tokenizer or model cannot
+be loaded.
+}
+
 \examples{
-# Pinned models that can be loaded.
+# The pinned models that load_model() accepts.
 models()
 
 \donttest{
 if (interactive()) {
   model <- load_model()
+  model
 }
 }
+}
+\seealso{
+\code{\link[=models]{models()}} for the pinned models; \code{\link[=model_download]{model_download()}} and
+\code{\link[=install_runtime]{install_runtime()}} to install them; \code{\link[=model_status]{model_status()}} to check an
+installation; \code{\link[=load_custom]{load_custom()}} for other Hugging Face models; \code{\link[=encode]{encode()}}
+to use the model.
 }

@@ -2,26 +2,50 @@
 % Please edit documentation in R/corpus.R
 \name{dedupe}
 \alias{dedupe}
-\title{Deduplicate a Text Corpus with Frequencies}
+\title{Collapse repeated texts and count them}
 \usage{
-dedupe(text)
+dedupe(text, column = NULL)
 }
 \arguments{
-\item{text}{A character vector. \code{NA} and blank (whitespace-only) elements
-are dropped before deduplication.}
+\item{text}{A character vector, or a data frame together with \code{column}.
+Missing and blank texts are dropped.}
+
+\item{column}{Name of the text column when \code{text} is a data frame; \code{NULL}
+(default) for a character vector.}
 }
 \value{
-A base data frame with one row per distinct text and columns
-\code{text} (in order of first appearance) and \code{n} (number of occurrences).
+A base data frame with one row per distinct text, in order of first
+appearance. For a character vector, the columns are \code{text} and \code{n}; for a
+data frame, all its columns, with the values of the row where the text
+first occurs, followed by \code{n}.
 }
 \description{
-Collapses a character vector to its distinct non-blank texts, keeping the
-order of first appearance and counting how often each text occurred.
-Embedding and clustering operate on the distinct texts (so repeated
-templates cannot drag the cluster geometry), while the returned counts
-carry the original frequencies back into reporting, for example through
-\code{\link[=topic_sizes]{topic_sizes()}}.
+\code{dedupe()} collapses repeated texts: it keeps the first occurrence of every
+distinct non-blank text, in order of first appearance, and adds its number of
+occurrences as \code{n}. Many corpora repeat texts (templates, standard replies,
+and copied messages); repeated texts carry no new information about the
+topics, but in a clustering they pull the topic centers toward themselves and
+inflate the size of the topics they fall in.
+
+Modeling each distinct text once, and carrying how often it occurred,
+separates what kinds of text there are from how often each kind is used. The
+result is a data frame with one row per distinct text. The counts can be used
+as weights after fitting, for example with \code{topic_sizes(weights = "n")}.
 }
+\section{Conditions}{
+
+An error of class \code{sbert_bad_input} when no non-blank text remains, when
+\code{column} is missing, not found, or given for a character vector, or when
+the data frame already has a column \code{n}.
+}
+
 \examples{
 dedupe(c("Very good!", "Try again.", "Very good!", NA, "  "))
+
+corpus <- dedupe(feedback_translations, column = "translation")
+head(corpus)
+}
+\seealso{
+\code{\link[=topic_sizes]{topic_sizes()}} to weight topic sizes by the counts;
+\code{\link[=clean_corpus]{clean_corpus()}} to clean the texts first.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/blend.R
 \name{blend}
 \alias{blend}
-\title{Blend Segment Embeddings with Their Document Context}
+\title{Blend segment embeddings with their document context}
 \usage{
 blend(
   segments,
@@ -15,67 +15,73 @@ blend(
 )
 }
 \arguments{
-\item{segments}{A data frame from \code{\link[=segment]{segment()}} (or any data frame
-with integer \code{document_id} and character \code{text} columns), one row per
-segment.}
+\item{segments}{A data frame from \code{\link[=segment]{segment()}}, or any data frame with a
+numeric \code{document_id} and a \code{text} column, one row per segment.}
 
 \item{documents}{The character vector of documents that was segmented;
-\code{segments$document_id} indexes into it. Required unless both embedding
-matrices are supplied.}
+\code{document_id} indexes it. Needed unless both embedding matrices are given.}
 
-\item{model}{A loaded sbert model, a pinned model name, or \code{NULL} for the
-session default (see \code{\link[=load_model]{load_model()}}). Ignored when embeddings are
-supplied.}
+\item{model}{A model from \code{\link[=load_model]{load_model()}}, a pinned model name, or \code{NULL}
+(default) for the default model; ignored when embeddings are given.}
 
-\item{alpha}{Blend weight in \verb{[0, 1]} for the segment's
-context-orthogonal residual. Default \code{0.5}.}
+\item{alpha}{Weight of the segment's residual, in \verb{[0, 1]} (default 0.5).}
 
-\item{embeddings}{Optional precomputed segment embeddings (one row per
-row of \code{segments}). Supply together with \code{document_embeddings} to skip
-encoding.}
+\item{embeddings}{Segment embeddings, one row per row of \code{segments}, or
+\code{NULL} (default) to encode them. Give together with
+\code{document_embeddings}.}
 
-\item{document_embeddings}{Optional precomputed document embeddings (one
-row per document; \code{segments$document_id} indexes its rows).}
+\item{document_embeddings}{Document embeddings, one row per document, or
+\code{NULL} (default) to encode \code{documents}.}
 
-\item{batch_size}{Number of texts encoded per model call when encoding is
-needed. Default \code{32}.}
+\item{batch_size}{Texts per model call when encoding (default 32).}
 }
 \value{
-A numeric matrix with one L2-normalized row per segment, suitable
-for the \code{embeddings} argument of \code{\link[=topics]{topics()}},
-\code{\link[=representatives]{representatives()}}, and \code{\link[=predict.sbert_topic_model]{predict.sbert_topic_model()}}.
+A numeric matrix with one unit-length row per row of \code{segments}
+and the columns of the embeddings.
 }
 \description{
-Computes context-aware embeddings for text segments: each segment vector is
-decomposed against its parent document embedding, and the blend keeps
-\code{alpha} of the segment's context-orthogonal residual plus \code{1 - alpha} of
-the document direction, renormalized to unit length:
-\deqn{m = normalize(\alpha (u - (u \cdot d) d) + (1 - \alpha) d)}
-with \code{u} the unit-normalized segment embedding and \code{d} the unit-normalized
-parent document embedding.
-}
-\details{
-This is the principled version of "mixing two embeddings": granularities
-are mixed per unit, never by pooling units of different levels into one
-training set (which lets clusters form along a length axis — see
-length-induced embedding collapse, arXiv:2410.24200). A segment that is
-ambiguous in isolation inherits its document's context; identical segment
-texts from different documents get different blended vectors, which keeps
-repeated boilerplate from collapsing into a single artificial topic.
+\code{blend()} computes context-aware embeddings of segments: it combines what
+each segment says beyond its parent document with the direction of the
+document itself. A short segment is often ambiguous on its own ("It was too
+hard."), and identical segments can occur in different documents with
+different meanings; the parent document supplies the missing context.
 
-\code{alpha = 0} returns the parent document embedding; \code{alpha = 1} keeps only
-what the segment says beyond its document; the default \code{0.5} balances the
-two. A segment exactly collinear with its document falls back to the
-document vector.
+Each segment vector \code{u} is split into the part along its unit-length
+document vector \code{d} and the residual orthogonal to it; the blend keeps
+\code{alpha} of the residual and \code{1 - alpha} of the document direction, scaled
+to unit length:
+\deqn{m = \mathrm{normalize}\left(\alpha \left(u - (u \cdot d)\, d\right) +
+(1 - \alpha)\, d\right)}{m = normalize(alpha (u - (u . d) d) + (1 - alpha) d)}
+with \code{u} and \code{d} normalized first. \code{alpha = 0} returns the document vector,
+\code{alpha = 1} only what the segment adds to it. Identical segments from
+different documents therefore receive different vectors. A segment that
+points exactly along its document receives the document vector.
+
+The result, a matrix with one unit-length row per segment, replaces the
+segment embeddings in the \code{embeddings} argument of \code{\link[=topics]{topics()}},
+\code{\link[=representatives]{representatives()}} and \link[=predict.sbert_topic_model]{predict()}. To cluster
+segments by their own meaning alone, pass the plain segment embeddings from
+\code{\link[=encode]{encode()}} instead.
 }
+\section{Conditions}{
+
+\code{sbert_bad_input} when only one of \code{embeddings} and
+\code{document_embeddings} is given, or neither they nor \code{documents}; when
+encoding, the conditions of \code{\link[=encode]{encode()}}.
+}
+
 \examples{
 segments <- segment("The model works. It is fast.", level = "sentence")
-unit_vectors <- matrix(c(1, 0, 0.6, 0.8), nrow = 2, byrow = TRUE)
-document_vectors <- matrix(c(0, 1), nrow = 1)
-blend(
-  segments,
-  alpha = 0.5,
-  embeddings = unit_vectors,
-  document_embeddings = document_vectors
-)
+segment_vectors <- matrix(c(1, 0, 0.6, 0.8), nrow = 2, byrow = TRUE)
+document_vector <- matrix(c(0, 1), nrow = 1)
+blend(segments, embeddings = segment_vectors,
+      document_embeddings = document_vector)
+
+# alpha = 0 returns the document vector for every segment.
+blend(segments, alpha = 0, embeddings = segment_vectors,
+      document_embeddings = document_vector)
+}
+\seealso{
+\code{\link[=segment]{segment()}} for the segments; \code{\link[=encode]{encode()}} for the embeddings;
+\code{\link[=topics]{topics()}} to fit topics on the blended vectors.
 }

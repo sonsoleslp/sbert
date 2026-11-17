@@ -362,32 +362,45 @@ resolve_sbert_manifest <- function(model = .sbert_default_model) {
     index <- match(model, full_ids)
   }
   if (is.na(index)) {
-    stop(
+    sbert_abort(
       sprintf(
         "Unknown model '%s'. Available models: %s. See models().",
         model,
         paste(short_names, collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_unknown_model"
     )
   }
   .sbert_registry[[index]]
 }
 
-#' List the Available Pinned Sentence-BERT Models
+#' List the pinned models
 #'
-#' Every supported model is locked to an immutable Hugging Face revision and
-#' verified by byte size and SHA-256 before use. Pass the `model` column value
-#' to any verb that takes a model, for example
-#' `encode(text, model = "bge-small-en-v1.5")`.
+#' @description
+#' `models()` lists the pinned embedding models as a table: by default the
+#' columns needed to choose a model, and with `detail = TRUE` also the settings
+#' the package applies when encoding (pooling rule and input prefix), the
+#' inference engine, the license, and the repository and revision. Embedding
+#' models differ in the languages they cover, the length of input they read, the
+#' size of their vectors, and the disk and time they cost.
 #'
-#' @param detail Whether to include the technical columns. The default
-#'   `FALSE` returns the menu (`model`, `dimensions`, `max_tokens`,
-#'   `languages`, `size_mb`); `TRUE` adds `pooling` (`"mean"` or `"cls"`),
-#'   `prefix` (text automatically prepended by [encode()]), `engine`
-#'   (`"onnx"` or `"static"`), `license`, `id`, and `revision`.
+#' The package supports a fixed set of models, each pinned to an immutable
+#' Hugging Face revision and verified by file size and SHA-256 hash, so a model
+#' name identifies exactly one model. The result has one row per pinned model.
+#'
+#' Pass a value of the `model` column to any argument that takes a model, for
+#' example `encode(text, model = "bge-small-en-v1.5")`, or to [load_model()]
+#' and [model_download()]. For a model outside the list, see [load_custom()].
+#'
+#' @param detail `FALSE` (default) for the columns `model`, `dimensions`,
+#'   `max_tokens`, `languages` and `size_mb`; `TRUE` adds `pooling` (`"mean"`
+#'   or `"cls"`), `prefix` (text prepended by [encode()]), `engine` (`"onnx"`
+#'   or `"static"`), `license`, `id` and `revision`.
 #' @return A base data frame with one row per pinned model and the columns
-#'   described under `detail`.
+#'   described under `detail`. `size_mb` is the download size in megabytes.
+#' @seealso [load_model()] and [model_download()] to use a model;
+#'   [model_status()] to check an installation; [load_custom()] for other
+#'   models.
 #' @export
 #' @examples
 #' models()

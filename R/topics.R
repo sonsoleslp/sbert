@@ -39,35 +39,45 @@
   vapply(seq_len(100L), int_to_roman, character(1))
 })
 
-#' Obtain and Adjust the Topic Stop-Word List
+#' Get and adjust the stop-word list
 #'
-#' Returns the stop words excluded from term extraction and keyword
-#' candidates. `add` extends the list — the standard way to remove a
-#' corpus-wide vocabulary from topic labels (words every document shares
-#' carry no discriminative information). `remove` un-lists built-in entries
-#' whose surface form is meaningful in a specific corpus.
+#' @description
+#' `stop_words()` returns the built-in English list of stop words, extended with
+#' `add` or reduced with `remove`. Stop words are frequent function words, such
+#' as articles, pronouns, and prepositions, that occur in texts of every topic
+#' and so say little about what distinguishes one topic from another; excluding
+#' them lets the terms that describe a topic be its content words.
 #'
-#' For a fully custom list, pass any character vector straight to the
-#' `stop_words` argument of [topics()], [compare_topics()], [topic_corpus()], or
-#' [keywords()] — for example `stop_words(add = c("covid", "patient"))` to keep
-#' the defaults plus domain terms, a bare `c("covid", "patient")` to replace the
-#' list entirely, or `character()` to disable stop-word filtering.
+#' Adding words that every text of a corpus shares, such as the name of the
+#' course or the disease a corpus is about, removes them from the topic terms as
+#' well. The list filters only the terms and keyword candidates; the text that
+#' is embedded is unchanged.
 #'
-#' @param language Currently only `"en"` is supported.
-#' @param add Character vector of extra words to exclude (matched
-#'   case-insensitively).
-#' @param remove Character vector of words to drop from the list.
-#' @return A sorted character vector of lowercase stop words.
+#' The result is passed as `stop_words =` to [topics()], [compare_topics()],
+#' [topic_corpus()], [terms()][terms.sbert_topic_model], or [keywords()]. A
+#' character vector of one's own replaces the list, and `character()` turns
+#' the filter off.
+#'
+#' @param language Language of the list. Only `"en"` (default) is available.
+#' @param add Words to add to the list, matched case-insensitively. Default
+#'   `NULL`.
+#' @param remove Words to remove from the list. Default `NULL`.
+#' @return A character vector of lower-case stop words, sorted.
+#' @section Conditions:
+#'   An error of class `sbert_bad_input` when `language` is not `"en"`.
+#' @seealso [topics()] and [terms()][terms.sbert_topic_model], which use the
+#'   list; [clean_corpus()] to clean the text itself.
 #' @export
 #' @examples
 #' head(stop_words())
-#' # keep the defaults and add domain terms
-#' custom <- stop_words(add = c("students", "learning"), remove = "against")
 #'
-#' # use a custom list when modeling
-#' text <- c("students learning math", "markets and trading stocks")
-#' embeddings <- rbind(c(1, 0), c(0, 1))
-#' topics(text, n_topics = 2, embeddings = embeddings, stop_words = custom)
+#' # Keep the defaults, add two domain words, and drop one entry
+#' custom <- stop_words(add = c("try", "again"), remove = "against")
+#'
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings, stop_words = custom)
+#' terms(topic_model, n = 3)
 stop_words <- function(language = "en", add = NULL, remove = NULL) {
   stopifnot(
     is.character(language),
@@ -78,7 +88,10 @@ stop_words <- function(language = "en", add = NULL, remove = NULL) {
     is.null(remove) || (is.character(remove) && !anyNA(remove))
   )
   if (!identical(language, "en")) {
-    stop("Only the built-in English stop-word list is currently available.", call. = FALSE)
+    sbert_abort(
+      "Only the built-in English stop-word list is currently available.",
+      class = "sbert_bad_input"
+    )
   }
   words <- unique(c(.sbert_english_stopwords, tolower(add)))
   sort(setdiff(words, tolower(remove)))
@@ -226,9 +239,9 @@ tokenize_topic_documents <- function(text, stop_words, min_token_length, stem = 
 # stem so labels stay readable ("picture", not "pictur"). Deterministic.
 collapse_inflections <- function(token_lists) {
   if (!requireNamespace("SnowballC", quietly = TRUE)) {
-    stop(
+    sbert_abort(
       "Stemming requires the 'SnowballC' package. Install it or use stem = FALSE.",
-      call. = FALSE
+      class = "sbert_missing_package"
     )
   }
   all_tokens <- unlist(token_lists, use.names = FALSE)
@@ -312,13 +325,19 @@ topic_term_scores <- function(
   }
   all_tokens <- unlist(token_lists, use.names = FALSE)
   if (length(all_tokens) == 0L) {
-    stop("No topic terms remain after tokenization and filtering.", call. = FALSE)
+    sbert_abort(
+      "No topic terms remain after tokenization and filtering.",
+      class = "sbert_no_terms"
+    )
   }
 
   corpus_counts <- table(all_tokens)
   vocabulary <- sort(names(corpus_counts[corpus_counts >= min_term_frequency]))
   if (length(vocabulary) == 0L) {
-    stop("No topic terms meet min_term_frequency.", call. = FALSE)
+    sbert_abort(
+      "No topic terms meet min_term_frequency.",
+      class = "sbert_no_terms"
+    )
   }
 
   count_matrix <- do.call(
@@ -339,9 +358,9 @@ topic_term_scores <- function(
   # frequency of a term across all classes.
   average_topic_length <- mean(row_totals)
   if (average_topic_length < 1) {
-    stop(
+    sbert_abort(
       "The average topic length is zero after tokenization and filtering.",
-      call. = FALSE
+      class = "sbert_no_terms"
     )
   }
   global_frequency <- pmax(colSums(count_matrix), 1)
@@ -482,9 +501,9 @@ deterministic_topic_centers <- function(embeddings, n_topics, existing_centers =
       # Every unselected point coincides with one already chosen: the corpus has
       # fewer distinct embeddings than requested topics. Detected here, exactly
       # when it matters, instead of by an up-front full-matrix dedup.
-      stop(
+      sbert_abort(
         "n_topics cannot exceed the number of distinct document embeddings.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     selected <- c(selected, next_center)
@@ -549,13 +568,11 @@ fit_embedding_topics <- function(
         if (nrow(member_rows) == 0L) {
           return(0)
         }
-        center <- matrix(
-          starting_centers[topic_id, ],
-          nrow = nrow(member_rows),
-          ncol = ncol(starting_centers),
-          byrow = TRUE
-        )
-        sum((member_rows - center)^2)
+        # The sum of squares of the partition (around the members' mean), so
+        # that between/total SS is the share of variance the assignment
+        # explains, in [0, 1], as for a k-means fit. The frozen seeds are not
+        # the members' mean, and measuring around them could exceed totss.
+        sum(sweep(member_rows, 2L, colMeans(member_rows))^2)
       },
       numeric(1)
     )
@@ -576,23 +593,55 @@ fit_embedding_topics <- function(
       betweenss = totss - sum(fixed_withinss),
       iter = 0L
     )
+    converged <- TRUE
+    kmeans_warnings <- character()
   } else {
+    # Warnings from kmeans() are recorded in the diagnostics rather than lost:
+    # with cores > 1 a fit can run in a forked worker, where an unrecorded
+    # warning would never reach the user. Non-convergence is re-raised below
+    # as a classed warning; anything else passes through unchanged.
+    kmeans_warnings <- character()
     fit <- tryCatch(
-      stats::kmeans(
-        normalized_embeddings,
-        centers = starting_centers,
-        iter.max = as.integer(iter_max),
-        algorithm = "Lloyd"
+      withCallingHandlers(
+        stats::kmeans(
+          normalized_embeddings,
+          centers = starting_centers,
+          iter.max = as.integer(iter_max),
+          algorithm = "Lloyd"
+        ),
+        warning = function(warning_condition) {
+          message_text <- conditionMessage(warning_condition)
+          kmeans_warnings <<- c(kmeans_warnings, message_text)
+          if (grepl("did not converge", message_text, fixed = TRUE)) {
+            invokeRestart("muffleWarning")
+          }
+        }
       ),
       error = function(error_condition) {
-        stop(
+        sbert_abort(
           sprintf("Topic clustering failed: %s", conditionMessage(error_condition)),
-          call. = FALSE
+          class = "sbert_clustering_failed"
         )
       }
     )
+    converged <- fit$iter <= iter_max && !identical(fit$ifault, 2L)
+    if (!converged) {
+      sbert_warn(
+        sprintf(
+          paste0(
+            "k-means did not converge in %d iterations; the topics are ",
+            "returned as they stood. Raise `iter_max` to continue the fit."
+          ),
+          as.integer(iter_max)
+        ),
+        class = "sbert_no_converge"
+      )
+    }
     if (length(fit$size) != n_topics || any(fit$size <= 0L)) {
-      stop("Topic clustering produced an empty topic.", call. = FALSE)
+      sbert_abort(
+        "Topic clustering produced an empty topic.",
+        class = "sbert_clustering_failed"
+      )
     }
   }
 
@@ -632,7 +681,9 @@ fit_embedding_topics <- function(
       totss = unname(fit$totss),
       tot_withinss = unname(fit$tot.withinss),
       betweenss = unname(fit$betweenss),
-      iterations = as.integer(fit$iter),
+      iterations = min(as.integer(fit$iter), as.integer(iter_max)),
+      converged = converged,
+      warnings = kmeans_warnings,
       algorithm = if (fixed) {
         "fixed seed centroids (nearest-centroid assignment)"
       } else {
@@ -738,10 +789,10 @@ validate_topic_segmentation <- function(
     segment == "document" &&
       (!is.null(max_tokens) || merge_below > 0 || min_content > 0)
   ) {
-    stop(
+    sbert_abort(
       "max_tokens, merge_below, and min_content apply only when segment is ",
       "\"sentence\", \"clause\", or \"phrase\".",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   list(
@@ -772,7 +823,7 @@ segment_topic_documents <- function(
     min_content = segmentation$min_content
   )
   if (nrow(units) < minimum) {
-    stop(
+    sbert_abort(
       sprintf(
         paste0(
           "segment = \"%s\" produced %d segment(s) from %d document(s); ",
@@ -783,7 +834,7 @@ segment_topic_documents <- function(
         length(text),
         minimum
       ),
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   units
@@ -808,47 +859,52 @@ is_segmented_topic_model <- function(object) {
   !identical(topic_segmentation(object)$segment, "document")
 }
 
-#' Prepare a Corpus Once to Fit Many Topic Models
+#' Prepare a corpus once for several topic models
 #'
-#' Runs the corpus-level work that does not depend on the number of topics —
-#' segmenting (when `segment` asks for it), embedding every unit, and
-#' tokenizing it for term scoring — a single time, so that fitting many models
-#' (a [compare_topics()] sweep, a manual loop over topic counts, or repeated
-#' [topics()] calls) reuses it instead of repeating it. Pass the returned
-#' object to [topics()] or [compare_topics()] in place of the raw `text`.
+#' @description
+#' `topic_corpus()` prepares a corpus once for several topic models: it segments
+#' the texts, embeds them, and tokenizes them for term scoring, and returns a
+#' prepared corpus that [topics()] and [compare_topics()] accept in place of the
+#' texts. Fitting topic models usually means fitting several (different numbers
+#' of topics, term settings, or seeds on the same texts), and these three steps
+#' do not depend on any of those choices; embedding is by far the most expensive
+#' step.
 #'
-#' @details The results are byte-identical to calling [topics()] on the raw
-#'   text: the corpus only *caches* the segmentation, embedding, and
-#'   tokenization steps, it does not change them. The corpus fixes the
-#'   embedding source (`model` or `embeddings`), the segmentation (`segment`,
-#'   `max_tokens`, `merge_below`, `min_content`), and the tokenization settings
-#'   (`stop_words`, `min_token_length`, `stem`, `numbers`, `roman_numerals`,
-#'   `section_numbers`). [topics()] refuses a `model`, `embeddings`, or a
-#'   different `segment` alongside a corpus, and takes the tokenization
-#'   settings from the corpus, so set them when building it. Per-model
-#'   settings (`n_topics`, `n_terms`, `min_term_frequency`, `weighting`,
-#'   `reduce_frequent_words`, `seeds`, ...) are still chosen per call.
+#' Models fitted to the corpus are identical to models fitted to the raw texts.
+#' The corpus fixes the embeddings (from `model` or `embeddings`), the
+#' segmentation, and the tokenization settings; the settings of each model, such
+#' as `n_topics`, `n_terms`, `weighting`, and `seeds`, are still chosen per
+#' call. The result is an object of class `sbert_topic_corpus`.
 #'
-#' @param text Character vector containing one document per element, or a
-#'   data frame together with `column`.
+#' [compare_topics()] builds a corpus itself, so a corpus is needed only
+#' when models are fitted one at a time.
+#'
+#' @param text Documents: a character vector with one document per element,
+#'   or a data frame together with `column`.
 #' @inheritParams topics
-#' @return An object of class `sbert_topic_corpus`: a list with the prepared
-#'   `text` (one element per modeled unit), carried `metadata`, `units` (the
-#'   `document_id`, `document_name`, and `segment` of every unit when the corpus
-#'   is segmented, otherwise `NULL`), unit `embeddings`, cached `token_lists`,
-#'   `model` information, and the fixed segmentation and tokenization
-#'   `settings`.
-#' @seealso [topics()], [compare_topics()]
+#' @return An object of class `sbert_topic_corpus`. Its units (one row per
+#'   document, or per segment) are given by
+#'   [as.data.frame()][as.data.frame.sbert_topic_corpus]; printing it shows
+#'   the number of documents and segments, the embedding dimension, the
+#'   model, and the tokenization settings.
+#' @section Conditions:
+#'   Errors of class `sbert_bad_input` when both `model` and `embeddings` are
+#'   given, a document is blank, the embeddings do not have one row per unit,
+#'   the segmentation produces fewer than two segments, or `segment` is passed
+#'   together with an existing corpus; `sbert_missing_package` for
+#'   `stem = TRUE` without SnowballC. When a model is used, the errors of
+#'   [load_model()] and [encode()] apply.
+#' @seealso [topics()] and [compare_topics()], which take the corpus;
+#'   [as.data.frame()][as.data.frame.sbert_topic_corpus] for its units;
+#'   [segment()] for the segmentation.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' corpus <- topic_corpus(text, embeddings = embeddings)
-#' topic_sizes(topics(corpus, n_topics = 2))
-#' compare_topics(corpus, n_topics = 2:3)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' prepared <- topic_corpus(corpus, column = "translation",
+#'                          embeddings = feedback_embeddings)
+#' prepared
+#' topic_sizes(topics(prepared, n_topics = 4))
+#' topic_sizes(topics(prepared, n_topics = 6))
 topic_corpus <- function(
   text,
   column = NULL,
@@ -876,16 +932,19 @@ topic_corpus <- function(
   )
   if (inherits(text, "sbert_topic_corpus")) {
     if (segment != "document") {
-      stop(
+      sbert_abort(
         "Segmentation is fixed by a prepared topic_corpus; pass segment = ",
         "to topic_corpus() when building it.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     return(text)
   }
   if (!is.null(model) && !is.null(embeddings)) {
-    stop("Supply model or embeddings, not both.", call. = FALSE)
+    sbert_abort(
+      "Supply model or embeddings, not both.",
+      class = "sbert_bad_input"
+    )
   }
   prepared <- prepare_topic_input(text, column)
   text <- prepared$text
@@ -921,13 +980,16 @@ topic_corpus <- function(
     !is.na(stem)
   )
   if (stem && !requireNamespace("SnowballC", quietly = TRUE)) {
-    stop(
+    sbert_abort(
       "stem = TRUE requires the 'SnowballC' package. Install it or use stem = FALSE.",
-      call. = FALSE
+      class = "sbert_missing_package"
     )
   }
   if (any(!nzchar(trimws(text)))) {
-    stop("text cannot contain blank documents.", call. = FALSE)
+    sbert_abort(
+      "text cannot contain blank documents.",
+      class = "sbert_bad_input"
+    )
   }
 
   if (is.null(embeddings)) {
@@ -952,7 +1014,7 @@ topic_corpus <- function(
       is.matrix(embeddings) &&
       nrow(embeddings) != nrow(units)
     if (misaligned) {
-      stop(
+      sbert_abort(
         sprintf(
           paste0(
             "With segment = \"%s\", embeddings must have one row per segment: ",
@@ -964,7 +1026,7 @@ topic_corpus <- function(
           nrow(embeddings),
           segment
         ),
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     text <- units$text
@@ -997,9 +1059,9 @@ topic_corpus <- function(
       anyNA(embedding_matrix) ||
       any(!is.finite(embedding_matrix))
   ) {
-    stop(
+    sbert_abort(
       "embeddings must be a finite numeric matrix with one row per document.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
 
@@ -1043,22 +1105,24 @@ topic_corpus <- function(
   )
 }
 
-#' Print a Prepared Topic Corpus
+#' Print a prepared topic corpus
 #'
-#' Shows what the corpus holds and can be reused for: document and unit
-#' counts, the segmentation level, and whether embeddings are attached.
+#' @description
+#' `print()` shows what a corpus prepared by [topic_corpus()] holds: the number
+#' of documents and, for a segmented corpus, of segments and their level; the
+#' embedding dimension; the embedding model; and the minimum token length and
+#' whether tokens are stemmed.
 #'
-#' @param x An `sbert_topic_corpus` object.
+#' @param x A corpus prepared by [topic_corpus()].
 #' @param ... Ignored.
-#' @return The corpus object, invisibly.
+#' @return `x`, invisibly.
+#' @seealso [topic_corpus()];
+#'   [as.data.frame()][as.data.frame.sbert_topic_corpus] for the units.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' print(topic_corpus(text, embeddings = embeddings))
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' print(topic_corpus(corpus, column = "translation",
+#'                    embeddings = feedback_embeddings))
 print.sbert_topic_corpus <- function(x, ...) {
   cat("<sbert_topic_corpus>\n")
   if (is.null(x$units)) {
@@ -1079,160 +1143,149 @@ print.sbert_topic_corpus <- function(x, ...) {
   invisible(x)
 }
 
-#' Discover Semantic Topics in Documents
+#' Fit semantic topics to documents
 #'
-#' Groups documents, or their sentences, clauses, or phrases (`segment`), into
-#' topics by deterministic k-means on their Sentence-BERT embeddings. Supply
-#' either a `model` to encode the text or a precomputed embedding matrix.
-#' Topics are summarized with representative documents and class-based TF-IDF
-#' terms. This is embedding-based topic discovery, not a probabilistic LDA model.
+#' @description
+#' `topics()` fits an embedding-based topic model: it groups texts, or the
+#' sentences, clauses, or phrases of texts, by what they mean rather than by the
+#' words they share, and each group is a topic. Each unit is represented by a
+#' Sentence-BERT embedding (Reimers and Gurevych 2019), a vector in which texts
+#' of similar meaning lie close together, and the embeddings are partitioned
+#' into groups of semantically similar texts.
 #'
-#' @details Each topic is named by its most central unit: the document or
-#'   segment nearest the topic's centroid, shortened to 60 characters. The
-#'   topics come from the meaning of whole texts, so a text names a topic
-#'   better than its top words do; `label = "terms"` names topics by their
-#'   three most distinctive words instead. Read more examples per topic with
-#'   [representatives()], and its typical words with
-#'   [terms()][terms.sbert_topic_model]. Term scores use the class-based
-#'   TF-IDF weighting `tf * log(1 + A / f_x)`, where `tf` is the
-#'   frequency of a term normalized within its topic, `f_x` is the term's
-#'   frequency across all topics, and `A` is the mean topic length (a real
-#'   number, matching Mendonca and Figueira (2025), Eq. 1). Set
-#'   `weighting = "bm25"` and/or `reduce_frequent_words = TRUE` for the BM25 and
-#'   square-root variants (their Eq. 2 to 4). The built-in tokenizer preserves
-#'   Unicode alphanumeric tokens and internal apostrophes, but does not perform
-#'   language-specific word segmentation for unspaced CJK text.
+#' Every unit is assigned to one of `n_topics` topics by k-means clustering
+#' (Lloyd 1982) of the L2-normalized embeddings, started from farthest-point
+#' initial centers. The fit is deterministic: the same input always gives the
+#' same topics, and no random seed is involved. Each topic is described by its
+#' distinctive terms, scored by class-based TF-IDF (Grootendorst 2022; Mendonca
+#' and Figueira 2025), and by its representative units, those nearest its
+#' center. By default a topic is labeled by its most central text. Topics are
+#' numbered by size, largest first, unless `seeds` fix their order. Unlike
+#' latent Dirichlet allocation, the model does not represent a text as a mixture
+#' of word distributions, so it does not depend on words co-occurring within
+#' texts, which they rarely do in short texts.
 #'
-#' @param text Character vector containing one document per element, a data
-#'   frame together with `column`, or a prepared [topic_corpus()].
-#' @param n_topics Number of semantic topics. Must be at least two.
-#' @param column When `text` is a data frame, the name of the column
-#'   holding the documents to model. Every other column is carried along
-#'   with each document in the fitted document table, and rows whose text is
-#'   missing, blank, or a bibliographic placeholder
-#'   (`"[No abstract available]"`) are dropped. Precomputed
-#'   `embeddings` may keep one row per supplied row; the dropped rows are
-#'   removed from them too. Leave `NULL` for a character vector.
-#' @param model A loaded [sbert_model][load_model()], a pinned model
-#'   name from [models()], or `NULL` for the default model. Ignored
-#'   when `embeddings` are supplied.
-#' @param embeddings Optional numeric matrix with one row per document;
-#'   when supplied, no model is loaded or used.
-#' @param batch_size Batch size passed to [encode()] when `model` is used.
-#' @param iter_max Maximum deterministic k-means iterations.
-#' @param n_terms Maximum class-based TF-IDF terms returned per topic.
-#' @param n_representatives Maximum representative documents per topic.
-#' @param stop_words Character vector excluded from topic terms. Use
-#'   `character()` to disable stop-word filtering.
-#' @param min_term_frequency Minimum corpus-wide token frequency.
-#' @param min_token_length Minimum Unicode character length for a topic token.
-#' @param numbers How to treat purely numeric tokens (years, counts) in topic
-#'   terms. `"keep"` (default) keeps them; `"remove"` drops tokens made only of
-#'   digits, while retaining alphanumerics such as `covid19`.
-#' @param roman_numerals How to treat Roman-numeral tokens (chapter, section,
-#'   and list markers such as `ii`, `iv`, `xii`). `"keep"` (default) keeps them;
-#'   `"remove"` drops canonical Roman numerals up to 100. The bound is
-#'   deliberate: larger Roman numerals collide with common abbreviations that
-#'   are also valid numerals (`ml`, `mm`, `cc`, `ci`, `cv`), which are always
-#'   kept. A few small numerals that are also words (`iv`, `vi`, `xl`) are
-#'   removed when this is on.
-#' @param section_numbers How to treat section, reference, and list numbering.
-#'   `"keep"` (default) keeps it; `"remove"` strips, before tokenizing, both
-#'   multi-level indices (`1.2.3`, `4.5.6.7` — three or more dot-separated
-#'   groups) and enumeration or list markers (`1.`, `2.`, `figure 12.` — a
-#'   standalone one- or two-digit number followed by a period). Decimals
-#'   (`3.14`), four-digit years (`2020.`), hyphenated numbers (`covid-19.`), and
-#'   larger counts are left untouched, so genuine values survive even when
-#'   `numbers = "keep"`.
-#'   These filter only the topic terms; the document text and its embedding are
-#'   untouched. To clean the source text itself — list markers, reference noise,
-#'   junk characters — before encoding, see [clean_corpus()].
-#' @param weighting Class-based term-weighting scheme. `"ctfidf"` (default) uses
-#'   `tf * log(1 + A / f_x)`; `"bm25"` uses the BM25 inverse-frequency variant
-#'   `tf * log(1 + (A - f_x + 0.5) / (f_x + 0.5))`, which more aggressively
-#'   down-weights terms shared across topics (Mendonca and Figueira 2025).
-#' @param reduce_frequent_words Whether to square-root the within-topic term
-#'   frequency before weighting, damping very frequent words.
-#' @param stem Whether to collapse inflected forms (for example `animals` and
-#'   `animal`) onto a shared Porter stem before scoring, displaying the most
-#'   frequent surface form of each stem. Requires the `SnowballC` package.
-#' @param seeds Optional guided topics: a character vector (or list of
-#'   character vectors, collapsed with spaces) of seed words or topic
-#'   descriptions — one element per seeded topic. Seeds are embedded and
-#'   become the first `length(seeds)` cluster centroids; remaining topics
-#'   (up to `n_topics`) are initialized away from the seeds. Seeded topics
-#'   keep their position — topic i is seed i, never reordered by size — and
-#'   a named `seeds` vector names those topics' labels. With precomputed
-#'   `embeddings`, supply `seed_embeddings` as well.
-#' @param seed_embeddings Optional matrix of seed embeddings (one row per
-#'   seed, same dimension as the document embeddings); required when
-#'   `seeds` is used together with precomputed `embeddings`.
-#' @param fixed_seeds When `TRUE`, seed centroids are frozen and documents
-#'   are simply assigned to the nearest seed (zero-shot classification into
-#'   the seeded topics; `n_topics` must equal the number of seeds, and
-#'   topics may be empty). When `FALSE` (default), seeds only initialize
-#'   the clustering and the data can move the centroids.
-#' @param keep_embeddings Whether to retain normalized document embeddings in
-#'   the returned object.
-#' @param cores Number of forked worker processes used to tokenize documents for
-#'   term scoring. Default `1` (serial). Values above one use
-#'   `parallel::mclapply` on Unix-alikes and fall back to serial on Windows or
-#'   for small corpora; the tokenization — and therefore every result — is
-#'   identical regardless of the count. Ignored when a prepared [topic_corpus()]
-#'   is supplied (its tokens are already computed).
-#' @param segment The unit the model is fitted on. `"document"` (default)
-#'   embeds each document whole. `"sentence"`, `"clause"`, or `"phrase"` first
-#'   splits every document with [segment()] at that level and fits the topics
-#'   on the segments, so long documents are modeled in full instead of being
-#'   truncated to the encoder's context window, and a document can span several
-#'   topics. The fitted document table then has one row per segment with its
-#'   parent `document_id` and `segment` position; [topic_sizes()] counts by
-#'   segment or by document, [topic_gamma()] recovers each document's topic
-#'   mixture from the stored segments, and
-#'   [predict()][predict.sbert_topic_model] segments new text the same way. A
-#'   precomputed `embeddings` matrix must then have one row per
-#'   segment, aligned with `segment(text, level = segment, ...)`.
-#' @param max_tokens Optional cap on segment length, passed to [segment()].
-#'   When a `model` is used, the budget counts that model's exact tokens; with
-#'   precomputed `embeddings` it counts words. Only with a segmented fit.
-#' @param merge_below Re-join segments shorter than this many words into their
-#'   neighbor, passed to [segment()]. Only with a segmented fit.
-#' @param min_content Minimum alphabetic-content ratio for a segment to be
-#'   kept, passed to [segment()]. Only with a segmented fit.
-#' @param label How each topic is named in `label` columns and plots.
-#'   `"representative"` (default) uses the topic's most central text,
-#'   shortened to 60 characters; `"terms"` joins its three most distinctive
-#'   words (`"box / red / blue"`). Named `seeds` override either.
-#' @return An object of class `sbert_topic_model`: a list with
+#' The result, an object of class `sbert_topic_model`, shows which kinds of
+#' content a corpus holds and how much of the corpus each kind accounts for.
+#'
+#' To choose the number of topics and the unit of analysis, compare candidate
+#' fits with [compare_topics()]. To fit several models to one corpus, prepare
+#' it once with [topic_corpus()]. New texts are assigned to the fitted topics
+#' by [predict()][predict.sbert_topic_model], and each document's mixture of
+#' topics is given by [topic_gamma()]. To merge the topics of an existing fit,
+#' use [reduce_topics()].
+#'
+#' @param text Documents: a character vector with one document per element, a
+#'   data frame together with `column`, or a corpus prepared by
+#'   [topic_corpus()].
+#' @param n_topics Number of topics: an integer of at least 2 and at most the
+#'   number of modeled units.
+#' @param column Name of the text column when `text` is a data frame. The other
+#'   columns are carried into the document table. Rows whose text is missing,
+#'   blank, or the placeholder `"[No abstract available]"` are dropped, and so
+#'   are their rows of `embeddings`. `NULL` (default) for a character vector.
+#' @param model The encoder: a model from [load_model()], a pinned model name
+#'   from [models()], or `NULL` (default) for the default model. Not used when
+#'   `embeddings` are given.
+#' @param embeddings Optional numeric matrix of precomputed embeddings, one row
+#'   per modeled unit (per document, or per segment with `segment`). When it
+#'   is given, no model is loaded. Default `NULL`.
+#' @param batch_size Texts encoded per model call (default 32).
+#' @param iter_max Maximum number of k-means iterations (default 100).
+#' @param n_terms Terms stored per topic (default 10).
+#' @param n_representatives Representative units stored per topic (default 5).
+#' @param stop_words Words excluded from the topic terms; default
+#'   [stop_words()]. `character()` turns the filter off.
+#' @param min_term_frequency Minimum corpus-wide frequency of a term
+#'   (default 1).
+#' @param min_token_length Minimum length of a term, in characters
+#'   (default 2).
+#' @param numbers,roman_numerals,section_numbers Whether to `"keep"` (default)
+#'   or `"remove"` digit-only tokens, Roman-numeral tokens, and section or list
+#'   numbering (`1.2.3`, `1.`) from the topic terms. They change the terms
+#'   only, not the text that is embedded; to clean the text, use
+#'   [clean_corpus()].
+#' @param weighting Term weighting: `"ctfidf"` (default) or `"bm25"`, which
+#'   down-weights terms shared by many topics more strongly.
+#' @param reduce_frequent_words Whether to take the square root of
+#'   within-topic term frequencies before weighting (default `FALSE`).
+#' @param stem Whether to merge inflected forms of a term under one Porter
+#'   stem, shown as its most frequent form (default `FALSE`; needs the
+#'   SnowballC package).
+#' @param keep_embeddings Whether to store the normalized embeddings in the
+#'   model (default `TRUE`). Without them, [reduce_topics()],
+#'   [topic_membership()], and [representatives()] need the embeddings
+#'   supplied again.
+#' @param seeds Optional guided topics: a character vector, or a list of
+#'   character vectors, of seed words or descriptions, one element per seeded
+#'   topic. The embedding of seed `i` is the starting center of topic `i`, and
+#'   the names of `seeds`, if any, become topic labels. Default `NULL`.
+#' @param seed_embeddings Matrix of seed embeddings, one row per seed. Needed
+#'   when `seeds` are combined with precomputed `embeddings`.
+#' @param fixed_seeds If `TRUE`, the seed centers are held fixed and each unit
+#'   joins its nearest seed (zero-shot classification); `n_topics` must equal
+#'   the number of seeds, and a topic may be empty. Default `FALSE`.
+#' @param cores Number of forked worker processes for tokenization (default 1;
+#'   Unix-alikes only). Results do not depend on it.
+#' @param segment Unit of analysis: `"document"` (default), or `"sentence"`,
+#'   `"clause"`, or `"phrase"`, which split each document with [segment()]
+#'   and fit the topics to the segments, so that a document can take part in
+#'   several topics.
+#' @param max_tokens,merge_below,min_content Segmentation options passed to
+#'   [segment()], for segmented fits only: the maximum segment length (in the
+#'   model's tokens, or in words with precomputed `embeddings`; default
+#'   `NULL`, no limit), the number of words below which a segment is joined to
+#'   its neighbor (default 0), and the minimum share of letters for a segment
+#'   to be kept (default 0; see [content_ratio()]).
+#' @param label How topics are labeled: `"representative"` (default), the most
+#'   central text shortened to 60 characters, or `"terms"`, the three most
+#'   distinctive terms. Named `seeds` override both.
+#' @return An object of class `sbert_topic_model`, a list with
 #'   \describe{
-#'     \item{`documents`}{One row per modeled unit (document, or segment for a
-#'       segmented fit): `document_id`, `document_name`, `segment` (segmented
-#'       fits only), `text`, `topic`, `label`, and `distance` (cosine distance
-#'       to the assigned centroid), followed by any carried `column` data.}
+#'     \item{`documents`}{One row per modeled unit (document, or segment):
+#'       `document_id`, `document_name`, `segment` (segmented fits only),
+#'       `text`, `topic`, `label`, and `distance` (cosine distance to the topic
+#'       center), followed by the columns carried from a data frame.}
 #'     \item{`topics`}{One row per topic: `topic`, `label`, `n_documents`,
 #'       `proportion`, and `withinss`.}
-#'     \item{`terms`, `representatives`}{The tables returned by
-#'       [terms()][terms.sbert_topic_model] and, ranked by distance, by
-#'       [representatives()].}
-#'     \item{`centers`}{Numeric matrix of unit-length topic centroids, one row
-#'       per topic.}
-#'     \item{`embeddings`}{The normalized unit embeddings, or `NULL` when
+#'     \item{`terms`, `representatives`}{The stored terms and representative
+#'       units of each topic.}
+#'     \item{`centers`}{Numeric matrix of topic centers, one row per topic: the
+#'       k-means means of the L2-normalized embeddings. They are not rescaled,
+#'       so their norms are below one; verbs that use cosine similarity
+#'       normalize them first.}
+#'     \item{`embeddings`}{The normalized embeddings, or `NULL` when
 #'       `keep_embeddings = FALSE`.}
 #'     \item{`diagnostics`}{Sums of squares (`totss`, `tot_withinss`,
-#'       `betweenss`), `iterations`, and `algorithm`.}
-#'     \item{`model`, `settings`}{The embedding model identity and every
-#'       setting the fit was made with, which later verbs reuse.}
+#'       `betweenss`), `iterations`, `converged` (whether k-means converged
+#'       within `iter_max`), `warnings` (warnings raised by
+#'       [stats::kmeans()]), and `algorithm`.}
+#'     \item{`model`, `settings`}{The identity of the embedding model and the
+#'       settings of the fit, which later verbs reuse.}
 #'   }
-#'   Read it through its verbs rather than its fields: [topic_sizes()],
-#'   [terms()][terms.sbert_topic_model], [representatives()],
-#'   [summary()][summary.sbert_topic_model],
-#'   [predict()][predict.sbert_topic_model], [topic_membership()],
-#'   [topic_gamma()], and [plot()][plot.sbert_topic_model].
-#' @section Errors: Raises an error when `n_topics` is below two or exceeds
-#'   the number of modeled units, when `embeddings` does not have one row per
-#'   unit, or when `column` is missing or not found in a data frame. With a
-#'   prepared [topic_corpus()], passing `model`, `embeddings`, or a different
-#'   `segment` is an error.
+#'   Read it through its accessors rather than its fields:
+#'   [as.data.frame()][as.data.frame.sbert_topic_model] with `what =
+#'   "documents"`, `"topics"`, `"terms"`, or `"representatives"`;
+#'   [topic_sizes()]; [terms()][terms.sbert_topic_model];
+#'   [representatives()]; and [summary()][summary.sbert_topic_model], which
+#'   also reports a fit that did not converge.
+#' @section Conditions:
+#'   Errors of class `sbert_bad_input` for conflicting arguments, embeddings
+#'   without one row per unit, more topics than distinct embeddings, or a
+#'   `model`, `embeddings`, or different `segment` combined with a prepared
+#'   corpus; `sbert_missing_package` for `stem = TRUE` without SnowballC;
+#'   `sbert_no_terms` when no term passes the filters; and
+#'   `sbert_clustering_failed` when k-means fails or leaves a topic empty.
+#'   Arguments of the wrong type or range fail a plain [stopifnot()] check.
+#'   When a model is used, the errors of [load_model()] and [encode()] apply.
+#'   A warning of class `sbert_no_converge` when k-means reaches `iter_max`
+#'   without converging; the fit is still returned. Errors inherit
+#'   `sbert_error` and warnings `sbert_warning`.
+#' @seealso [compare_topics()] to choose the number of topics;
+#'   [topic_corpus()] to prepare a corpus once; [name_topics()] to name the
+#'   topics; [plot()][plot.sbert_topic_model] for figures;
+#'   [predict()][predict.sbert_topic_model] and [topic_gamma()] for new texts
+#'   and topic mixtures; [feedback_embeddings] for the example data.
 #' @references
 #' Reimers, N. and Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
 #' using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP 2019*,
@@ -1248,28 +1301,23 @@ print.sbert_topic_corpus <- function(x, ...) {
 #' on Information Theory*, 28(2), 129--137. \doi{10.1109/TIT.1982.1056489}
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' topic_model <- topics(text, 2, embeddings = embeddings)
-#' topic_sizes(topic_model)
+#' # 600 distinct feedback messages with their precomputed embeddings
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' topic_model
+#' topic_sizes(topic_model, weights = "n")
 #' terms(topic_model, n = 3)
 #'
-#' # Fit on sentences: each document is split first, and the segments are
-#' # what the topics are made of (the embeddings here are one row per
-#' # sentence, so no model download is needed).
+#' # Sentence-level fit: one embedding per sentence
 #' documents <- c(
 #'   "Cats chase mice. Stocks and bonds trade.",
 #'   "Dogs chase balls. Markets price shares."
 #' )
 #' sentence_model <- topics(
-#'   documents, 2,
-#'   segment = "sentence",
+#'   documents, n_topics = 2, segment = "sentence",
 #'   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
 #' )
-#' representatives(sentence_model)
 #' topic_sizes(sentence_model, by = "document")
 #' topic_gamma(sentence_model)
 topics <- function(
@@ -1356,16 +1404,22 @@ topics <- function(
   if (inherits(text, "sbert_topic_corpus")) {
     corpus <- text
     if (!is.null(model)) {
-      stop("A model cannot be combined with a prepared topic_corpus.", call. = FALSE)
+      sbert_abort(
+        "A model cannot be combined with a prepared topic_corpus.",
+        class = "sbert_bad_input"
+      )
     }
     if (!is.null(embeddings)) {
-      stop("embeddings cannot be combined with a prepared topic_corpus.", call. = FALSE)
+      sbert_abort(
+        "embeddings cannot be combined with a prepared topic_corpus.",
+        class = "sbert_bad_input"
+      )
     }
     if (segment != "document" && !identical(corpus$settings$segment, segment)) {
-      stop(
+      sbert_abort(
         "Segmentation is fixed by a prepared topic_corpus; pass segment = ",
         "to topic_corpus() when building it.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     text <- corpus$text
@@ -1445,16 +1499,22 @@ topics <- function(
     !is.na(keep_embeddings)
   )
   if (stem && !requireNamespace("SnowballC", quietly = TRUE)) {
-    stop(
+    sbert_abort(
       "stem = TRUE requires the 'SnowballC' package. Install it or use stem = FALSE.",
-      call. = FALSE
+      class = "sbert_missing_package"
     )
   }
   if (any(!nzchar(trimws(text)))) {
-    stop("text cannot contain blank documents.", call. = FALSE)
+    sbert_abort(
+      "text cannot contain blank documents.",
+      class = "sbert_bad_input"
+    )
   }
   if (!is.null(model) && !is.null(embeddings)) {
-    stop("Supply model or embeddings, not both.", call. = FALSE)
+    sbert_abort(
+      "Supply model or embeddings, not both.",
+      class = "sbert_bad_input"
+    )
   }
 
   if (is.null(embeddings)) {
@@ -1490,9 +1550,9 @@ topics <- function(
       anyNA(embedding_matrix) ||
       any(!is.finite(embedding_matrix))
   ) {
-    stop(
+    sbert_abort(
       "embeddings must be a finite numeric matrix with one row per document.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
 
@@ -1515,20 +1575,23 @@ topics <- function(
     )
     n_seeds <- length(seed_texts)
     if (fixed_seeds && n_seeds != n_topics) {
-      stop(
+      sbert_abort(
         "With fixed_seeds = TRUE, n_topics must equal the number of seeds.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     if (n_seeds > n_topics) {
-      stop("More seeds than topics; raise n_topics.", call. = FALSE)
+      sbert_abort(
+        "More seeds than topics; raise n_topics.",
+        class = "sbert_bad_input"
+      )
     }
     if (is.null(seed_embeddings)) {
       if (is.null(seed_model)) {
-        stop(
+        sbert_abort(
           "Seeds need the encoding model; with precomputed embeddings, ",
           "supply seed_embeddings as well.",
-          call. = FALSE
+          class = "sbert_bad_input"
         )
       }
       seed_embeddings <- encode_topic_documents(
@@ -1688,28 +1751,25 @@ topics <- function(
   )
 }
 
-#' Print a Semantic Topic Model
+#' Print a topic model
 #'
-#' Shows the fit at a glance: the number of documents and topics, the
-#' embedding source, the clustering algorithm, the size of every topic, and
-#' the share of the embedding variance that lies between topics. Use
-#' [summary()][summary.sbert_topic_model] for coherence per topic and
-#' [topic_sizes()] for the labeled size table.
+#' @description
+#' `print()` shows a fitted topic model at a glance: the number of documents
+#' (and of segments, for a segmented fit), the number of topics, the embedding
+#' model, the clustering algorithm, the size of every topic, and the share of
+#' the embedding variance that lies between topics.
 #'
-#' @param x An `sbert_topic_model` object.
+#' @param x A topic model fitted by [topics()].
 #' @param ... Ignored.
-#' @return The topic model object, invisibly.
+#' @return `x`, invisibly.
+#' @seealso [summary()][summary.sbert_topic_model] for coherence and topic
+#'   diversity; [topic_sizes()] for the labeled size table;
+#'   [as.data.frame()][as.data.frame.sbert_topic_model] for the tables.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' print(topics(text, n_topics = 2, embeddings = embeddings, n_terms = 3))
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' print(topics(corpus, n_topics = 6, column = "translation",
+#'              embeddings = feedback_embeddings))
 print.sbert_topic_model <- function(x, ...) {
   stopifnot(inherits(x, "sbert_topic_model"))
   explained <- if (x$diagnostics$totss > 0) {
@@ -1744,26 +1804,35 @@ print.sbert_topic_model <- function(x, ...) {
   invisible(x)
 }
 
-#' Name the Topics of a Fitted Model
+#' Name the topics of a fitted model
 #'
-#' Replaces each topic's label with a name you choose after reading its
-#' representative texts, for example the kind of message a topic holds
-#' (`"Correction"`, `"Short hint"`). The names replace the `label` column of
-#' every table keyed by topic, so they appear in
-#' [summary()][summary.sbert_topic_model], [topic_sizes()],
+#' @description
+#' `name_topics()` replaces the label of every topic of a fitted model with the
+#' names given, in topic order. The labels that [topics()] gives are drawn from
+#' the data (the most central text of each topic, or its most distinctive
+#' terms); once the representative texts of each topic have been read, a short
+#' name for what the topic is about, such as the kind of message it holds,
+#' communicates the result better.
+#'
+#' The names then appear in every table and figure that refers to a topic,
+#' including [summary()][summary.sbert_topic_model], [topic_sizes()],
 #' [terms()][terms.sbert_topic_model], [representatives()],
-#' [predict()][predict.sbert_topic_model], [topic_hierarchy()], and every
-#' plot. Nothing is refitted.
+#' [predict()][predict.sbert_topic_model], [topic_hierarchy()], and
+#' [plot()][plot.sbert_topic_model]. The model is not refitted; the result is
+#' the topic model with its labels replaced.
 #'
-#' @param object A fitted [topics()] model.
-#' @param labels Character vector with one distinct, non-empty name per
-#'   topic, in topic order (topic 1 first).
-#' @return The model with its labels replaced: an `sbert_topic_model` whose
-#'   `$settings$topic_names` records the names. [reduce_topics()] merges
-#'   topics, so it drops the names and labels the merged topics afresh.
-#' @section Errors: Raises a condition of class `sbert_bad_topic_names` when
-#'   `labels` is not a character vector with one distinct, non-empty,
-#'   non-missing name per topic.
+#' [reduce_topics()] drops the names, because merged topics need new ones.
+#'
+#' @param object A topic model fitted by [topics()].
+#' @param labels Character vector of distinct, non-empty names, one per topic,
+#'   in topic order (topic 1 first).
+#' @return The topic model with its labels replaced; an object of class
+#'   `sbert_topic_model`.
+#' @section Conditions:
+#'   An error of class `sbert_bad_topic_names` when `labels` is not a
+#'   character vector of distinct, non-empty, non-missing names, one per topic.
+#' @seealso [representatives()] to read each topic before naming it;
+#'   [topics()].
 #' @export
 #' @examples
 #' text <- c(
@@ -1771,8 +1840,8 @@ print.sbert_topic_model <- function(x, ...) {
 #'   "Stocks and bonds trade", "Markets price shares"
 #' )
 #' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' fitted <- topics(text, 2, embeddings = embeddings)
-#' named <- name_topics(fitted, c("Pets", "Finance"))
+#' topic_model <- topics(text, n_topics = 2, embeddings = embeddings)
+#' named <- name_topics(topic_model, c("Pets", "Finance"))
 #' topic_sizes(named)
 name_topics <- function(object, labels) {
   stopifnot(
@@ -1791,7 +1860,7 @@ name_topics <- function(object, labels) {
         "`labels` must be %d distinct, non-empty names, one per topic in topic order.",
         n_topics
       ),
-      class = "sbert_bad_topic_names",
+      class = c("sbert_bad_topic_names", "sbert_error"),
       call = NULL
     ))
   }

@@ -2,21 +2,28 @@
 % Please edit documentation in R/compare.R
 \name{select_topics}
 \alias{select_topics}
-\title{Deprecated: Compare Topic Counts}
+\alias{sbert-deprecated}
+\title{Compare numbers of topics (deprecated)}
 \usage{
 select_topics(...)
 }
 \arguments{
-\item{...}{Passed to \code{\link[=compare_topics]{compare_topics()}}.}
+\item{...}{Arguments passed to \code{\link[=compare_topics]{compare_topics()}}.}
 }
 \value{
-See \code{\link[=compare_topics]{compare_topics()}}.
+The result of \code{\link[=compare_topics]{compare_topics()}}.
 }
 \description{
-\code{select_topics()} is the former name of \code{\link[=compare_topics]{compare_topics()}}. It never
-selected a count, it compared them, so it was renamed in sbert 0.5.4. This
-alias forwards every argument and warns once per session.
+\code{select_topics()} is the former name of \code{\link[=compare_topics]{compare_topics()}}, renamed in
+sbert 0.5.4 because the function compares candidate numbers of topics and
+does not select one. It passes every argument to \code{\link[=compare_topics]{compare_topics()}} and
+warns that it is deprecated.
 }
+\section{Conditions}{
+
+A deprecation warning (class \code{deprecatedWarning}) on every call.
+}
+
 \examples{
 text <- c(
   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
@@ -26,7 +33,10 @@ embeddings <- rbind(
   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 )
-# Deprecated: prefer compare_topics(). This warns once, then forwards.
-suppressWarnings(select_topics(text, n_topics = 2:3, embeddings = embeddings))
+# Warns, then forwards to compare_topics()
+select_topics(text, n_topics = 2:3, embeddings = embeddings)
+}
+\seealso{
+\code{\link[=compare_topics]{compare_topics()}}.
 }
 \keyword{internal}

@@ -68,24 +68,54 @@ prepare_sbert_inputs <- function(
   )
 }
 
-#' Pool Token Embeddings into Sentence Embeddings
+#' Pool token embeddings into sentence embeddings
 #'
-#' Applies the pooling strategy of the loaded model — attention-mask-aware
-#' mean pooling (the Sentence-BERT default) or CLS-token pooling (used by the
-#' BGE and mxbai families) — and optional row-wise L2 normalization.
+#' @description
+#' `pool()` reduces the token embeddings of each text to one sentence embedding,
+#' by mean or CLS pooling. A transformer encoder returns one vector per word
+#' piece of a text, whereas a sentence embedding is one vector per text, and the
+#' pooling rule is part of the model's definition: Sentence-BERT models average
+#' the token vectors over the positions that hold real tokens (mean pooling;
+#' Reimers and Gurevych, 2019), while the BGE and mxbai families take the vector
+#' of the first, classification token (CLS pooling).
 #'
-#' @param token_embeddings Numeric array shaped batch by sequence by hidden.
-#' @param attention_mask Numeric matrix shaped batch by sequence, containing
-#'   only zero and one.
-#' @param normalize Whether to L2-normalize every sentence vector.
-#' @param method `"mean"` (default) or `"cls"` (first token).
-#' @return A numeric matrix shaped batch by hidden.
+#' It applies either rule to an array of token embeddings and its attention
+#' mask, and by default scales each pooled vector to unit Euclidean (L2) length,
+#' the form in which cosine similarity is a dot product. It returns a matrix
+#' with one row per text. It is the step [encode()] runs after the ONNX model,
+#' exposed for checking the arithmetic or for pooling token embeddings computed
+#' elsewhere.
+#'
+#' To embed text, use [encode()], which tokenizes, runs the model, and pools
+#' with the rule pinned for that model; `models(detail = TRUE)` lists each
+#' model's rule.
+#'
+#' @param token_embeddings Numeric array of token embeddings, shaped texts x
+#'   tokens x hidden dimensions.
+#' @param attention_mask Numeric matrix shaped texts x tokens: 1 for a real
+#'   token, 0 for padding.
+#' @param normalize Scale each pooled vector to unit L2 length (default
+#'   `TRUE`).
+#' @param method `"mean"` (default), the average over positions with mask 1,
+#'   or `"cls"`, the first token.
+#' @return A numeric matrix with one row per text and one column per hidden
+#'   dimension, without dimnames.
+#' @seealso [encode()] for embeddings of text; [models()] for the pooling
+#'   rule of each pinned model.
+#' @references Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence
+#'   embeddings using Siamese BERT-networks. *Proceedings of the 2019
+#'   Conference on Empirical Methods in Natural Language Processing and the
+#'   9th International Joint Conference on Natural Language Processing
+#'   (EMNLP-IJCNLP)*, 3982-3992. \doi{10.18653/v1/D19-1410}
 #' @export
 #' @examples
+#' # Two texts, three token positions, two hidden dimensions; the first text
+#' # has two real tokens, the second one.
 #' hidden <- array(1:12, dim = c(2, 3, 2))
 #' mask <- matrix(c(1, 1, 0, 1, 0, 0), nrow = 2, byrow = TRUE)
 #' pool(hidden, mask)
 #' pool(hidden, mask, method = "cls")
+#' pool(hidden, mask, normalize = FALSE)
 pool <- function(
   token_embeddings,
   attention_mask,
@@ -209,16 +239,19 @@ encode_sbert_batch <- function(model, text, normalize) {
   model_output <- tryCatch(
     run_sbert_onnx(model$onnx, inputs, token_type_ids = send_token_type_ids),
     error = function(error_condition) {
-      stop(
+      sbert_abort(
         sprintf("ONNX inference failed: %s", conditionMessage(error_condition)),
-        call. = FALSE
+        class = "sbert_model_error"
       )
     }
   )
 
   token_embeddings <- model_output[["last_hidden_state"]]
   if (is.null(token_embeddings)) {
-    stop("The ONNX model did not return 'last_hidden_state'.", call. = FALSE)
+    sbert_abort(
+      "The ONNX model did not return 'last_hidden_state'.",
+      class = "sbert_model_error"
+    )
   }
   pooled <- pool_impl(
     token_embeddings,
@@ -234,9 +267,9 @@ encode_sbert_batch <- function(model, text, normalize) {
   # becomes Inf * 0 = NaN. anyNA() alone missed both, which let infinities reach
   # the caller as finite-looking embeddings.
   if (!all(is.finite(pooled))) {
-    stop(
+    sbert_abort(
       "ONNX inference produced missing or non-finite values.",
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
   pooled
@@ -319,68 +352,85 @@ run_sbert_onnx <- function(onnx_model, inputs, token_type_ids = TRUE) {
   }
 }
 
-#' Encode Text with Sentence-BERT
+#' Encode texts as sentence embeddings
 #'
-#' Turns each text into one embedding: a vector in which texts with similar
-#' meaning lie close together. Encoding is the step every topic workflow
-#' starts from and by far its most expensive one, so encode once and pass the
-#' matrix to the `embeddings` argument of [topics()], [compare_topics()],
-#' [topic_corpus()], and the inference verbs. Each text is tokenized with the
-#' model's own tokenizer, truncated to the model's maximum length, run
-#' through the ONNX graph, pooled with [pool()], and by default
-#' L2-normalized. The static `potion-base-8M` model instead averages
-#' looked-up token vectors, with no ONNX Runtime involved.
+#' @description
+#' `encode()` returns one sentence embedding per text from a pinned model (see
+#' [models()]): a point in a vector space learned so that texts with similar
+#' meaning lie close together, whatever words they use. Sentence-BERT models
+#' (Reimers and Gurevych, 2019) obtain such a vector by running a transformer
+#' encoder over the text and pooling its token vectors; the cosine of the angle
+#' between two embeddings then measures how close the two texts are in meaning.
 #'
-#' @param text Character vector of sentences. Empty strings are supported;
-#'   missing values are rejected.
-#' @param model A loaded [sbert_model][load_model()], the name of a
-#'   pinned model from [models()], or `NULL` for the default
-#'   `all-MiniLM-L6-v2`. Names are loaded lazily and kept in a session
-#'   cache; the first use of a not-yet-installed model offers a one-time
-#'   verified download (interactive prompt, or
-#'   `options(sbert.download = TRUE)` in scripts).
-#' @param batch_size Positive number of sentences processed per ONNX call.
-#' @param normalize Whether to return row-wise L2-normalized embeddings.
-#' @param prefix Text prepended to every input before tokenization. `NULL`
-#'   (default) uses the model's pinned prefix (for example `"query: "` for
-#'   E5 models, which require one); `""` disables prefixing.
-#' @param sort_by_length When `TRUE`, group inputs of similar length into the
-#'   same batch before encoding and restore the original order afterwards.
-#'   Sequences in a batch are padded to the longest member, so mixed-length
-#'   input makes the model compute over padding: on clause-level segments
-#'   60.1% of token work is padding in input order against 1.6% when sorted,
-#'   measured at 1.9x faster end to end. Whole documents of similar length gain
-#'   little (1.1x). Off by default because regrouping changes batch composition,
-#'   which moves embeddings by around 1e-7 — enough to flip a rare borderline
-#'   topic assignment, the same trade-off as `dedupe_segments` in
-#'   [topic_gamma()]. Row order of the result is unaffected.
-#' @param cache Optional path to an embedding cache file. When supplied, every
-#'   document is looked up by a SHA-256 digest of its own text together with the
-#'   model identity, revision, dimension, maximum length, pooling method and
-#'   `normalize` setting; only documents with no matching entry are encoded, and
-#'   the file is updated with whatever was newly computed. Corpora are usually
-#'   edited rather than replaced — a few records corrected, a year appended, rows
-#'   reordered — and encoding is about 97% of the cost of a topic workflow, so
-#'   reuse dominates. Changing 38 documents of 3,847 cost 0.59 s against 57 s to
-#'   re-encode the corpus. Repeated documents within a single call are also
-#'   encoded once (177 of the 3,847 bundled `covid` abstracts repeat an
-#'   earlier one).
+#' Each text is tokenized with the model's own tokenizer, truncated to the
+#' model's maximum length, run through the ONNX graph, pooled with the model's
+#' rule ([pool()]), and by default scaled to unit length. The static
+#' `potion-base-8M` model instead averages looked-up token vectors and needs no
+#' ONNX Runtime. With `cache`, embeddings are stored in a file keyed by text and
+#' model, so encoding an edited corpus again computes only the new or changed
+#' texts. The result is a numeric matrix with one row per text, in input order.
 #'
-#'   The key deliberately excludes `batch_size` and `sort_by_length`, which shift
-#'   embeddings by around 1e-7 through batch composition alone. Cached values are
-#'   therefore stable to whatever computed them first rather than bit-identical
-#'   to a fresh encode under different batching — the same trade-off as
-#'   `sort_by_length` itself. A cache that cannot be read, or that was written
-#'   for a different embedding dimension, is discarded with a warning and rebuilt
-#'   rather than trusted.
-#' @return A numeric matrix with one row per input, in input order, and one
-#'   column per embedding dimension of the model (for example 384 for
-#'   `all-MiniLM-L6-v2`; see `models()`).
+#' Encoding is the expensive step of a workflow, and every analysis in the
+#' package (topics, the assignment of new texts, similarity) starts from its
+#' result: encode once and pass the matrix to the `embeddings` argument of
+#' [topics()], [compare_topics()], [topic_corpus()],
+#' [predict()][predict.sbert_topic_model], [representatives()] and
+#' [topic_gamma()]. To split long documents into sentences or clauses first, use
+#' [segment()]. The bundled [feedback_embeddings] matrix is the output of
+#' `encode()` for 600 feedback messages and lets the examples run without a
+#' model.
+#'
+#' @param text Character vector, one text per element. Empty strings are
+#'   allowed; `NA` is not. Names become the row names of the result.
+#' @param model A model from [load_model()] or [load_custom()], the name of a
+#'   pinned model from [models()], or `NULL` (default) for
+#'   `"all-MiniLM-L6-v2"`. A name is loaded once per session. A model that is
+#'   not installed is downloaded only with consent: an interactive prompt, or
+#'   `options(sbert.download = TRUE)` in a script.
+#' @param batch_size Number of texts per model call (default 32).
+#' @param normalize Scale each embedding to unit L2 length (default `TRUE`).
+#' @param prefix Text prepended to every input. `NULL` (default) uses the
+#'   model's pinned prefix (for example `"query: "` for E5 models); `""` uses
+#'   none.
+#' @param sort_by_length Batch texts of similar length together, which reduces
+#'   computation over padding, most of all for segments of varying length
+#'   (default `FALSE`). The rows keep input order, but the values can differ
+#'   from an unsorted run by floating-point rounding, enough to change the
+#'   assignment of a rare unit on a topic boundary.
+#' @param cache `NULL` (default), or the path of an `.rds` file of stored
+#'   embeddings. Texts already stored for the same model and settings are read
+#'   from the file; the others are encoded once each (repeats within the call
+#'   included) and added to it. A file that cannot be read, or was written for
+#'   another embedding dimension, is rebuilt with a warning.
+#' @return A numeric matrix with one row per text, in input order, and one
+#'   column per embedding dimension of the model (the `dimensions` column of
+#'   [models()]). Row names are `names(text)`. An empty `text` gives a matrix
+#'   with no rows.
+#' @section Conditions:
+#'   `sbert_unknown_model` when `model` names no pinned model;
+#'   `sbert_model_not_installed` when the model is not installed and its
+#'   download is declined or not permitted; `sbert_download_failed` or
+#'   `sbert_cache_invalid` when a permitted download fails or does not verify;
+#'   `sbert_cache_invalid` when installed files fail verification;
+#'   `sbert_runtime_missing` when ONNX Runtime is not installed;
+#'   `sbert_missing_package` when the static model is loaded without
+#'   jsonlite; `sbert_model_error` when the model cannot be loaded, or
+#'   inference fails or returns non-finite values. Warning
+#'   `sbert_cache_rebuilt` when the `cache` file is unusable.
+#' @seealso [load_model()] and [models()] for the models; [segment()] to
+#'   split documents first; [topic_similarity()] to compare embeddings;
+#'   [topics()] to fit topics on them.
+#' @references Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence
+#'   embeddings using Siamese BERT-networks. *Proceedings of the 2019
+#'   Conference on Empirical Methods in Natural Language Processing and the
+#'   9th International Joint Conference on Natural Language Processing
+#'   (EMNLP-IJCNLP)*, 3982-3992. \doi{10.18653/v1/D19-1410}
 #' @export
 #' @examples
-#' # Embeddings need a downloaded model, so the full workflow is in the
-#' # interactive block below. Segmenting needs none.
-#' segment("One sentence. Another sentence.", level = "sentence")
+#' # The bundled embeddings are what encode() returns for 600 feedback
+#' # messages: one row per text, one column per model dimension.
+#' dim(feedback_embeddings)
+#' topic_similarity(head(feedback_embeddings, 3))
 #'
 #' \donttest{
 #' if (interactive()) {

@@ -2,29 +2,38 @@
 % Please edit documentation in R/model.R
 \name{print.sbert_model}
 \alias{print.sbert_model}
-\title{Print a Loaded Model}
+\title{Print a loaded model}
 \usage{
 \method{print}{sbert_model}(x, ...)
 }
 \arguments{
-\item{x}{An \code{sbert_model} object.}
+\item{x}{An \code{sbert_model} from \code{\link[=load_model]{load_model()}} or \code{\link[=load_custom]{load_custom()}}.}
 
 \item{...}{Ignored.}
 }
 \value{
-The model object, invisibly.
+\code{x}, invisibly.
 }
 \description{
-Shows the model's identity and the settings inference will run under:
-Hugging Face id, pinned revision, embedding dimensions, and backend.
+\code{print()} shows a loaded model: the repository id, the pinned revision, the
+number of embedding dimensions, and the backend. A loaded model is identified
+by its Hugging Face repository and the revision it is pinned to; together
+with the embedding dimension and the execution backend, these are what a
+report needs to state which model produced a set of embeddings.
+
+For the full list of settings of every pinned model, including pooling and
+prefix, use \code{models(detail = TRUE)}.
 }
 \examples{
-# Pinned models that can be loaded and printed.
-models()
+# Repository ids and revisions of the pinned models, without loading one.
+models(detail = TRUE)
 
 \donttest{
 if (interactive()) {
   print(load_model())
 }
 }
+}
+\seealso{
+\code{\link[=load_model]{load_model()}}; \code{\link[=models]{models()}} for the settings of all pinned models.
 }

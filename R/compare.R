@@ -2,96 +2,98 @@
 # counts and report coherence, topic_diversity, and cluster separation side by
 # side, so the chosen granularity is justified by numbers rather than habit.
 
-#' Compare Topic Counts Before Committing to One
+#' Compare numbers of topics and segmentation levels
 #'
-#' Fits [topics()] once per candidate topic count — deterministically,
-#' on one shared set of embeddings — and returns the quality metrics that
-#' justify a granularity choice: mean topic coherence, topic diversity, and
-#' the share of embedding variance separated between topics. The verb
-#' compares; it never chooses for you. Take the count you want out of the
-#' comparison with [fitted()][fitted.sbert_topic_sweep].
+#' @description
+#' `compare_topics()` fits [topics()] for every candidate number of topics, and
+#' for every segmentation level in `segment`, on one shared set of embeddings,
+#' and reports measures of the quality of each fit. The number of topics, like
+#' the unit of analysis (the whole document or its sentences, clauses, or
+#' phrases), sets the granularity of a topic model and has no single correct
+#' value: fewer topics give broad themes, more topics give narrower ones, until
+#' some of them split a theme into near-duplicates.
 #'
-#' There is no single correct topic count; this verb replaces the habit of
-#' picking one by feel with a table you can defend. Coherence typically falls
-#' as counts grow while separation rises, so look for the count after which
-#' coherence stops improving (or starts degrading) rather than a global
-#' maximum.
+#' Three measures are reported per candidate: the mean coherence of the topics'
+#' terms ([coherence()]), the diversity of the terms across topics
+#' ([topic_diversity()]), and the share of the embedding variance that lies
+#' between topics. Coherence tends to fall and between-topic variance to rise as
+#' the number of topics grows, so a useful candidate is often the count after
+#' which coherence stops improving rather than the count with the highest
+#' coherence. Comparing candidates on such measures is a better basis for the
+#' choice than fixing a number in advance. The function compares; it does not
+#' choose.
 #'
-#' @param text A character vector of documents, a data frame together with
-#'   `column`, or a prepared [topic_corpus()]. Passing a corpus (or letting
-#'   `compare_topics()` build one internally) segments, embeds, and tokenizes
-#'   the documents once and reuses that work across every candidate, instead
-#'   of re-tokenizing per candidate.
-#' @param n_topics Integer vector of candidate topic counts, each at least 2
-#'   and below the number of modeled units. Default `c(5, 10, 15, 20, 25, 30)`.
-#' @param model A loaded sbert model, a pinned model name, or `NULL` for the
-#'   session default. Ignored when `embeddings` is supplied.
+#' The result is a table of class `sbert_topic_sweep` with one row per
+#' candidate. The fitted candidates are kept, so a chosen one is taken out with
+#' [fitted()][fitted.sbert_topic_sweep] without refitting.
+#'
+#' The measures are a guide; the choice should also rest on reading the
+#' representative texts of the candidate models.
+#'
+#' @param text Documents: a character vector, a data frame together with
+#'   `column`, or a corpus prepared by [topic_corpus()].
+#' @param n_topics Candidate numbers of topics: distinct integers of at least
+#'   2 and below the number of modeled units. Default
+#'   `c(5, 10, 15, 20, 25, 30)`.
+#' @param model The encoder: a model from [load_model()], a pinned model name,
+#'   or `NULL` (default) for the default model. Not used when `embeddings` are
+#'   given.
 #' @param embeddings Optional precomputed embedding matrix, one row per
-#'   document (or per segment when `segment` is not `"document"`); supply it
-#'   to avoid re-encoding.
-#' @param measure Coherence measure, `"npmi"` (default) or `"umass"`.
-#' @param n_terms Top terms per topic used for coherence and topic diversity.
-#'   Default `10`.
-#' @param coherence_weight How each candidate's topic coherences are averaged:
-#'   `"none"` (default) gives every topic the same weight; `"size"` weights
-#'   each topic by its number of modeled units, so a tiny topic of a few
-#'   near-identical texts (which scores very high) cannot decide the
-#'   comparison. Passed to [coherence()] as `weight`.
-#' @param n_representatives Representative documents kept per topic in each
-#'   retained model. Default `1`; raise it when the stored models are meant
-#'   to be inspected rather than only compared.
-#' @param keep_models Whether to retain every fitted model so the chosen
-#'   granularity needs no refitting. Default `TRUE`; set `FALSE` to return
-#'   only the comparison table when memory matters.
-#' @param batch_size Number of texts encoded per model call when encoding is
-#'   needed. Default `32`.
-#' @param cores Number of forked worker processes. Default `1` (serial). Above
-#'   one, the shared corpus is tokenized in parallel and the candidates — which
-#'   are independent and deterministic — are fitted in parallel, on Unix-alikes
-#'   (serial fallback on Windows). Results are identical for any core count.
-#' @param ... Further arguments passed to [topics()] (for example
-#'   `stop_words` or `weighting`).
-#' @param segment The unit the candidates are fitted on, as in [topics()]:
-#'   `"document"` (default), `"sentence"`, `"clause"`, or `"phrase"`. Give
-#'   several levels — for example `c("document", "sentence", "clause")` — to
-#'   compare the segmentations as well as the counts: every level is fitted
-#'   across every candidate, the table gains a leading `segment` column, the
-#'   plot draws one line per level, and [fitted()][fitted.sbert_topic_sweep]
-#'   takes `segment =` alongside `n_topics`. `max_tokens`, `merge_below`, and
-#'   `min_content` then apply to
-#'   the segmented levels only. With several levels, precomputed `embeddings`
-#'   are a list of matrices named by level.
+#'   modeled unit. When several `segment` levels are compared, a list of
+#'   matrices named by level. Default `NULL`.
+#' @param measure Coherence measure: `"npmi"` (default) or `"umass"`.
+#' @param n_terms Top terms per topic used for coherence and diversity
+#'   (default 10).
+#' @param coherence_weight How the coherences of a candidate's topics are
+#'   averaged: `"none"` (default), every topic equally, or `"size"`, each
+#'   topic in proportion to its number of units, so a very small topic cannot
+#'   decide the comparison.
+#' @param n_representatives Representative units stored per topic in each
+#'   candidate (default 1).
+#' @param keep_models Whether to keep the fitted candidates (default `TRUE`).
+#'   With `FALSE`, only the table is kept and [fitted()][fitted.sbert_topic_sweep]
+#'   is not available.
+#' @param batch_size Texts encoded per model call (default 32).
+#' @param cores Number of forked worker processes for tokenization and for
+#'   fitting the candidates (default 1; Unix-alikes only). Results do not
+#'   depend on it.
+#' @param segment Unit or units of analysis, as in [topics()]: one or more of
+#'   `"document"` (default), `"sentence"`, `"clause"`, and `"phrase"`. With
+#'   several levels, every level is fitted for every candidate.
+#' @param ... Further arguments to [topics()], for example `stop_words` or
+#'   `weighting`.
 #' @inheritParams topics
-#' @return A base data frame with one row per candidate and columns
-#'   `n_topics`, `coherence` (mean over the topics with at least two scorable
-#'   terms, as in [summary()][summary.sbert_topic_model], weighted as
-#'   `coherence_weight` says; `NA` only when no topic can be scored),
-#'   `topic_diversity`, and `explained` (between-topic share of total
-#'   variance), preceded by `segment` when several levels were compared. The
-#'   coherence measure is recorded in the `measure` attribute and the averaging
-#'   in the `coherence_weight` attribute. When `keep_models = TRUE` the result also carries
-#'   class `sbert_topic_sweep` and the fitted models, which
-#'   [fitted()][fitted.sbert_topic_sweep] extracts,
-#'   [as.data.frame()][as.data.frame.sbert_topic_sweep] strips, and
-#'   [plot.sbert_topic_sweep()] draws.
-#' @seealso [fitted()][fitted.sbert_topic_sweep] to pull one fitted model out
-#'   of the comparison.
+#' @return An object of class `sbert_topic_sweep`: a data frame with one row
+#'   per candidate and columns `n_topics`, `coherence` (the mean over the
+#'   topics that can be scored, averaged as `coherence_weight` says; `NA` when
+#'   no topic can be scored), `topic_diversity`, `explained` (the
+#'   between-topic share of the variance), and `converged`, preceded by
+#'   `segment` when several levels are compared. The coherence measure and the
+#'   weighting are kept as the attributes `measure` and `coherence_weight`.
+#'   [summary()][summary.sbert_topic_sweep] gives the most coherent candidate
+#'   per level, [plot()][plot.sbert_topic_sweep] draws the measures, and
+#'   [fitted()][fitted.sbert_topic_sweep] returns a fitted candidate.
+#' @section Conditions:
+#'   Errors of class `sbert_bad_input` when fewer than three units are
+#'   modeled, a candidate is not below the number of units, a list of
+#'   embeddings is given for a single level, several levels are given with a
+#'   prepared corpus or with embeddings that are not a list named by level;
+#'   and the conditions of [topics()] for each candidate.
+#'   Non-convergence of a candidate is recorded in the `converged` column.
+#' @seealso [topics()] to fit one model; [coherence()] and
+#'   [topic_diversity()] for the measures; [topic_hierarchy()] and
+#'   [reduce_topics()] to merge the topics of a fit.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' comparison <- compare_topics(corpus, n_topics = c(4, 6, 8),
+#'                              column = "translation",
+#'                              embeddings = feedback_embeddings)
 #' comparison
-#' fitted(comparison, n_topics = 2)
+#' summary(comparison)
+#' fitted(comparison, n_topics = 6)
 #'
-#' # Documents against sentences, in one table and one plot (offline: one
-#' # embedding matrix per level, one row per unit of that level).
+#' # Documents against sentences (one embedding matrix per level)
 #' documents <- c(
 #'   "Cats chase mice. Stocks and bonds trade.",
 #'   "Dogs chase balls. Markets price shares.",
@@ -111,7 +113,6 @@
 #'   n_terms = 2
 #' )
 #' levels
-#' fitted(levels, n_topics = 2, segment = "sentence")
 compare_topics <- function(
   text,
   n_topics = c(5L, 10L, 15L, 20L, 25L, 30L),
@@ -169,10 +170,10 @@ compare_topics <- function(
     ))
   }
   if (is.list(embeddings) && !is.data.frame(embeddings)) {
-    stop(
+    sbert_abort(
       "A list of embedding matrices is only for comparing several segment ",
       "levels; supply one matrix for a single level.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   # The upper bound is the number of modeled units. At document level it is
@@ -277,6 +278,9 @@ compare_topics <- function(
         coherence = attr(coherence, "mean_coherence"),
         topic_diversity = topic_diversity(fitted, n_terms = n_terms),
         explained = explained,
+        # Forked candidates cannot pass warnings back, so non-convergence is
+        # carried in the table itself.
+        converged = !isFALSE(fitted$diagnostics$converged),
         stringsAsFactors = FALSE
       )
     },
@@ -321,10 +325,10 @@ compare_topic_segments <- function(
   dots
 ) {
   if (inherits(text, "sbert_topic_corpus")) {
-    stop(
+    sbert_abort(
       "A prepared topic_corpus fixes one segmentation; pass the raw text to ",
       "compare several segment levels.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   per_level <- is.null(embeddings) ||
@@ -333,10 +337,10 @@ compare_topic_segments <- function(
         all(segments %in% names(embeddings))
     )
   if (!per_level) {
-    stop(
+    sbert_abort(
       "With several segment levels, `embeddings` must be a list of matrices ",
       "named by level.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   comparisons <- lapply(
@@ -402,12 +406,12 @@ plot_comparison_fit <- function(x, n_topics, segment, n_terms, n_representatives
   candidates <- unique(x$n_topics)
   if (is.null(n_topics)) {
     if (length(candidates) > 1L) {
-      stop(
+      sbert_abort(
         sprintf(
           "plot(type = \"fit\"): pass n_topics = one of %s.",
           paste(candidates, collapse = ", ")
         ),
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     n_topics <- candidates
@@ -448,16 +452,16 @@ plot_comparison_fit <- function(x, n_topics, segment, n_terms, n_representatives
 # unassigned to a topic of its own.
 validate_candidate_counts <- function(n_topics, n_units) {
   if (n_units < 3L) {
-    stop(
+    sbert_abort(
       sprintf(
         "compare_topics needs at least three units; %d supplied.",
         n_units
       ),
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   if (any(n_topics >= n_units)) {
-    stop(
+    sbert_abort(
       sprintf(
         paste0(
           "Every candidate n_topics must be below the number of units ",
@@ -466,20 +470,26 @@ validate_candidate_counts <- function(n_topics, n_units) {
         n_units,
         paste(n_topics[n_topics >= n_units], collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   invisible(n_topics)
 }
 
-#' Deprecated: Compare Topic Counts
+#' Compare numbers of topics (deprecated)
 #'
-#' `select_topics()` is the former name of [compare_topics()]. It never
-#' selected a count, it compared them, so it was renamed in sbert 0.5.4. This
-#' alias forwards every argument and warns once per session.
+#' @description
+#' `select_topics()` is the former name of [compare_topics()], renamed in
+#' sbert 0.5.4 because the function compares candidate numbers of topics and
+#' does not select one. It passes every argument to [compare_topics()] and
+#' warns that it is deprecated.
 #'
-#' @param ... Passed to [compare_topics()].
-#' @return See [compare_topics()].
+#' @param ... Arguments passed to [compare_topics()].
+#' @return The result of [compare_topics()].
+#' @section Conditions:
+#'   A deprecation warning (class `deprecatedWarning`) on every call.
+#' @seealso [compare_topics()].
+#' @aliases sbert-deprecated
 #' @examples
 #' text <- c(
 #'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
@@ -489,8 +499,8 @@ validate_candidate_counts <- function(n_topics, n_units) {
 #'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
 #'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 #' )
-#' # Deprecated: prefer compare_topics(). This warns once, then forwards.
-#' suppressWarnings(select_topics(text, n_topics = 2:3, embeddings = embeddings))
+#' # Warns, then forwards to compare_topics()
+#' select_topics(text, n_topics = 2:3, embeddings = embeddings)
 #' @keywords internal
 #' @export
 select_topics <- function(...) {
@@ -498,57 +508,62 @@ select_topics <- function(...) {
   compare_topics(...)
 }
 
-#' Extract One Fitted Model from a Topic-Count Comparison
+#' Extract a fitted model from a topic-count comparison
 #'
-#' Returns the model [compare_topics()] already fitted for a given topic
-#' count, so choosing a granularity from the comparison table costs no
-#' refitting.
+#' @description
+#' `fitted()` returns one candidate model from a [compare_topics()] comparison,
+#' identical to a [topics()] fit with the same settings, without fitting it
+#' again. [compare_topics()] fits a model for every candidate number of topics
+#' and, by default, keeps them, so once a candidate has been chosen from the
+#' comparison its model can be taken out directly.
 #'
 #' @param object A comparison returned by [compare_topics()] with
 #'   `keep_models = TRUE` (the default).
-#' @param ... Unused, present for generic consistency.
-#' @param n_topics The topic count to extract. Must be one of the candidates
-#'   in the comparison.
-#' @param segment The segment level to extract when the comparison spans
-#'   several (`compare_topics(segment = c(...))`); one of its levels. Leave
-#'   `NULL` for a single-level comparison.
-#' @return The `sbert_topic_model` fitted for that candidate.
+#' @param n_topics The number of topics of the model to return; one of the
+#'   candidates.
+#' @param segment The segment level of the model to return, when the
+#'   comparison spans several levels; `NULL` (default) for a single-level
+#'   comparison.
+#' @param ... Ignored.
+#' @return A topic model of class `sbert_topic_model`, as returned by
+#'   [topics()].
+#' @section Conditions:
+#'   Errors of class `sbert_no_fitted_model` when the comparison kept no
+#'   models or holds no model for `n_topics`, and `sbert_bad_input` when
+#'   `segment` is given for a single-level comparison or missing for a
+#'   comparison of several levels.
+#' @seealso [compare_topics()]; [summary()][summary.sbert_topic_sweep] for
+#'   the most coherent candidate.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Kittens chase mice too", "Cats nap daily",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0, 0), c(0.98, 0.02, 0), c(0.96, 0, 0.04),
-#'   c(0, 1, 0), c(0.02, 0.98, 0), c(0, 0.96, 0.04)
-#' )
-#' comparison <- compare_topics(
-#'   text, n_topics = 2:3, embeddings = embeddings, n_terms = 3
-#' )
-#' fitted(comparison, n_topics = 2)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' comparison <- compare_topics(corpus, n_topics = c(4, 6),
+#'                              column = "translation",
+#'                              embeddings = feedback_embeddings)
+#' topic_model <- fitted(comparison, n_topics = 6)
+#' topic_sizes(topic_model, weights = "n")
 fitted.sbert_topic_sweep <- function(object, n_topics, segment = NULL, ...) {
   sweep <- object
   models <- attr(sweep, "models")
   if (is.null(models)) {
-    stop(
+    sbert_abort(
       "fitted: this comparison kept no models. Refit with ",
       "compare_topics(..., keep_models = TRUE).",
-      call. = FALSE
+      class = "sbert_no_fitted_model"
     )
   }
   levels <- comparison_levels(sweep)
   if (is.null(levels)) {
     if (!is.null(segment)) {
-      stop(
+      sbert_abort(
         "fitted: this comparison has a single segment level; leave ",
         "`segment` NULL.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
   } else {
     if (is.null(segment)) {
-      stop(
+      sbert_abort(
         sprintf(
           paste0(
             "fitted: this comparison spans several segment levels (%s); ",
@@ -556,7 +571,7 @@ fitted.sbert_topic_sweep <- function(object, n_topics, segment = NULL, ...) {
           ),
           paste(levels, collapse = ", ")
         ),
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     segment <- match.arg(segment, levels)
@@ -570,38 +585,36 @@ fitted.sbert_topic_sweep <- function(object, n_topics, segment = NULL, ...) {
   )
   key <- as.character(as.integer(n_topics))
   if (!key %in% names(models)) {
-    stop(
+    sbert_abort(
       sprintf(
         "fitted: no model for n_topics = %s. Available: %s.",
         key,
         paste(names(models), collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_no_fitted_model"
     )
   }
   models[[key]]
 }
 
-#' Print a Topic-Count Comparison
+#' Print a topic-count comparison
 #'
-#' Shows one row per candidate with its quality measures, and the call that
-#' pulls the best-scoring fitted model back out.
+#' @description
+#' `print()` shows a topic-count comparison: the coherence measure, one row per
+#' candidate with its measures, and, when the fitted models are kept, the
+#' [fitted()][fitted.sbert_topic_sweep] call that returns the most coherent
+#' candidate.
 #'
-#' @param x An `sbert_topic_sweep` object.
+#' @param x A comparison returned by [compare_topics()].
 #' @param ... Ignored.
-#' @return The sweep object, invisibly.
+#' @return `x`, invisibly.
+#' @seealso [compare_topics()]; [summary()][summary.sbert_topic_sweep];
+#'   [as.data.frame()][as.data.frame.sbert_topic_sweep].
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
-#' print(comparison)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' print(compare_topics(corpus, n_topics = c(4, 6), column = "translation",
+#'                      embeddings = feedback_embeddings))
 print.sbert_topic_sweep <- function(x, ...) {
   measure <- attr(x, "measure")
   models <- attr(x, "models")
@@ -633,28 +646,26 @@ print.sbert_topic_sweep <- function(x, ...) {
   invisible(x)
 }
 
-#' Coerce a Topic-Count Comparison to a Data Frame
+#' Convert a topic-count comparison to a data frame
 #'
-#' Drops the retained models and the sweep class, leaving the plain table of
-#' candidates and their measures.
+#' @description
+#' `as.data.frame()` returns the table of a comparison of candidate numbers of
+#' topics as a plain data frame, without the fitted models, for reporting or for
+#' joining with other results.
 #'
-#' @param x An `sbert_topic_sweep` object.
+#' @param x A comparison returned by [compare_topics()].
 #' @param ... Ignored.
 #' @return A base data frame with one row per candidate and columns
-#'   `n_topics`, `coherence`, `topic_diversity`, and `explained`, preceded by
-#'   `segment` when several levels were compared. The coherence measure stays
-#'   in the `measure` attribute; the fitted models are dropped.
+#'   `n_topics`, `coherence`, `topic_diversity`, `explained`, and `converged`,
+#'   preceded by `segment` when several levels were compared. The attributes
+#'   `measure` and `coherence_weight` are kept.
+#' @seealso [compare_topics()]; [summary()][summary.sbert_topic_sweep].
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' comparison <- compare_topics(corpus, n_topics = c(4, 6),
+#'                              column = "translation",
+#'                              embeddings = feedback_embeddings)
 #' as.data.frame(comparison)
 as.data.frame.sbert_topic_sweep <- function(x, ...) {
   plain <- x
@@ -663,42 +674,44 @@ as.data.frame.sbert_topic_sweep <- function(x, ...) {
   plain
 }
 
-#' Plot a Topic-Count Comparison
+#' Plot a topic-count comparison
 #'
-#' `type = "metrics"` (the default) draws coherence, topic diversity, and
-#' between-topic variance against the candidate topic counts, marking the
-#' count with the highest coherence. A comparison over several segment levels
-#' draws one line per level in each panel, told apart by color, point shape,
-#' and line type, with a legend. There is no single correct topic count; the
-#' useful signal is the count after which coherence stops improving, not a
-#' global maximum.
+#' @description
+#' `plot()` draws the measures of a topic-count comparison, or the fit report of
+#' one of its candidates. With `type = "metrics"` (default) it draws three
+#' panels against the number of topics: mean coherence, topic diversity, and the
+#' share of the variance between topics, with a dotted line at the most coherent
+#' candidate. A comparison of several segment levels draws one line per level,
+#' told apart by color, point shape, and line type. The useful signal is usually
+#' the count after which coherence stops improving, not the highest value.
 #'
-#' `type = "fit"` draws the per-topic fit report of
-#' [plot.sbert_topic_model()] for the retained model at `n_topics`, one
-#' figure per segment level, so the same topic count can be read across
-#' segmentations side by side.
+#' `type = "fit"` draws the fit report of [plot()][plot.sbert_topic_model]
+#' for the kept model with `n_topics` topics, one figure per segment level, so
+#' that one number of topics can be read across segmentations.
 #'
 #' @param x A comparison returned by [compare_topics()].
 #' @param type `"metrics"` (default) or `"fit"`.
-#' @param main Overall title for `type = "metrics"`.
-#' @param n_topics For `type = "fit"`, the candidate count whose models are
-#'   drawn. Required when the comparison holds several candidates.
-#' @param segment For `type = "fit"`, the segment levels to draw; defaults to
-#'   every level in the comparison.
-#' @param n_terms,n_representatives For `type = "fit"`, passed to
-#'   [plot.sbert_topic_model()].
+#' @param main Overall title for `type = "metrics"` (default
+#'   `"Topic-count comparison"`).
+#' @param n_topics For `type = "fit"`, the number of topics of the models to
+#'   draw; required when the comparison holds several candidates. Default
+#'   `NULL`.
+#' @param segment For `type = "fit"`, the segment levels to draw; `NULL`
+#'   (default) for every level.
+#' @param n_terms,n_representatives For `type = "fit"`, terms and
+#'   representatives per topic (defaults 8 and 5), passed to
+#'   [plot()][plot.sbert_topic_model].
 #' @param ... Passed to the underlying plotting calls.
-#' @return `x`, invisibly.
+#' @return `x`, invisibly. Called for the plot.
+#' @section Conditions:
+#'   An error of class `sbert_bad_input` when `type = "fit"` and `n_topics`
+#'   is missing for a comparison of several candidates.
+#' @seealso [compare_topics()]; [summary()][summary.sbert_topic_sweep].
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' comparison <- compare_topics(corpus, n_topics = c(4, 6, 8),
+#'                              column = "translation",
+#'                              embeddings = feedback_embeddings)
 #' plot(comparison)
 #' @export
 plot.sbert_topic_sweep <- function(

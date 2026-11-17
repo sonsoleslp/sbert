@@ -2,27 +2,74 @@
 % Please edit documentation in R/similarity.R
 \name{topic_similarity}
 \alias{topic_similarity}
-\title{Compute Cosine Similarity}
+\title{Compute cosine similarity between embeddings}
 \usage{
-topic_similarity(x, y = NULL)
+topic_similarity(x, y = NULL, tidy = FALSE, top = NULL)
 }
 \arguments{
-\item{x}{Numeric embedding matrix, or one numeric vector.}
+\item{x}{Numeric embedding matrix, or a numeric vector (one embedding).}
 
-\item{y}{Optional second embedding matrix or vector. When omitted, computes
-all pairwise similarities among rows of \code{x}.}
+\item{y}{Numeric embedding matrix or vector, or \code{NULL} (default) to
+compare the rows of \code{x} with each other.}
+
+\item{tidy}{\code{FALSE} (default) for a matrix; \code{TRUE} for a data frame.}
+
+\item{top}{\code{NULL} (default) for every pair, or a whole number: with
+\code{tidy = TRUE}, the \code{top} most similar rows of \code{y} for each row of \code{x}.}
 }
 \value{
-A numeric matrix of cosine similarities in \verb{[-1, 1]} with one row
-per row of \code{x} and one column per row of \code{y} (or of \code{x} when \code{y} is
-omitted). A vector counts as a one-row matrix.
+With \code{tidy = FALSE}, a numeric matrix of similarities in \verb{[-1, 1]}
+with one row per row of \code{x} and one column per row of \code{y} (or of \code{x});
+a vector counts as one row. With \code{tidy = TRUE}, a base data frame with
+one row per pair and columns \code{from} (row of \code{x}), \code{to} (row of \code{y}), and
+\code{similarity}; \code{from} and \code{to} are row names when the matrices have them,
+else row numbers. With \code{top}, at most \code{top} rows per row of \code{x}, ordered
+by \code{from} and decreasing similarity (ties by position in \code{y}), with a
+\code{rank} column (1 for the most similar).
 }
 \description{
-Cosine similarity between embedding rows, for example to check how close
-two texts are in meaning before or after topic modeling. Rows are
-L2-normalized first, so unnormalized embeddings give the same result.
+\code{topic_similarity()} computes the cosine similarity between every row of \code{x}
+and every row of \code{y}, or between all pairs of rows of \code{x} when \code{y} is
+omitted. In a sentence-embedding space, the closeness of two texts in meaning
+is measured by the cosine of the angle between their embeddings: 1 for the
+same direction, 0 for unrelated directions, and negative values for opposed
+ones; cosine similarity ignores vector length, so it compares texts of
+different lengths on an equal footing.
+
+Rows are scaled to unit length first, so embeddings need not be normalized.
+The result is a matrix, or with \code{tidy = TRUE} a long data frame with one row
+per pair. With \code{top}, the data frame keeps only the nearest neighbors of each
+row of \code{x}: its \code{top} most similar rows of \code{y}, most similar first, where a
+row is not its own neighbor when \code{y} is omitted.
+
+Any embeddings can be compared: texts from \code{\link[=encode]{encode()}}, the bundled
+\link{feedback_embeddings}, or rows of another embedding matrix with the same
+number of columns. To assign texts to fitted topics use
+\link[=predict.sbert_topic_model]{predict()}; to relate the topics of a model to
+one another use \code{\link[=topic_hierarchy]{topic_hierarchy()}}.
 }
+\section{Conditions}{
+
+\code{sbert_dimension_mismatch} when \code{x} and \code{y} have different numbers of
+columns; \code{sbert_bad_input} when a row is zero, or when \code{top} is given
+without \code{tidy = TRUE}.
+}
+
 \examples{
+# Three feedback messages compared with each other.
+topic_similarity(head(feedback_embeddings, 3))
+topic_similarity(head(feedback_embeddings, 3), tidy = TRUE)
+
+# The three nearest neighbors of each of the 600 messages.
+neighbors <- topic_similarity(feedback_embeddings, tidy = TRUE, top = 3)
+head(neighbors)
+
+# Toy vectors: rows of x against one vector y.
 x <- rbind(c(1, 0), c(0, 1), c(1, 1))
-topic_similarity(x)
+topic_similarity(x, c(1, 1))
+}
+\seealso{
+\code{\link[=encode]{encode()}} for embeddings; \link[=predict.sbert_topic_model]{predict()}
+to assign texts to topics; \code{\link[=topic_hierarchy]{topic_hierarchy()}} for similarity between
+topics.
 }

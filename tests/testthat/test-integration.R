@@ -14,7 +14,7 @@ testthat::test_that("official model matches SentenceTransformers references", {
     model_directory
   )
   testthat::expect_true(all(copied))
-  model <- load_model(cache_dir, threads = 1L)
+  model <- load_model(cache_dir = cache_dir, threads = 1L)
   sentences <- c(
     "This is an example sentence",
     "Each sentence is converted.",

@@ -12,9 +12,7 @@ testthat::test_that("topics() output is bit-identical to the golden reference", 
   # machines. The "identical across independent reruns" test below is the
   # portable determinism guarantee and keeps running everywhere.
   testthat::skip_on_cran()
-  embeddings_fixture <- readRDS(
-    system.file("extdata", "feedback_embeddings.rds", package = "sbert")
-  )
+  embeddings_fixture <- feedback_fixture()
   golden <- readRDS(
     testthat::test_path("fixtures", "topic_model_golden.rds")
   )
@@ -45,9 +43,7 @@ testthat::test_that("topics() output is bit-identical to the golden reference", 
 })
 
 testthat::test_that("topics() is identical across independent reruns", {
-  embeddings_fixture <- readRDS(
-    system.file("extdata", "feedback_embeddings.rds", package = "sbert")
-  )
+  embeddings_fixture <- feedback_fixture()
   run <- function() {
     m <- topics(
       embeddings_fixture$text,

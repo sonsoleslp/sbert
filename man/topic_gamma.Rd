@@ -2,7 +2,7 @@
 % Please edit documentation in R/inference.R
 \name{topic_gamma}
 \alias{topic_gamma}
-\title{Document-Topic Distributions from Segment Assignments}
+\title{Compute document-topic mixtures from segments}
 \usage{
 topic_gamma(
   object,
@@ -18,82 +18,80 @@ topic_gamma(
 )
 }
 \arguments{
-\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
+\item{object}{A fitted model from \code{\link[=topics]{topics()}}.}
 
-\item{text}{Either \code{NULL}, a character vector of documents (segmented here
-at \code{level}), or the data frame returned by \code{\link[=segment]{segment()}} (used as-is).
-\code{NULL} — the default — works for a model fitted with \code{segment = "sentence"}, \code{"clause"}, or \code{"phrase"}: its own segments and their topic
-assignments are already stored, so the mixture of every fitted document
-comes back with no encoding at all. Passing your own segmentation keeps
-every segment option in \code{\link[=segment]{segment()}} and lets you reuse one set of segment
-embeddings across this and other verbs. A data frame must have
-\code{document_id} and \code{text} columns; \code{gamma} is then computed per
-\code{document_id}.}
+\item{text}{\code{NULL} (default) for the fitted segments of a segmented model;
+a character vector of documents to segment; or a data frame from
+\code{\link[=segment]{segment()}} (columns \code{document_id} and \code{text}), used as it is.}
 
-\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
-name, or \code{NULL} for the default model, used to embed the segments;
-ignored when \code{embeddings} are supplied.}
+\item{model}{A model from \code{\link[=load_model]{load_model()}}, a pinned model name, or \code{NULL}
+(default) for the default model, used to embed the segments; ignored
+when \code{embeddings} are given.}
 
-\item{embeddings}{Optional precomputed numeric matrix of segment
-embeddings, one row per segment. When \code{text} is raw documents the rows must
-align with \code{segment(text, level = level)}; when \code{text} is a \code{\link[=segment]{segment()}}
-data frame they must align with its rows — which is automatic, since no
-re-segmentation happens.}
+\item{embeddings}{Numeric matrix of segment embeddings, one row per
+segment of \code{text} (in the order of \code{\link[=segment]{segment()}}), or \code{NULL} (default) to
+encode them.}
 
-\item{level}{Segmentation granularity passed to \code{\link[=segment]{segment()}} when \code{text} is
-a character vector: \code{"clause"}, \code{"sentence"}, or \code{"phrase"}. \code{NULL} (the
-default) uses the fitted segmentation — level, \code{max_tokens},
-\code{merge_below}, and \code{min_content} — for a segmented model, so new
-documents are cut exactly as the fitted ones were, and \code{"clause"} for a
-document-level model. Ignored when \code{text} is already a \code{\link[=segment]{segment()}} data
-frame.}
+\item{level}{\code{"clause"}, \code{"sentence"}, or \code{"phrase"} for segmenting a
+character \code{text}, or \code{NULL} (default) for the fitted segmentation of a
+segmented model and \code{"clause"} otherwise.}
 
-\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is
-used.}
+\item{batch_size}{Texts per model call when encoding (default 32).}
 
-\item{cores}{Number of forked worker processes used to split documents into
-segments (passed to \code{\link[=segment]{segment()}}). Default \code{1}. Segmenting a large corpus
-dominates the non-encoding cost, so \code{cores > 1} can noticeably speed up
-sentence- and clause-level gamma; the result is identical for any count.
-Encoding itself is parallelized separately, via \code{load_model(threads =)}.
-Ignored when \code{text} is already a \code{\link[=segment]{segment()}} data frame.}
+\item{cores}{Number of forked processes for segmenting (default 1), passed
+to \code{\link[=segment]{segment()}}; the result does not depend on it.}
 
-\item{dedupe_segments}{When \code{TRUE}, encode each distinct segment only once
-and expand the embeddings back by position, rather than encoding every
-occurrence. Real corpora are often close to half duplicate segments, so
-this can roughly halve encoding time (the dominant cost). Only applies when
-\code{embeddings} are not supplied. Assignments match encoding every occurrence
-up to the ~1e-7 floating-point effect of encoding a smaller batched set,
-which can flip a rare borderline segment; it is therefore opt-in and off by
-default. With the static \verb{potion-base-8M} model, encoding has no batch
-effect and the result is identical.}
+\item{dedupe_segments}{Encode each distinct segment once (default \code{FALSE}).
+Saves time on corpora with many repeated segments; the values can differ
+from encoding every occurrence by floating-point rounding.}
 
-\item{sort_by_length}{Passed to \code{\link[=encode]{encode()}}. Groups segments of similar length
-into the same batch so the model computes over less padding. Segment
-lengths vary far more than document lengths — at clause level 60.1\% of
-token work is padding in input order against 1.6\% when sorted — so this is
-the single largest saving available on this verb, measured at 1.9x. Off by
-default for the same ~1e-7 reason as \code{dedupe_segments}.}
+\item{sort_by_length}{Batch segments of similar length together when
+encoding (default \code{FALSE}); see \code{\link[=encode]{encode()}}.}
 
 \item{top}{\code{NULL} (default) for every topic of every document, or a whole
-number: each document's \code{top} largest topic shares, largest first. Topics
-with a zero share are left out, so a document can list fewer.}
+number: each document's \code{top} largest non-zero shares.}
 }
 \value{
 A base data frame with one row per document-topic pair and columns
-\code{document_id}, \code{topic}, \code{gamma}, and \code{n_segments}. \code{gamma} sums to 1
-within each document; documents with no segments contribute no rows.
-With \code{top}, only each document's \code{top} largest non-zero shares, ordered
-by document and then by share, with a \code{rank} column after \code{document_id}.
+\code{document_id}, \code{topic}, \code{gamma} (the share of the document's segments in
+the topic), and \code{n_segments}. \code{gamma} sums to one within each document;
+documents without segments have no rows. With \code{top}, only the largest
+non-zero shares, ordered by document and share, with a \code{rank} column
+after \code{document_id}.
 }
 \description{
-Computes \code{gamma}, the distribution of every document over the fitted
-topics, by segmenting each document with \code{\link[=segment]{segment()}}, assigning each
-segment to its nearest topic centroid, and normalizing the per-document
-segment counts. This yields parameter-free mixed membership: a document
-that discusses two topics in different sentences receives weight on both,
-which the single-embedding hard assignment cannot express.
+\code{topic_gamma()} returns, for each document, its mixture over topics: the
+share of its segments assigned to each topic, the document-topic distribution
+conventionally called gamma. A document that discusses two subjects in
+different sentences belongs partly to two topics, which a single embedding of
+the whole document cannot express; counting the topics of its segments gives
+the mixture without any additional parameter.
+
+For a model fitted on segments (\verb{segment =} in \code{\link[=topics]{topics()}}) and \code{text = NULL},
+it counts the fitted assignments, with no encoding. Otherwise it segments the
+given documents (with the fitted segmentation, or at \code{level}), or takes a
+\code{\link[=segment]{segment()}} data frame as it is, embeds the segments, and assigns each to the
+topic whose unit-length center has the highest cosine similarity, as
+\link[=predict.sbert_topic_model]{predict()} does. The result is a data frame with
+one row per document-topic pair.
+
+The fitted assignments come from Lloyd's k-means in \code{\link[=topics]{topics()}}, which uses
+squared Euclidean distance to the raw means of the normalized embeddings;
+for a few segments on topic boundaries this can differ from the
+cosine-similarity rule applied to new text. For graded membership of
+single units, use \code{\link[=topic_membership]{topic_membership()}}.
 }
+\section{Conditions}{
+
+\code{sbert_bad_input} when \code{text} is \code{NULL} for a model fitted on whole
+documents, when \code{model}, \code{embeddings} or \code{level} is given without
+\code{text}, when a data frame lacks \code{document_id} or \code{text}, when no segment
+results, or when \code{embeddings} has the wrong number of rows;
+\code{sbert_dimension_mismatch} when the embeddings have a different number of
+columns from the fitted model; when encoding, the conditions of
+\code{\link[=encode]{encode()}}.
+}
+
 \examples{
 text <- c(
   "Cats chase mice", "Dogs chase balls",
@@ -101,11 +99,13 @@ text <- c(
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 fitted <- topics(text, 2, embeddings = embeddings)
+
+# A new document with one sentence on each topic.
 mixed <- "Cats chase mice. Stocks and bonds trade."
 segment_embeddings <- rbind(c(1, 0), c(0, 1))
 topic_gamma(fitted, mixed, embeddings = segment_embeddings)
 
-# Segment once (with any options), reuse the segments and their embeddings:
+# Segment once, then reuse the segments and their embeddings.
 segments <- segment(mixed, level = "sentence")
 topic_gamma(fitted, segments, embeddings = segment_embeddings)
 
@@ -117,4 +117,9 @@ sentence_model <- topics(
 )
 topic_gamma(sentence_model)
 topic_gamma(sentence_model, top = 1)
+}
+\seealso{
+\code{\link[=segment]{segment()}} for the segments; \code{\link[=topic_membership]{topic_membership()}} for graded
+membership; \link[=predict.sbert_topic_model]{predict()} for single
+assignments; \code{\link[=topic_sizes]{topic_sizes()}} for topic totals.
 }

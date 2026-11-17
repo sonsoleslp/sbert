@@ -4,20 +4,38 @@
 # rather than a stochastic projection such as UMAP or t-SNE, so the same model
 # always yields the same picture.
 
-#' Qualitative Color Palette for Topics
+#' Get colors that distinguish topics in plots
 #'
-#' The qualitative palette the package plots use to tell topics apart: `n`
-#' colors from the qualitative HCL palette `"Dark 3"`
-#' ([grDevices::hcl.colors()]), which vary only in hue at fixed lightness and
-#' chroma, so no topic looks more prominent than another. Pass your own
-#' vector to the `colors` argument of [plot.sbert_topic_model()] to override
-#' it.
+#' @description
+#' `topic_palette()` returns `n` colors that distinguish topics in plots, from
+#' the HCL palette `"Dark 3"`, through
+#' `grDevices::hcl.colors(n, palette = "Dark 3")`. Topics are unordered
+#' categories, so their colors should differ in hue without suggesting that one
+#' topic matters more than another; qualitative palettes from the HCL color
+#' space hold lightness and chroma fixed and vary hue only, which serves that
+#' purpose.
 #'
-#' @param n Number of colors to return.
-#' @return A character vector of `n` hex colors.
+#' It is the default of the `colors` argument of [plot.sbert_topic_model()].
+#' Hues alone can be hard to tell apart for readers with color-vision
+#' deficiency; the plots therefore also label each topic by number and name. To
+#' use other colors, for example the Okabe-Ito palette from
+#' `grDevices::palette.colors()`, pass them to `colors`.
+#'
+#' @param n Number of colors, a positive whole number.
+#' @return A character vector of `n` hex color codes.
+#' @seealso [plot.sbert_topic_model()], which uses the palette.
 #' @export
 #' @examples
-#' topic_palette(4)
+#' topic_palette(6)
+#'
+#' # The Okabe-Ito colors instead, for a toy model of three topics.
+#' text <- c("Cats chase mice", "Dogs chase balls", "Stocks trade",
+#'           "Markets price shares", "Nets learn", "Models train")
+#' embeddings <- rbind(c(1, 0, 0), c(0.9, 0.1, 0), c(0, 1, 0),
+#'                     c(0.1, 0.9, 0), c(0, 0, 1), c(0.05, 0, 0.95))
+#' toy_model <- topics(text, 3, embeddings = embeddings)
+#' plot(toy_model, type = "sizes",
+#'      colors = grDevices::palette.colors(3, palette = "Okabe-Ito"))
 topic_palette <- function(n) {
   stopifnot(
     is.numeric(n),
@@ -378,7 +396,7 @@ plot_representatives_table <- function(x, n) {
     return(stored)
   }
   if (is.null(x$embeddings)) {
-    warning(
+    sbert_warn(
       sprintf(
         paste(
           "Only %d representatives per topic were stored; refit with",
@@ -388,7 +406,7 @@ plot_representatives_table <- function(x, n) {
         min(per_topic),
         n
       ),
-      call. = FALSE
+      class = "sbert_few_representatives"
     )
     return(stored)
   }
@@ -585,7 +603,7 @@ with_panel_size_guard <- function(expr, n_panels, remedy) {
           n_panels,
           remedy
         ),
-        class = "sbert_plot_too_small",
+        class = c("sbert_plot_too_small", "sbert_error"),
         call = NULL
       ))
     }
@@ -615,16 +633,19 @@ thin_map_documents <- function(topic, topic_ids, max_points) {
 plot_topic_map <- function(x, colors, max_points) {
   embeddings <- x$embeddings
   if (is.null(embeddings)) {
-    stop(
+    sbert_abort(
       paste(
         "The document map needs stored embeddings.",
         "Refit with topics(..., keep_embeddings = TRUE)."
       ),
-      call. = FALSE
+      class = "sbert_no_embeddings"
     )
   }
   if (nrow(embeddings) < 3L) {
-    stop("The document map needs at least three documents.", call. = FALSE)
+    sbert_abort(
+      "The document map needs at least three documents.",
+      class = "sbert_bad_input"
+    )
   }
 
   topic <- x$documents$topic
@@ -680,47 +701,63 @@ plot_topic_map <- function(x, colors, max_points) {
   invisible(x)
 }
 
-#' Plot a Semantic Topic Model
+#' Plot a fitted topic model
 #'
-#' Draws one of five deterministic base-graphics views of a fitted topic
-#' model.
+#' @description
+#' `plot()` draws one of five base-graphics views of a fitted topic model: how
+#' large the topics are, which words distinguish them, which texts exemplify
+#' them, and how they lie relative to one another in the embedding space.
+#' Together the views support naming the topics and judging whether the chosen
+#' number of topics is adequate.
 #'
-#' @param x An `sbert_topic_model` returned by [topics()].
-#' @param type One of `"sizes"` (document count per topic), `"terms"` (top
-#'   terms per topic), `"representatives"` (a ranked text list of the
-#'   centroid-nearest documents per topic), `"fit"` (a per-topic report with the
-#'   representative documents followed by all three term views -- count,
-#'   TF-IDF, beta -- one row per topic), or `"map"` (a two-dimensional classical-MDS
-#'   projection of the document embeddings, colored by topic). The `"map"` view
-#'   requires a model fitted with `keep_embeddings = TRUE`.
-#' @param by For `type = "terms"`, one or more of `"score"` (class-based
-#'   TF-IDF, the default and most distinctive terms), `"beta"` (the generative
-#'   within-topic word probability), and `"frequency"` (the raw within-topic
-#'   count). A single value draws one panel per topic; several values draw one
-#'   row per topic with a column for each metric.
-#' @param topics For `type` `"terms"`, `"representatives"`, or `"fit"`, an
-#'   optional vector of topic numbers to restrict the plot to. Defaults to all
-#'   topics.
-#' @param per_topic For `type` `"terms"`, `"representatives"`, or `"fit"`, draw
-#'   a separate figure for each topic instead of arranging all topics into one
-#'   gridded figure. Most useful with a device or `knitr` chunk that keeps every
-#'   figure (each topic then becomes its own image).
-#' @param n_terms Number of top terms shown per panel when `type` is `"terms"`
-#'   or `"fit"`.
-#' @param n_representatives Number of representative documents shown per panel
-#'   when `type` is `"representatives"` or `"fit"`. When more are requested than
-#'   the model stored at fit time, they are recomputed from the retained
-#'   embeddings; if the model was fitted with `keep_embeddings = FALSE`, the
-#'   stored set is used and a warning is issued.
-#' @param colors Optional vector of topic colors; defaults to [topic_palette()].
-#' @param max_points Maximum documents drawn when `type = "map"`. Larger corpora
-#'   are thinned to a deterministic stratified subsample so the classical-MDS
-#'   projection stays tractable.
-#' @param main Optional figure title for `type = "fit"` drawn as one figure
-#'   (it is not used with `per_topic = TRUE`). The default names the layout
-#'   (term columns and representative documents).
-#' @param ... Unused; present for S3 compatibility.
-#' @return Invisibly, `x`.
+#' `"sizes"` is a bar chart of the number of units (documents, or segments for a
+#' segmented model) in each topic. `"terms"` shows each topic's top terms by
+#' class-based TF-IDF score, within-topic probability (beta), or count.
+#' `"representatives"` lists each topic's representative texts, those closest to
+#' its center. `"fit"` combines both in one row per topic: the representative
+#' texts, then the terms by count, TF-IDF and beta. `"map"` places the units in
+#' two dimensions by classical multidimensional scaling of their cosine
+#' distances, colored by topic and labeled at each topic's mean position; large
+#' corpora are thinned to `max_points` by an even, non-random sample within each
+#' topic.
+#'
+#' The data behind each view are available as tables: [topic_sizes()],
+#' [terms()][terms.sbert_topic_model], [representatives()], and
+#' `as.data.frame(x, what = "documents")`. To compare models with different
+#' numbers of topics, plot a [compare_topics()] result.
+#'
+#' @param x A fitted model from [topics()].
+#' @param type `"sizes"` (default), `"terms"`, `"representatives"`, `"fit"`,
+#'   or `"map"`.
+#' @param by For `type = "terms"`, one or more of `"score"` (default;
+#'   class-based TF-IDF), `"beta"` (within-topic word probability) and
+#'   `"frequency"` (within-topic count). Several values draw one row per
+#'   topic with a column per measure.
+#' @param topics Topic numbers to draw for `"terms"`, `"representatives"` and
+#'   `"fit"`, or `NULL` (default) for all.
+#' @param per_topic For `"terms"`, `"representatives"` and `"fit"`, draw one
+#'   figure per topic instead of one grid (default `FALSE`).
+#' @param n_terms Terms per panel for `"terms"` and `"fit"` (default 8).
+#' @param n_representatives Texts per topic for `"representatives"` and
+#'   `"fit"` (default 5). More than the model stored are recomputed from its
+#'   stored embeddings, if any.
+#' @param colors Topic colors, at least one per topic (default
+#'   [topic_palette()]).
+#' @param max_points Maximum number of units drawn by `"map"` (default 1500).
+#' @param main Title for `"fit"` drawn as one figure, or `NULL` (default) for
+#'   a title naming the layout.
+#' @param ... Unused.
+#' @return `x`, invisibly. The plot is drawn on the current device.
+#' @section Conditions:
+#'   `sbert_no_embeddings` when `type = "map"` and the model stores no
+#'   embeddings; `sbert_bad_input` when `type = "map"` and the model has fewer
+#'   than three units; `sbert_plot_too_small` when the device is too small for
+#'   the `"fit"` grid. Warning `sbert_few_representatives` when more
+#'   representatives are requested than stored and the model has no
+#'   embeddings to recompute them.
+#' @seealso [topic_sizes()], [terms()][terms.sbert_topic_model],
+#'   [representatives()] for the tables behind the views; [topic_palette()]
+#'   for the colors; [compare_topics()] to compare numbers of topics.
 #' @export
 #' @examples
 #' text <- c(
@@ -733,11 +770,11 @@ plot_topic_map <- function(x, colors, max_points) {
 #'   c(0, 1, 0), c(0.1, 0.9, 0),
 #'   c(0, 0, 1), c(0.05, 0, 0.95)
 #' )
-#' topic_model <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
+#' topic_model <- topics(text, 3, embeddings = embeddings)
 #' plot(topic_model, type = "sizes")
 #' plot(topic_model, type = "terms")
-#' plot(topic_model, type = "terms", by = "frequency")
-#' plot(topic_model, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
+#' plot(topic_model, type = "terms", by = c("frequency", "score", "beta"),
+#'      topics = 1)
 #' plot(topic_model, type = "representatives")
 #' plot(topic_model, type = "fit")
 #' plot(topic_model, type = "fit", per_topic = TRUE)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/compare.R
 \name{plot.sbert_topic_sweep}
 \alias{plot.sbert_topic_sweep}
-\title{Plot a Topic-Count Comparison}
+\title{Plot a topic-count comparison}
 \usage{
 \method{plot}{sbert_topic_sweep}(
   x,
@@ -20,46 +20,51 @@
 
 \item{type}{\code{"metrics"} (default) or \code{"fit"}.}
 
-\item{main}{Overall title for \code{type = "metrics"}.}
+\item{main}{Overall title for \code{type = "metrics"} (default
+\code{"Topic-count comparison"}).}
 
-\item{n_topics}{For \code{type = "fit"}, the candidate count whose models are
-drawn. Required when the comparison holds several candidates.}
+\item{n_topics}{For \code{type = "fit"}, the number of topics of the models to
+draw; required when the comparison holds several candidates. Default
+\code{NULL}.}
 
-\item{segment}{For \code{type = "fit"}, the segment levels to draw; defaults to
-every level in the comparison.}
+\item{segment}{For \code{type = "fit"}, the segment levels to draw; \code{NULL}
+(default) for every level.}
 
-\item{n_terms, n_representatives}{For \code{type = "fit"}, passed to
-\code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}}.}
+\item{n_terms, n_representatives}{For \code{type = "fit"}, terms and
+representatives per topic (defaults 8 and 5), passed to
+\link[=plot.sbert_topic_model]{plot()}.}
 
 \item{...}{Passed to the underlying plotting calls.}
 }
 \value{
-\code{x}, invisibly.
+\code{x}, invisibly. Called for the plot.
 }
 \description{
-\code{type = "metrics"} (the default) draws coherence, topic diversity, and
-between-topic variance against the candidate topic counts, marking the
-count with the highest coherence. A comparison over several segment levels
-draws one line per level in each panel, told apart by color, point shape,
-and line type, with a legend. There is no single correct topic count; the
-useful signal is the count after which coherence stops improving, not a
-global maximum.
+\code{plot()} draws the measures of a topic-count comparison, or the fit report of
+one of its candidates. With \code{type = "metrics"} (default) it draws three
+panels against the number of topics: mean coherence, topic diversity, and the
+share of the variance between topics, with a dotted line at the most coherent
+candidate. A comparison of several segment levels draws one line per level,
+told apart by color, point shape, and line type. The useful signal is usually
+the count after which coherence stops improving, not the highest value.
+
+\code{type = "fit"} draws the fit report of \link[=plot.sbert_topic_model]{plot()}
+for the kept model with \code{n_topics} topics, one figure per segment level, so
+that one number of topics can be read across segmentations.
 }
-\details{
-\code{type = "fit"} draws the per-topic fit report of
-\code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}} for the retained model at \code{n_topics}, one
-figure per segment level, so the same topic count can be read across
-segmentations side by side.
+\section{Conditions}{
+
+An error of class \code{sbert_bad_input} when \code{type = "fit"} and \code{n_topics}
+is missing for a comparison of several candidates.
 }
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+comparison <- compare_topics(corpus, n_topics = c(4, 6, 8),
+                             column = "translation",
+                             embeddings = feedback_embeddings)
 plot(comparison)
+}
+\seealso{
+\code{\link[=compare_topics]{compare_topics()}}; \link[=summary.sbert_topic_sweep]{summary()}.
 }

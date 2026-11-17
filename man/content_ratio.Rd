@@ -2,7 +2,7 @@
 % Please edit documentation in R/corpus.R
 \name{content_ratio}
 \alias{content_ratio}
-\title{Alphabetic Content Ratio of Text}
+\title{Compute the share of letters in text}
 \usage{
 content_ratio(text)
 }
@@ -10,15 +10,23 @@ content_ratio(text)
 \item{text}{A character vector.}
 }
 \value{
-A numeric vector in \verb{[0, 1]}; empty or space-only elements score \code{0}.
+A numeric vector of the same length as \code{text}, with values between
+0 and 1; an empty or all-space element scores 0.
 }
 \description{
-The fraction of a string's non-space characters that are letters. A
-domain-agnostic measure of how much of a unit is prose rather than numbers,
-punctuation, or symbols: real sentences score near 1, while citation
-fragments, reference lists, number tables, and identifiers (\code{"OJ No L 297, 24.11.1979, p. 1."}, \code{"doi:10.1007/..."}) score low. Used by the
-\code{min_content} filters of \code{\link[=segment]{segment()}} and \code{\link[=topics]{topics()}}.
+\code{content_ratio()} computes the share of letters among the non-space
+characters of each element of \code{text}. The share separates prose from other
+units without relying on a language: sentences score close to one, while
+reference lists, citations, tables of numbers, and identifiers, which consist
+mostly of digits and punctuation and form spurious topics of their own when
+they are clustered, score low.
+
+It returns one value between 0 and 1 per element and is the measure behind
+the \code{min_content} filters of \code{\link[=clean_corpus]{clean_corpus()}}, \code{\link[=segment]{segment()}}, and \code{\link[=topics]{topics()}}.
 }
 \examples{
 content_ratio(c("A real sentence here.", "OJ No L 297, 24.11.1979, p. 1."))
+}
+\seealso{
+\code{\link[=clean_corpus]{clean_corpus()}} and \code{\link[=segment]{segment()}}, which filter on it.
 }

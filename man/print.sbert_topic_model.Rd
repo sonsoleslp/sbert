@@ -2,33 +2,31 @@
 % Please edit documentation in R/topics.R
 \name{print.sbert_topic_model}
 \alias{print.sbert_topic_model}
-\title{Print a Semantic Topic Model}
+\title{Print a topic model}
 \usage{
 \method{print}{sbert_topic_model}(x, ...)
 }
 \arguments{
-\item{x}{An \code{sbert_topic_model} object.}
+\item{x}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
 \item{...}{Ignored.}
 }
 \value{
-The topic model object, invisibly.
+\code{x}, invisibly.
 }
 \description{
-Shows the fit at a glance: the number of documents and topics, the
-embedding source, the clustering algorithm, the size of every topic, and
-the share of the embedding variance that lies between topics. Use
-\link[=summary.sbert_topic_model]{summary()} for coherence per topic and
-\code{\link[=topic_sizes]{topic_sizes()}} for the labeled size table.
+\code{print()} shows a fitted topic model at a glance: the number of documents
+(and of segments, for a segmented fit), the number of topics, the embedding
+model, the clustering algorithm, the size of every topic, and the share of
+the embedding variance that lies between topics.
 }
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-print(topics(text, n_topics = 2, embeddings = embeddings, n_terms = 3))
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+print(topics(corpus, n_topics = 6, column = "translation",
+             embeddings = feedback_embeddings))
+}
+\seealso{
+\link[=summary.sbert_topic_model]{summary()} for coherence and topic
+diversity; \code{\link[=topic_sizes]{topic_sizes()}} for the labeled size table;
+\link[=as.data.frame.sbert_topic_model]{as.data.frame()} for the tables.
 }

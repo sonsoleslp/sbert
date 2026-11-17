@@ -2,48 +2,54 @@
 % Please edit documentation in R/corpus.R
 \name{topic_sizes}
 \alias{topic_sizes}
-\title{Topic Sizes on the Distinct and Weighted Scales}
+\title{Compute the size of each topic}
 \usage{
 topic_sizes(object, weights = NULL, by = c("segment", "document"))
 }
 \arguments{
-\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
+\item{object}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
-\item{weights}{Optional numeric vector with one non-negative weight per
-unit on the chosen scale — per fitted document (in document order),
-typically the \code{n} column of \code{\link[=dedupe]{dedupe()}}, or per segment when
-\code{by = "segment"} on a segmented model.}
+\item{weights}{Optional weights: the name of a numeric column carried in
+the model (for example \code{"n"} from \code{\link[=dedupe]{dedupe()}}), or a numeric vector of
+non-negative weights, one per unit on the chosen scale. Default \code{NULL}.}
 
-\item{by}{\code{"segment"} (default; every fitted unit) or \code{"document"} (the
-distinct source documents).}
+\item{by}{Unit counted: \code{"segment"} (default), every modeled unit, or
+\code{"document"}, the source documents.}
 }
 \value{
 A base data frame with one row per topic and columns \code{topic},
-\code{label}, \code{n_documents}, and \code{proportion}, plus \code{n_weighted} and
-\code{weighted_share} when \code{weights} are supplied.
+\code{label}, \code{n_documents}, and \code{proportion}, followed by \code{n_weighted} and
+\code{weighted_share} when \code{weights} are given.
 }
 \description{
-Returns the size of every topic as fitted (distinct units) and,
-when \code{weights} are supplied, on the weighted scale — for example the
-original row frequencies from \code{\link[=dedupe]{dedupe()}}. The gap between
-\code{proportion} and \code{weighted_share} measures how template-driven a topic
-is: a topic whose weighted share far exceeds its distinct share is a
-small repertoire of heavily repeated texts.
+\code{topic_sizes()} returns the number and proportion of units in every topic of
+a fitted model and, with \code{weights}, the weighted size and share. The size of
+a topic can be counted in several ways: counted in distinct texts, it says
+how varied the content of the topic is; weighted by how often each text
+occurred, it says how much of the original corpus the topic accounts for.
+
+A topic whose weighted share far exceeds its share of distinct texts is a
+small set of texts that are repeated many times. For a segmented model, a
+topic can be counted in segments or, with \code{by = "document"}, in the documents
+that have at least one segment in it; a document with segments in several
+topics then counts in each of them, so the proportions need not sum to one.
+For a model fitted to documents, the two scales are the same.
 }
-\details{
-For a model fitted with \code{segment = "sentence"}, \code{"clause"}, or \code{"phrase"},
-\code{by} picks the scale: \code{"segment"} counts the fitted segments, \code{"document"}
-counts the source documents that have at least one segment in the topic.
-A document that spans several topics is counted in each, so document
-proportions need not sum to one. On a document-level model the two scales
-coincide.
+\section{Conditions}{
+
+An error of class \code{sbert_bad_input} when \code{weights} names a column that
+the model does not carry.
 }
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-fitted <- topics(text, 2, embeddings = embeddings)
-topic_sizes(fitted, weights = c(10, 1, 1, 1))
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+topic_sizes(topic_model)
+topic_sizes(topic_model, weights = "n")
+}
+\seealso{
+\code{\link[=dedupe]{dedupe()}} for the counts; \code{\link[=topics]{topics()}};
+\link[=as.data.frame.sbert_topic_model]{as.data.frame()} for the full tables;
+\link[=plot.sbert_topic_model]{plot()} with \code{type = "sizes"}.
 }

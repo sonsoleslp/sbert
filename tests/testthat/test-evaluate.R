@@ -155,13 +155,19 @@ testthat::test_that("topic_diversity is the unique-term proportion", {
   testthat::expect_true(topic_diversity(model, 4L) > 0 && topic_diversity(model, 4L) <= 1)
 })
 
-testthat::test_that("summary prints a report and returns a tidy quality table", {
+testthat::test_that("summary returns a quality table that prints as a report", {
   model <- evaluation_test_model()
-  quality <- NULL
-  output <- utils::capture.output(quality <- summary(model, measure = "npmi", n_terms = 4L))
+  # summary() returns its result; it prints nothing as a side effect.
+  silent <- utils::capture.output(quality <- summary(model, measure = "npmi", n_terms = 4L))
+  testthat::expect_identical(silent, character())
+  output <- utils::capture.output(print(quality))
 
   testthat::expect_true(any(grepl("Semantic topic model summary", output)))
-  testthat::expect_true(any(grepl("topic topic_diversity", output)))
+  testthat::expect_true(any(grepl("topic diversity:", output, fixed = TRUE)))
+  testthat::expect_equal(
+    attr(quality, "overview")$topic_diversity,
+    topic_diversity(model, 4L)
+  )
   testthat::expect_identical(
     names(quality),
     c("topic", "label", "n_documents", "proportion", "coherence")

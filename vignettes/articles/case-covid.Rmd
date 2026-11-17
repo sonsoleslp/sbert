@@ -1,0 +1,363 @@
+---
+title: "Case study: COVID-19 research abstracts"
+author: "Written by [Mohammed Saqr](https://saqr.me) and [Sonsoles López-Pernas](https://sonsoles.me)"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Case study: COVID-19 research abstracts}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r options, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center", dpi = 96)
+old_options <- options(digits = 3, width = 90)
+```
+
+A literature that grew as fast as research on COVID-19 and education is
+difficult to survey by reading. Thousands of abstracts appeared within a few
+years, written in different disciplines and for different audiences, and a
+map of their themes has to be built from the texts themselves. A semantic
+topic model builds that map from meaning rather than from shared words: each
+abstract becomes a sentence embedding, a vector in which texts with similar
+meaning lie close together, and a topic is a group of nearby embeddings. The
+topics are then read through their most typical texts, and words serve only
+as labels.
+
+Abstracts pose a problem of granularity. An abstract is several sentences
+that do different jobs (context, aim, sample, method, finding, implication),
+and an encoder reads a limited number of tokens: the default model,
+`all-MiniLM-L6-v2`, reads at most 256 and ignores the rest. A whole abstract is
+therefore one vector for a mixture of statements, part of which the model
+never sees, while a sentence is short enough to be read in full but carries
+only one of those statements. This case study fits topics at both levels and
+asks what each level finds: what the abstracts are about, what their
+sentences do, how the two groupings relate, and which to use for which
+question.
+
+Unlike the vignettes, this article downloads a model and encodes several
+thousand abstracts and all of their sentences, which takes a few minutes. The
+numbers in the text are computed when the article is built, so they always
+describe the output shown.
+
+```{r package}
+library(sbert)
+```
+
+## Data
+
+`covid` holds `r nrow(covid)` records of peer-reviewed research on COVID-19
+and its effects on education, children, schools, and society, published from
+`r with(covid, min(Year))` to `r with(covid, max(Year))`. Each row is one
+record.
+
+- **Publication year:** `Year`, an integer; available for every record.
+- **Text:** `Abstract`, the abstract, the unit of analysis. Records without an
+  abstract carry the placeholder `"[No abstract available]"`.
+
+`r nrow(subset(covid, Abstract == "[No abstract available]"))` records have
+only the placeholder. They are dropped, and the remaining abstracts are
+counted by year.
+
+```{r data}
+abstracts <- subset(covid, Abstract != "[No abstract available]")
+nrow(abstracts)
+xtabs(~ Year, data = abstracts)
+with(abstracts, sum(grepl("©", Abstract)))
+```
+
+`r nrow(abstracts)` abstracts remain, most of them from
+`r names(which.max(xtabs(~ Year, data = abstracts)))`, and
+`r with(abstracts, sum(grepl("©", Abstract)))` of them contain a "©" sign.
+
+Almost every abstract ends with a copyright notice, such as "© 2021 Informa UK
+Limited, trading as Taylor & Francis Group." Left in, the notices would form
+topics of their own, grouped by publisher rather than by research. The
+`remove` argument of `clean_corpus()` deletes text that matches a regular
+expression. The pattern below deletes a notice at the end of an abstract that
+starts with "©", "Copyright ©", or "Copyright" and a year; abstracts that
+mention copyright as a subject keep their text. `clean_corpus()` also repairs
+broken characters, removes HTML tags, URLs, DOIs, and bracketed citations,
+and with `min_content = 0.5` drops rows that are mostly numbers or symbols
+rather than words. Given a data frame and a `column`, it cleans that column
+and keeps the other columns.
+
+```{r clean}
+abstracts <- clean_corpus(
+  abstracts,
+  column = "Abstract",
+  remove = "(copyright:?\\s*(©|\\d{4})|©).{0,1000}$",
+  min_content = 0.5
+)
+nrow(abstracts)
+with(abstracts, sum(grepl("©", Abstract)))
+```
+
+All `r nrow(abstracts)` abstracts pass the content filter, and after
+cleaning `r with(abstracts, sum(grepl("©", Abstract)))` contain a "©" sign.
+`dedupe()` counts the distinct texts:
+
+```{r distinct}
+nrow(dedupe(abstracts, column = "Abstract"))
+```
+
+`r nrow(dedupe(abstracts, column = "Abstract"))` of the
+`r nrow(abstracts)` abstracts are distinct; the others repeat an abstract
+that appears in another record. Every record is kept, so a repeated abstract
+counts once per record in the topic sizes below.
+
+The last property that matters for the model is length. The number of words
+per abstract and the number of sentences that `segment()` finds:
+
+```{r length}
+with(abstracts, summary(lengths(strsplit(Abstract, "\\s+"))))
+sentences <- with(abstracts, segment(Abstract, level = "sentence"))
+nrow(sentences)
+```
+
+The median abstract has
+`r with(abstracts, median(lengths(strsplit(Abstract, "\\s+"))))` words, and
+`r with(abstracts, round(100 * mean(lengths(strsplit(Abstract, "\\s+")) > 200)))`%
+of the abstracts have more than 200. A tokenizer emits more tokens than
+words, so these abstracts are likely to exceed the 256 tokens that the model
+reads, and their endings, where findings and conclusions usually stand, do
+not enter the whole-abstract embedding. The `r nrow(sentences)` sentences, about
+`r round(nrow(sentences) / nrow(abstracts), 1)` per abstract, are each read in
+full.
+
+## Fitting abstracts and sentences
+
+Install the ONNX Runtime and download the default model,
+`all-MiniLM-L6-v2`. Both steps happen once per computer.
+
+```{r runtime}
+install_runtime()
+model_download()
+```
+
+Words such as *covid*, *pandemic*, and *study* appear in nearly every
+abstract, so they are added to the standard English stop words, and
+`numbers = "remove"` leaves out bare numbers such as years. Stop words affect
+only the word labels and the word-based measures; the topics themselves are
+computed from the embeddings of the full text.
+
+```{r stop-words}
+covid_stop_words <- stop_words(add = c(
+  "covid", "coronavirus", "sars", "cov", "pandemic", "disease",
+  "study", "studies", "result", "results", "conclusion", "conclusions",
+  "background", "method", "methods", "objective", "aim"
+))
+```
+
+`compare_topics()` fits one model for each candidate number of topics, here
+on whole abstracts (`"document"`) and on sentences (`"sentence"`) in one
+call. `max_tokens = 200` caps a sentence at 200 of the model's tokens and
+splits a longer one at its punctuation, so that no sentence is cut off.
+`coherence_weight = "size"` averages the coherence of a candidate's topics in
+proportion to their sizes. A topic of a handful of unusual abstracts whose
+rare words always occur together scores a very high coherence and, in an
+unweighted mean, can make a candidate look better than its other topics
+justify; in the run published with sbert 0.5.12, a three-abstract topic at
+eight topics had a coherence of 0.90 and lifted the unweighted mean of that
+candidate to 0.18. k-means on tens of thousands of sentences can need more
+than the default 100 iterations to settle; `iter_max = 300` gives it room,
+and the `converged` column of the table reports whether every candidate
+converged.
+
+```{r sweep}
+sweep <- compare_topics(
+  abstracts,
+  column = "Abstract",
+  n_topics = c(4, 6, 8, 10, 12),
+  segment = c("document", "sentence"),
+  max_tokens = 200,
+  coherence_weight = "size",
+  iter_max = 300,
+  stop_words = covid_stop_words,
+  numbers = "remove"
+)
+sweep
+summary(sweep)
+```
+
+The table has one row per level and candidate: `coherence` (how often the top
+words of a topic occur together), `topic_diversity` (the share of distinct
+words among all topics' top words), `explained` (the share of the variance in
+the embeddings that lies between topics), and `converged`. `summary()` gives
+the most coherent candidate at each level. The plot shows the three measures
+against the number of topics:
+
+```{r sweep-plot}
+plot(sweep)
+```
+
+`explained` tends to rise as topics are added, so it cannot choose a count
+by itself; coherence and diversity can. To compare
+the two levels at the same resolution, both are read at eight topics below.
+The guide [Choosing the number of topics and the
+granularity](choosing-topics.html) discusses the choice in detail.
+
+```{r models}
+topic_model <- fitted(sweep, n_topics = 8, segment = "document")
+sentence_model <- fitted(sweep, n_topics = 8, segment = "sentence")
+```
+
+## What are the abstracts about?
+
+`representatives()` returns, for each topic, the abstracts closest to that
+topic and clearly farther from every other topic. One per topic, in full:
+
+```{r representatives}
+knitr::kable(representatives(topic_model, n = 1), digits = 2)
+```
+
+The plot shows the opening of two abstracts per topic:
+
+```{r plot-representatives, fig.width = 9, fig.height = 9}
+plot(topic_model, type = "representatives", n_representatives = 2)
+```
+
+A topic is named from what its representatives share: the population studied
+(students, teachers, children, residents), the setting (schools,
+universities, laboratories, hospitals), or the kind of paper (survey,
+reflection, editorial). Two abstracts that use the same words can fall in
+different topics when they report different things, and the representatives,
+not the word lists below, show which. `topic_sizes()` counts the abstracts in
+each topic:
+
+```{r sizes}
+topic_sizes(topic_model)
+```
+
+The `r nrow(as.data.frame(topic_model))` abstracts are divided into eight
+topics; the largest holds
+`r with(topic_sizes(topic_model), max(n_documents))` and the smallest
+`r with(topic_sizes(topic_model), min(n_documents))`. A very small topic is
+worth reading in full: it can isolate papers that do not belong to the
+corpus's subject, which is useful in itself. `summary()` lists each topic
+under its label with its size and the coherence of its top words, and
+`terms()` lists those words:
+
+```{r summary}
+summary(topic_model)
+terms(topic_model, n = 5)
+```
+
+Words such as *online*, *learning*, and *students* run through the whole
+corpus, so several topics share them, and a topic's top words describe it
+less precisely than its representatives. The embeddings separate abstracts by
+what they report rather than by the words they use, and the word lists serve
+as labels after the topics have been read.
+
+## What do the sentences do?
+
+The sentence model was fitted in the same call. It models
+`r nrow(as.data.frame(sentence_model))` sentences. Its representatives are
+short enough to read in full:
+
+```{r sentence-representatives}
+knitr::kable(representatives(sentence_model, n = 3), digits = 2)
+```
+
+Sentence topics can be of two kinds. Some are subjects, as at the document
+level. Others gather sentences that play the same part in an
+abstract whatever its subject: the opening that states what the pandemic did
+to education, the report of a sample and response rate, the description of a
+method, a general or hedging statement. In the run published with sbert
+0.5.12, one sentence topic was represented by sentences such as "Results: Of
+268 students enrolled, 104 responded" and another by "Content analysis
+technique was used in the analysis of the data obtained.", topics of
+reporting rather than of research subjects.
+
+A sentence topic that plays a structural part appears in many abstracts.
+`topic_sizes(by = "document")` counts the abstracts that have at least one
+sentence in each topic:
+
+```{r sentence-sizes}
+topic_sizes(sentence_model, by = "document")
+```
+
+`proportion` is here the share of abstracts that touch the topic, so the
+shares do not add up to one. The most widespread sentence topic reaches
+`r with(topic_sizes(sentence_model, by = "document"), round(100 * max(proportion)))`%
+of the abstracts. `summary()` reports the sentence topics' top words and
+coherence:
+
+```{r sentence-summary}
+summary(sentence_model)
+```
+
+The words of a structural topic describe its function only indirectly: no
+word says that a sentence opens an abstract or reports a sample. The
+representatives remain the evidence.
+
+## How do the two granularities differ?
+
+`topic_gamma()` gives the mix of sentence topics within each abstract: the
+share of its sentences that fall in each topic. With `top = 2` it keeps the
+two largest shares of every abstract:
+
+```{r gamma}
+head(topic_gamma(sentence_model, top = 2), 10)
+```
+
+An abstract whose largest share is close to one says one kind of thing
+throughout; an abstract whose largest share is well below one spreads its
+sentences over several topics, which a single whole-abstract topic cannot
+show. To relate the two groupings, each abstract's document topic is paired
+with its dominant sentence topic (`top = 1`; an abstract whose sentences are
+split evenly is counted under one of the tied topics), and the pairs are
+cross-tabulated:
+
+```{r crosstab}
+granularity <- merge(
+  as.data.frame(topic_model),
+  topic_gamma(sentence_model, top = 1),
+  by = "document_id",
+  suffixes = c("_abstract", "_sentence")
+)
+xtabs(~ topic_abstract + topic_sentence, data = granularity)
+```
+
+Each row is a whole-abstract topic and each column the sentence topic that
+holds the largest share of an abstract's sentences. A row concentrated in one
+column means the abstract topic corresponds to one sentence topic; a row
+spread across columns means that abstracts of one subject are dominated by
+different kinds of sentences, typically the structural ones, which recur
+across subjects. The most frequent dominant sentence topic is the dominant
+one in
+`r with(granularity, round(100 * max(prop.table(table(topic_sentence)))))`%
+of the `r nrow(granularity)` abstracts.
+
+## Which granularity to use
+
+The two models answer different questions:
+
+- **Whole abstracts** group papers by what each abstract is about as a
+  whole. Use them to map the research themes of a literature. The model reads only the first 256 tokens, so the subject is
+  taken mostly from the opening of a long abstract.
+- **Sentences** group by what a single sentence says or does, and can yield
+  structural topics (context, sample, method) next to subject topics. Use them to study how
+  abstracts are written, to reach content beyond the first 256 tokens, or to
+  describe each abstract as a mixture of topics with `topic_gamma()`.
+
+Next steps:
+
+- `predict(topic_model, new_abstracts)` assigns new abstracts to these topics
+  without refitting; for the sentence model it splits the new abstracts into
+  sentences in the same way. See [Assigning new documents and topic
+  mixtures](assigning-topics.html).
+- `reduce_topics(topic_model, n_topics = 4)` merges similar topics, and
+  `topic_hierarchy()` shows which topics are closest to each other.
+- [Segmenting long documents](segmenting.html) covers the sentence, clause,
+  and phrase levels and `max_tokens`; [Preparing and cleaning a
+  corpus](preparing-corpus.html) covers `clean_corpus()`.
+- [Parallel and high-throughput topic modeling](parallel.html) shows how to
+  encode once and reuse the embeddings across many fits and sessions.
+
+```{r restore, include = FALSE}
+options(old_options)
+```

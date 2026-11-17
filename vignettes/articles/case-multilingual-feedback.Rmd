@@ -1,0 +1,287 @@
+---
+title: "Case study: multilingual feedback messages"
+author: "Written by [Mohammed Saqr](https://saqr.me) and [Sonsoles López-Pernas](https://sonsoles.me)"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Case study: multilingual feedback messages}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r options, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center", dpi = 96)
+old_options <- options(digits = 3, width = 90)
+```
+
+Learning applications that generate feedback with a language model produce
+large numbers of short messages in the language of each learner. Two
+properties of such a corpus shape any analysis of what the feedback says.
+First, it repeats itself: a generator produces the same hint for many
+learners, and the same hint in many languages, so a count of rows is not a
+count of distinct messages. Second, it is multilingual: a model of the
+content can work on English translations, which puts every message on one
+scale, or on the source texts, which keeps what the learner actually read.
+The two choices measure different things, and a study should know which one
+it reports.
+
+This case study takes a corpus of AI-generated mathematics feedback with
+English translations and asks four questions: how repetitive the feedback
+is, and whether the repetition lies in the messages or in the languages;
+what kinds of feedback exist once repetition is accounted for; how a
+source-language message relates to the translation that is modeled; and how
+the source languages can be modeled directly. The vignette [Semantic topic
+modeling with Sentence-BERT](sbert.html) walks through fitting, naming, and
+reading the topics of this corpus in depth; this article uses its topics and
+concentrates on repetition and language.
+
+```{r package}
+library(sbert)
+```
+
+## Data
+
+`feedback_translations` holds
+`r format(nrow(feedback_translations), big.mark = ",")` feedback messages
+shown to young learners solving mathematics exercises in an educational
+application. Each row is one message as it was shown.
+
+- **Source text:** `feedback`, the message in the language the learner
+  received it in. The source languages include Czech, Slovak, Polish, German,
+  Hungarian, Romanian, Ukrainian, Russian, Mongolian, and Vietnamese, and some
+  messages are in English.
+- **Translation:** `translation`, the English translation, the text modeled
+  below.
+
+There is no column for the language, so the language of a message is known
+only from its text. The rows and the distinct texts in each column:
+
+```{r data}
+nrow(feedback_translations)
+nrow(dedupe(feedback_translations, column = "translation"))
+nrow(dedupe(feedback_translations, column = "feedback"))
+```
+
+## How repetitive is the feedback?
+
+The two columns give very different answers.
+`r format(nrow(feedback_translations) - nrow(dedupe(feedback_translations, column = "feedback")), big.mark = ",")`
+rows repeat a source text that occurred earlier, but
+`r format(nrow(feedback_translations) - nrow(dedupe(feedback_translations, column = "translation")), big.mark = ",")`
+repeat an English translation. Since the source texts are almost all
+distinct, nearly every repeated translation was reached from different
+source texts: the repetition lies less in the messages than in the
+languages, with the same hint written in several languages and translated
+back to one English sentence.
+
+`dedupe()` keeps the first occurrence of each distinct translation, with all
+its columns, and adds `n`, the number of rows that share it. The number of
+translations by how often they occur:
+
+```{r repetition}
+messages <- dedupe(feedback_translations, column = "translation")
+table(repeats = with(messages, n))
+subset(messages, n >= 6)
+```
+
+`r format(with(messages, sum(n == 1)), big.mark = ",")` of the
+`r format(nrow(messages), big.mark = ",")` distinct translations occur once
+and `r with(messages, sum(n > 1))` occur more than once, at most
+`r with(messages, max(n))` times. The source text kept for each is the
+first occurrence only, which is why the table shows one language per row;
+one of them is in Hindi, a language the dataset's documentation does not
+list.
+All the rows behind the most repeated translation show where the repetition
+comes from:
+
+```{r try-again}
+subset(feedback_translations, translation == "Try again.")
+```
+
+The eleven rows are eleven different source texts: two Vietnamese and two
+Polish phrasings, Ukrainian, Russian, Mongolian, Romanian and Hungarian
+versions, and two English ones, "Try again." and "Have another go at it.".
+Translation therefore merges two kinds of repetition: the same message in
+different languages, and different phrasings in one language that mean the
+same.
+
+Some source texts are already in English, or were left untranslated. The
+rows whose source text is identical to its translation:
+
+```{r identical}
+with(feedback_translations, sum(feedback == translation))
+head(subset(feedback_translations, feedback == translation), 4)
+```
+
+`r with(feedback_translations, sum(feedback == translation))` rows carry the
+same text in both columns. For these rows the translation adds nothing, and
+for an English-only analysis they need no special handling.
+
+## What kinds of feedback are there?
+
+The embeddings of the first 600 distinct translations ship with the package
+as `feedback_embeddings`, so the topics below are computed without a model
+download. Row *i* of the matrix is the embedding of row *i* of `corpus`.
+
+```{r corpus}
+corpus <- head(messages, 600)
+with(corpus, sum(n))
+```
+
+The 600 distinct messages stand for `r with(corpus, sum(n))` rows of the
+corpus. Six topics are fitted on the English embeddings and given the names
+established in the [main vignette](sbert.html), where the representatives of
+each topic are read and the number of topics is chosen:
+
+```{r topics}
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+topic_model <- name_topics(topic_model, c(
+  "Guiding question and instruction", "Short hint",
+  "Question about meaning", "Correction", "Definition", "Negation"
+))
+topic_sizes(topic_model, weights = "n")
+```
+
+`n_documents` and `proportion` count each distinct message once;
+`n_weighted` and `weighted_share` count every row it stands for. Corrections
+are `r with(subset(topic_sizes(topic_model, weights = "n"), label == "Correction"), round(100 * proportion, 1))`%
+of the distinct messages but
+`r with(subset(topic_sizes(topic_model, weights = "n"), label == "Correction"), round(100 * weighted_share, 1))`%
+of the rows. Averaging over the messages of each topic gives the share that
+recur and the mean number of rows per message:
+
+```{r repetition-by-topic}
+repetition <- aggregate(cbind(repeated = n > 1, n) ~ label,
+                        data = as.data.frame(topic_model), FUN = mean)
+repetition
+```
+
+`repeated` is the share of a topic's distinct messages that occur more than
+once and `n` the mean number of rows each stands for. Corrections stand for
+the most rows per message
+(`r with(subset(repetition, label == "Correction"), round(n, 2))`), and
+corrections, definitions and negations recur most often
+(`r with(subset(repetition, label == "Correction"), round(100 * repeated))`%,
+`r with(subset(repetition, label == "Definition"), round(100 * repeated))`%
+and `r with(subset(repetition, label == "Negation"), round(100 * repeated))`%
+of their messages). Questions about meaning
+(`r with(subset(repetition, label == "Question about meaning"), round(100 * repeated, 1))`%)
+and guiding questions
+(`r with(subset(repetition, label == "Guiding question and instruction"), round(100 * repeated))`%)
+recur least. A correction such as "There should be two fewer in the red one
+than in the blue one." can be reused across exercises, while a question that
+names the pictures of one exercise, such as "What does 'all between the
+plant and the princess' mean?", has fewer occasions to recur. The table is
+descriptive: it shows which kinds of feedback the generator repeated, not
+why.
+
+## How does a source message relate to its translation?
+
+The model is fitted on the translations, and every other column of `corpus`
+rides along. `as.data.frame()` returns one row per modeled message with its
+topic, the English text that was modeled (`text`), and the source text
+(`feedback`) and count (`n`) carried from `dedupe()`:
+
+```{r carried}
+head(subset(as.data.frame(topic_model), label == "Correction"), 5)
+```
+
+Each row pairs a modeled English message with the source text of its first
+occurrence. The topic is a property of the English text, and the source text
+is attached to it, not modeled: when a translation stands for several source
+texts (as "Try again." does), only the first is shown, and the topic says
+nothing about how well the other languages were phrased. Two consequences
+follow. A topic analysis of the translations measures what the feedback was
+meant to say, filtered through the translation; and differences between
+languages, such as a hint that is more direct in one language than in
+another, are invisible to it.
+
+## Modeling the source languages directly
+
+To keep what the learners read, the source texts can be modeled with a
+multilingual encoder. `paraphrase-multilingual-MiniLM-L12-v2` maps more than
+50 languages into one embedding space, trained so that a sentence and its
+translation lie close together. The chunks below download that model and
+encode the source texts; they are not run here, and no output is shown.
+
+The first step fits the same six topics to the `feedback` column of the
+same 600 messages:
+
+```{r multilingual-fit, eval = FALSE}
+model_download("paraphrase-multilingual-MiniLM-L12-v2")
+source_model <- topics(corpus, n_topics = 6, column = "feedback",
+                       model = "paraphrase-multilingual-MiniLM-L12-v2")
+topic_sizes(source_model, weights = "n")
+```
+
+Because both models are fitted on the rows of `corpus`, their documents
+correspond one to one, and the two topic columns can be cross-tabulated:
+
+```{r multilingual-compare, eval = FALSE}
+languages <- merge(as.data.frame(topic_model), as.data.frame(source_model),
+                   by = "document_id", suffixes = c("_english", "_source"))
+xtabs(~ label_english + topic_source, data = languages)
+```
+
+Each row is an English topic and each column a source-language topic. If the
+source-language model recovers the kinds of feedback, each row concentrates
+in one column; a row split across columns marks a kind of feedback whose
+source texts the multilingual model groups differently, for example by
+language rather than by meaning. Two encoders are compared here, so a
+difference can come from the language or from the encoder. Fitting the
+multilingual model to the translations as well separates the two:
+
+```{r multilingual-encoder, eval = FALSE}
+translation_model <- topics(corpus, n_topics = 6, column = "translation",
+                            model = "paraphrase-multilingual-MiniLM-L12-v2")
+```
+
+The closeness of a message to its own translation can be measured directly.
+`encode()` embeds the two columns with the multilingual model, and
+`topic_similarity()` with `tidy = TRUE` returns the cosine similarity of every
+source text with every translation; a source and its own translation share a
+row number:
+
+```{r multilingual-similarity, eval = FALSE}
+multilingual <- load_model("paraphrase-multilingual-MiniLM-L12-v2")
+source_embeddings <- with(corpus, encode(feedback, model = multilingual))
+translation_embeddings <- with(corpus, encode(translation, model = multilingual))
+similarity <- transform(
+  topic_similarity(source_embeddings, translation_embeddings, tidy = TRUE),
+  own_translation = from == to
+)
+aggregate(similarity ~ own_translation, data = similarity, FUN = median)
+```
+
+If the encoder places translations close together, the median similarity of
+a message to its own translation is far above its median similarity to the
+other messages, and the source-language topics can be read with the English
+names.
+
+## When to use which
+
+- **Translations, deduplicated** (`dedupe(column = "translation")`): one row
+  per distinct English message. Use it to find the kinds of feedback; weight
+  topic sizes with `topic_sizes(weights = "n")` to count every row shown.
+- **Source texts, deduplicated** (`dedupe(column = "feedback")`): almost
+  every row is distinct, because one message in ten languages is ten texts.
+  Use it with a multilingual encoder when what the learner read is the
+  object of study.
+- **Both, side by side:** the cross-tabulation of the two topic columns shows
+  whether the kinds of feedback found in English survive in the source
+  languages.
+
+Related articles: [Semantic topic modeling with Sentence-BERT](sbert.html)
+for the full walkthrough of this corpus; [Describing and naming
+topics](describing-topics.html); [Models, the cache, and custom
+models](models-and-cache.html) for the multilingual models and their
+downloads; [Case study: COVID-19 research abstracts](case-covid.html) for
+long documents.
+
+```{r restore, include = FALSE}
+options(old_options)
+```

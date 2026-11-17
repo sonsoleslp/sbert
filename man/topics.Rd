@@ -2,7 +2,7 @@
 % Please edit documentation in R/topics.R
 \name{topics}
 \alias{topics}
-\title{Discover Semantic Topics in Documents}
+\title{Fit semantic topics to documents}
 \usage{
 topics(
   text,
@@ -36,216 +36,188 @@ topics(
 )
 }
 \arguments{
-\item{text}{Character vector containing one document per element, a data
-frame together with \code{column}, or a prepared \code{\link[=topic_corpus]{topic_corpus()}}.}
+\item{text}{Documents: a character vector with one document per element, a
+data frame together with \code{column}, or a corpus prepared by
+\code{\link[=topic_corpus]{topic_corpus()}}.}
 
-\item{n_topics}{Number of semantic topics. Must be at least two.}
+\item{n_topics}{Number of topics: an integer of at least 2 and at most the
+number of modeled units.}
 
-\item{column}{When \code{text} is a data frame, the name of the column
-holding the documents to model. Every other column is carried along
-with each document in the fitted document table, and rows whose text is
-missing, blank, or a bibliographic placeholder
-(\code{"[No abstract available]"}) are dropped. Precomputed
-\code{embeddings} may keep one row per supplied row; the dropped rows are
-removed from them too. Leave \code{NULL} for a character vector.}
+\item{column}{Name of the text column when \code{text} is a data frame. The other
+columns are carried into the document table. Rows whose text is missing,
+blank, or the placeholder \code{"[No abstract available]"} are dropped, and so
+are their rows of \code{embeddings}. \code{NULL} (default) for a character vector.}
 
-\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
-name from \code{\link[=models]{models()}}, or \code{NULL} for the default model. Ignored
-when \code{embeddings} are supplied.}
+\item{model}{The encoder: a model from \code{\link[=load_model]{load_model()}}, a pinned model name
+from \code{\link[=models]{models()}}, or \code{NULL} (default) for the default model. Not used when
+\code{embeddings} are given.}
 
-\item{embeddings}{Optional numeric matrix with one row per document;
-when supplied, no model is loaded or used.}
+\item{embeddings}{Optional numeric matrix of precomputed embeddings, one row
+per modeled unit (per document, or per segment with \code{segment}). When it
+is given, no model is loaded. Default \code{NULL}.}
 
-\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is used.}
+\item{batch_size}{Texts encoded per model call (default 32).}
 
-\item{iter_max}{Maximum deterministic k-means iterations.}
+\item{iter_max}{Maximum number of k-means iterations (default 100).}
 
-\item{n_terms}{Maximum class-based TF-IDF terms returned per topic.}
+\item{n_terms}{Terms stored per topic (default 10).}
 
-\item{n_representatives}{Maximum representative documents per topic.}
+\item{n_representatives}{Representative units stored per topic (default 5).}
 
-\item{stop_words}{Character vector excluded from topic terms. Use
-\code{character()} to disable stop-word filtering.}
+\item{stop_words}{Words excluded from the topic terms; default
+\code{\link[=stop_words]{stop_words()}}. \code{character()} turns the filter off.}
 
-\item{min_term_frequency}{Minimum corpus-wide token frequency.}
+\item{min_term_frequency}{Minimum corpus-wide frequency of a term
+(default 1).}
 
-\item{min_token_length}{Minimum Unicode character length for a topic token.}
+\item{min_token_length}{Minimum length of a term, in characters
+(default 2).}
 
-\item{weighting}{Class-based term-weighting scheme. \code{"ctfidf"} (default) uses
-\code{tf * log(1 + A / f_x)}; \code{"bm25"} uses the BM25 inverse-frequency variant
-\code{tf * log(1 + (A - f_x + 0.5) / (f_x + 0.5))}, which more aggressively
-down-weights terms shared across topics (Mendonca and Figueira 2025).}
+\item{weighting}{Term weighting: \code{"ctfidf"} (default) or \code{"bm25"}, which
+down-weights terms shared by many topics more strongly.}
 
-\item{reduce_frequent_words}{Whether to square-root the within-topic term
-frequency before weighting, damping very frequent words.}
+\item{reduce_frequent_words}{Whether to take the square root of
+within-topic term frequencies before weighting (default \code{FALSE}).}
 
-\item{stem}{Whether to collapse inflected forms (for example \code{animals} and
-\code{animal}) onto a shared Porter stem before scoring, displaying the most
-frequent surface form of each stem. Requires the \code{SnowballC} package.}
+\item{stem}{Whether to merge inflected forms of a term under one Porter
+stem, shown as its most frequent form (default \code{FALSE}; needs the
+SnowballC package).}
 
-\item{keep_embeddings}{Whether to retain normalized document embeddings in
-the returned object.}
+\item{keep_embeddings}{Whether to store the normalized embeddings in the
+model (default \code{TRUE}). Without them, \code{\link[=reduce_topics]{reduce_topics()}},
+\code{\link[=topic_membership]{topic_membership()}}, and \code{\link[=representatives]{representatives()}} need the embeddings
+supplied again.}
 
-\item{seeds}{Optional guided topics: a character vector (or list of
-character vectors, collapsed with spaces) of seed words or topic
-descriptions — one element per seeded topic. Seeds are embedded and
-become the first \code{length(seeds)} cluster centroids; remaining topics
-(up to \code{n_topics}) are initialized away from the seeds. Seeded topics
-keep their position — topic i is seed i, never reordered by size — and
-a named \code{seeds} vector names those topics' labels. With precomputed
-\code{embeddings}, supply \code{seed_embeddings} as well.}
+\item{seeds}{Optional guided topics: a character vector, or a list of
+character vectors, of seed words or descriptions, one element per seeded
+topic. The embedding of seed \code{i} is the starting center of topic \code{i}, and
+the names of \code{seeds}, if any, become topic labels. Default \code{NULL}.}
 
-\item{seed_embeddings}{Optional matrix of seed embeddings (one row per
-seed, same dimension as the document embeddings); required when
-\code{seeds} is used together with precomputed \code{embeddings}.}
+\item{seed_embeddings}{Matrix of seed embeddings, one row per seed. Needed
+when \code{seeds} are combined with precomputed \code{embeddings}.}
 
-\item{fixed_seeds}{When \code{TRUE}, seed centroids are frozen and documents
-are simply assigned to the nearest seed (zero-shot classification into
-the seeded topics; \code{n_topics} must equal the number of seeds, and
-topics may be empty). When \code{FALSE} (default), seeds only initialize
-the clustering and the data can move the centroids.}
+\item{fixed_seeds}{If \code{TRUE}, the seed centers are held fixed and each unit
+joins its nearest seed (zero-shot classification); \code{n_topics} must equal
+the number of seeds, and a topic may be empty. Default \code{FALSE}.}
 
-\item{cores}{Number of forked worker processes used to tokenize documents for
-term scoring. Default \code{1} (serial). Values above one use
-\code{parallel::mclapply} on Unix-alikes and fall back to serial on Windows or
-for small corpora; the tokenization — and therefore every result — is
-identical regardless of the count. Ignored when a prepared \code{\link[=topic_corpus]{topic_corpus()}}
-is supplied (its tokens are already computed).}
+\item{cores}{Number of forked worker processes for tokenization (default 1;
+Unix-alikes only). Results do not depend on it.}
 
-\item{numbers}{How to treat purely numeric tokens (years, counts) in topic
-terms. \code{"keep"} (default) keeps them; \code{"remove"} drops tokens made only of
-digits, while retaining alphanumerics such as \code{covid19}.}
+\item{numbers, roman_numerals, section_numbers}{Whether to \code{"keep"} (default)
+or \code{"remove"} digit-only tokens, Roman-numeral tokens, and section or list
+numbering (\verb{1.2.3}, \code{1.}) from the topic terms. They change the terms
+only, not the text that is embedded; to clean the text, use
+\code{\link[=clean_corpus]{clean_corpus()}}.}
 
-\item{roman_numerals}{How to treat Roman-numeral tokens (chapter, section,
-and list markers such as \code{ii}, \code{iv}, \code{xii}). \code{"keep"} (default) keeps them;
-\code{"remove"} drops canonical Roman numerals up to 100. The bound is
-deliberate: larger Roman numerals collide with common abbreviations that
-are also valid numerals (\code{ml}, \code{mm}, \code{cc}, \code{ci}, \code{cv}), which are always
-kept. A few small numerals that are also words (\code{iv}, \code{vi}, \code{xl}) are
-removed when this is on.}
+\item{segment}{Unit of analysis: \code{"document"} (default), or \code{"sentence"},
+\code{"clause"}, or \code{"phrase"}, which split each document with \code{\link[=segment]{segment()}}
+and fit the topics to the segments, so that a document can take part in
+several topics.}
 
-\item{section_numbers}{How to treat section, reference, and list numbering.
-\code{"keep"} (default) keeps it; \code{"remove"} strips, before tokenizing, both
-multi-level indices (\verb{1.2.3}, \verb{4.5.6.7} — three or more dot-separated
-groups) and enumeration or list markers (\code{1.}, \code{2.}, \verb{figure 12.} — a
-standalone one- or two-digit number followed by a period). Decimals
-(\code{3.14}), four-digit years (\code{2020.}), hyphenated numbers (\code{covid-19.}), and
-larger counts are left untouched, so genuine values survive even when
-\code{numbers = "keep"}.
-These filter only the topic terms; the document text and its embedding are
-untouched. To clean the source text itself — list markers, reference noise,
-junk characters — before encoding, see \code{\link[=clean_corpus]{clean_corpus()}}.}
+\item{max_tokens, merge_below, min_content}{Segmentation options passed to
+\code{\link[=segment]{segment()}}, for segmented fits only: the maximum segment length (in the
+model's tokens, or in words with precomputed \code{embeddings}; default
+\code{NULL}, no limit), the number of words below which a segment is joined to
+its neighbor (default 0), and the minimum share of letters for a segment
+to be kept (default 0; see \code{\link[=content_ratio]{content_ratio()}}).}
 
-\item{segment}{The unit the model is fitted on. \code{"document"} (default)
-embeds each document whole. \code{"sentence"}, \code{"clause"}, or \code{"phrase"} first
-splits every document with \code{\link[=segment]{segment()}} at that level and fits the topics
-on the segments, so long documents are modeled in full instead of being
-truncated to the encoder's context window, and a document can span several
-topics. The fitted document table then has one row per segment with its
-parent \code{document_id} and \code{segment} position; \code{\link[=topic_sizes]{topic_sizes()}} counts by
-segment or by document, \code{\link[=topic_gamma]{topic_gamma()}} recovers each document's topic
-mixture from the stored segments, and
-\link[=predict.sbert_topic_model]{predict()} segments new text the same way. A
-precomputed \code{embeddings} matrix must then have one row per
-segment, aligned with \code{segment(text, level = segment, ...)}.}
-
-\item{max_tokens}{Optional cap on segment length, passed to \code{\link[=segment]{segment()}}.
-When a \code{model} is used, the budget counts that model's exact tokens; with
-precomputed \code{embeddings} it counts words. Only with a segmented fit.}
-
-\item{merge_below}{Re-join segments shorter than this many words into their
-neighbor, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
-
-\item{min_content}{Minimum alphabetic-content ratio for a segment to be
-kept, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
-
-\item{label}{How each topic is named in \code{label} columns and plots.
-\code{"representative"} (default) uses the topic's most central text,
-shortened to 60 characters; \code{"terms"} joins its three most distinctive
-words (\code{"box / red / blue"}). Named \code{seeds} override either.}
+\item{label}{How topics are labeled: \code{"representative"} (default), the most
+central text shortened to 60 characters, or \code{"terms"}, the three most
+distinctive terms. Named \code{seeds} override both.}
 }
 \value{
-An object of class \code{sbert_topic_model}: a list with
+An object of class \code{sbert_topic_model}, a list with
 \describe{
-\item{\code{documents}}{One row per modeled unit (document, or segment for a
-segmented fit): \code{document_id}, \code{document_name}, \code{segment} (segmented
-fits only), \code{text}, \code{topic}, \code{label}, and \code{distance} (cosine distance
-to the assigned centroid), followed by any carried \code{column} data.}
+\item{\code{documents}}{One row per modeled unit (document, or segment):
+\code{document_id}, \code{document_name}, \code{segment} (segmented fits only),
+\code{text}, \code{topic}, \code{label}, and \code{distance} (cosine distance to the topic
+center), followed by the columns carried from a data frame.}
 \item{\code{topics}}{One row per topic: \code{topic}, \code{label}, \code{n_documents},
 \code{proportion}, and \code{withinss}.}
-\item{\code{terms}, \code{representatives}}{The tables returned by
-\link[=terms.sbert_topic_model]{terms()} and, ranked by distance, by
-\code{\link[=representatives]{representatives()}}.}
-\item{\code{centers}}{Numeric matrix of unit-length topic centroids, one row
-per topic.}
-\item{\code{embeddings}}{The normalized unit embeddings, or \code{NULL} when
+\item{\code{terms}, \code{representatives}}{The stored terms and representative
+units of each topic.}
+\item{\code{centers}}{Numeric matrix of topic centers, one row per topic: the
+k-means means of the L2-normalized embeddings. They are not rescaled,
+so their norms are below one; verbs that use cosine similarity
+normalize them first.}
+\item{\code{embeddings}}{The normalized embeddings, or \code{NULL} when
 \code{keep_embeddings = FALSE}.}
 \item{\code{diagnostics}}{Sums of squares (\code{totss}, \code{tot_withinss},
-\code{betweenss}), \code{iterations}, and \code{algorithm}.}
-\item{\code{model}, \code{settings}}{The embedding model identity and every
-setting the fit was made with, which later verbs reuse.}
+\code{betweenss}), \code{iterations}, \code{converged} (whether k-means converged
+within \code{iter_max}), \code{warnings} (warnings raised by
+\code{\link[stats:kmeans]{stats::kmeans()}}), and \code{algorithm}.}
+\item{\code{model}, \code{settings}}{The identity of the embedding model and the
+settings of the fit, which later verbs reuse.}
 }
-Read it through its verbs rather than its fields: \code{\link[=topic_sizes]{topic_sizes()}},
-\link[=terms.sbert_topic_model]{terms()}, \code{\link[=representatives]{representatives()}},
-\link[=summary.sbert_topic_model]{summary()},
-\link[=predict.sbert_topic_model]{predict()}, \code{\link[=topic_membership]{topic_membership()}},
-\code{\link[=topic_gamma]{topic_gamma()}}, and \link[=plot.sbert_topic_model]{plot()}.
+Read it through its accessors rather than its fields:
+\link[=as.data.frame.sbert_topic_model]{as.data.frame()} with \code{what = "documents"}, \code{"topics"}, \code{"terms"}, or \code{"representatives"};
+\code{\link[=topic_sizes]{topic_sizes()}}; \link[=terms.sbert_topic_model]{terms()};
+\code{\link[=representatives]{representatives()}}; and \link[=summary.sbert_topic_model]{summary()}, which
+also reports a fit that did not converge.
 }
 \description{
-Groups documents, or their sentences, clauses, or phrases (\code{segment}), into
-topics by deterministic k-means on their Sentence-BERT embeddings. Supply
-either a \code{model} to encode the text or a precomputed embedding matrix.
-Topics are summarized with representative documents and class-based TF-IDF
-terms. This is embedding-based topic discovery, not a probabilistic LDA model.
+\code{topics()} fits an embedding-based topic model: it groups texts, or the
+sentences, clauses, or phrases of texts, by what they mean rather than by the
+words they share, and each group is a topic. Each unit is represented by a
+Sentence-BERT embedding (Reimers and Gurevych 2019), a vector in which texts
+of similar meaning lie close together, and the embeddings are partitioned
+into groups of semantically similar texts.
+
+Every unit is assigned to one of \code{n_topics} topics by k-means clustering
+(Lloyd 1982) of the L2-normalized embeddings, started from farthest-point
+initial centers. The fit is deterministic: the same input always gives the
+same topics, and no random seed is involved. Each topic is described by its
+distinctive terms, scored by class-based TF-IDF (Grootendorst 2022; Mendonca
+and Figueira 2025), and by its representative units, those nearest its
+center. By default a topic is labeled by its most central text. Topics are
+numbered by size, largest first, unless \code{seeds} fix their order. Unlike
+latent Dirichlet allocation, the model does not represent a text as a mixture
+of word distributions, so it does not depend on words co-occurring within
+texts, which they rarely do in short texts.
+
+The result, an object of class \code{sbert_topic_model}, shows which kinds of
+content a corpus holds and how much of the corpus each kind accounts for.
+
+To choose the number of topics and the unit of analysis, compare candidate
+fits with \code{\link[=compare_topics]{compare_topics()}}. To fit several models to one corpus, prepare
+it once with \code{\link[=topic_corpus]{topic_corpus()}}. New texts are assigned to the fitted topics
+by \link[=predict.sbert_topic_model]{predict()}, and each document's mixture of
+topics is given by \code{\link[=topic_gamma]{topic_gamma()}}. To merge the topics of an existing fit,
+use \code{\link[=reduce_topics]{reduce_topics()}}.
 }
-\details{
-Each topic is named by its most central unit: the document or
-segment nearest the topic's centroid, shortened to 60 characters. The
-topics come from the meaning of whole texts, so a text names a topic
-better than its top words do; \code{label = "terms"} names topics by their
-three most distinctive words instead. Read more examples per topic with
-\code{\link[=representatives]{representatives()}}, and its typical words with
-\link[=terms.sbert_topic_model]{terms()}. Term scores use the class-based
-TF-IDF weighting \code{tf * log(1 + A / f_x)}, where \code{tf} is the
-frequency of a term normalized within its topic, \code{f_x} is the term's
-frequency across all topics, and \code{A} is the mean topic length (a real
-number, matching Mendonca and Figueira (2025), Eq. 1). Set
-\code{weighting = "bm25"} and/or \code{reduce_frequent_words = TRUE} for the BM25 and
-square-root variants (their Eq. 2 to 4). The built-in tokenizer preserves
-Unicode alphanumeric tokens and internal apostrophes, but does not perform
-language-specific word segmentation for unspaced CJK text.
-}
-\section{Errors}{
- Raises an error when \code{n_topics} is below two or exceeds
-the number of modeled units, when \code{embeddings} does not have one row per
-unit, or when \code{column} is missing or not found in a data frame. With a
-prepared \code{\link[=topic_corpus]{topic_corpus()}}, passing \code{model}, \code{embeddings}, or a different
-\code{segment} is an error.
+\section{Conditions}{
+
+Errors of class \code{sbert_bad_input} for conflicting arguments, embeddings
+without one row per unit, more topics than distinct embeddings, or a
+\code{model}, \code{embeddings}, or different \code{segment} combined with a prepared
+corpus; \code{sbert_missing_package} for \code{stem = TRUE} without SnowballC;
+\code{sbert_no_terms} when no term passes the filters; and
+\code{sbert_clustering_failed} when k-means fails or leaves a topic empty.
+Arguments of the wrong type or range fail a plain \code{\link[=stopifnot]{stopifnot()}} check.
+When a model is used, the errors of \code{\link[=load_model]{load_model()}} and \code{\link[=encode]{encode()}} apply.
+A warning of class \code{sbert_no_converge} when k-means reaches \code{iter_max}
+without converging; the fit is still returned. Errors inherit
+\code{sbert_error} and warnings \code{sbert_warning}.
 }
 
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topic_model <- topics(text, 2, embeddings = embeddings)
-topic_sizes(topic_model)
+# 600 distinct feedback messages with their precomputed embeddings
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+topic_model
+topic_sizes(topic_model, weights = "n")
 terms(topic_model, n = 3)
 
-# Fit on sentences: each document is split first, and the segments are
-# what the topics are made of (the embeddings here are one row per
-# sentence, so no model download is needed).
+# Sentence-level fit: one embedding per sentence
 documents <- c(
   "Cats chase mice. Stocks and bonds trade.",
   "Dogs chase balls. Markets price shares."
 )
 sentence_model <- topics(
-  documents, 2,
-  segment = "sentence",
+  documents, n_topics = 2, segment = "sentence",
   embeddings = rbind(c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9))
 )
-representatives(sentence_model)
 topic_sizes(sentence_model, by = "document")
 topic_gamma(sentence_model)
 }
@@ -262,4 +234,11 @@ Sentence-BERT and BERTopic. arXiv:2510.22904.
 
 Lloyd, S. P. (1982). Least squares quantization in PCM. \emph{IEEE Transactions
 on Information Theory}, 28(2), 129--137. \doi{10.1109/TIT.1982.1056489}
+}
+\seealso{
+\code{\link[=compare_topics]{compare_topics()}} to choose the number of topics;
+\code{\link[=topic_corpus]{topic_corpus()}} to prepare a corpus once; \code{\link[=name_topics]{name_topics()}} to name the
+topics; \link[=plot.sbert_topic_model]{plot()} for figures;
+\link[=predict.sbert_topic_model]{predict()} and \code{\link[=topic_gamma]{topic_gamma()}} for new texts
+and topic mixtures; \link{feedback_embeddings} for the example data.
 }

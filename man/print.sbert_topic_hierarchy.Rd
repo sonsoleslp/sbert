@@ -2,21 +2,22 @@
 % Please edit documentation in R/hierarchy.R
 \name{print.sbert_topic_hierarchy}
 \alias{print.sbert_topic_hierarchy}
-\title{Print a Topic Hierarchy}
+\title{Print a topic hierarchy}
 \usage{
 \method{print}{sbert_topic_hierarchy}(x, ...)
 }
 \arguments{
-\item{x}{An \code{sbert_topic_hierarchy} object.}
+\item{x}{A hierarchy built by \code{\link[=topic_hierarchy]{topic_hierarchy()}}.}
 
 \item{...}{Ignored.}
 }
 \value{
-The hierarchy object, invisibly.
+\code{x}, invisibly.
 }
 \description{
-Shows the merge table: one row per merge, with its height and the two
-branches that fused.
+\code{print()} shows a topic hierarchy: the number of topics and merges, and the
+merge table: one row per merge, with the cosine distance at which it happens
+and the two branches it joins.
 }
 \examples{
 text <- c(
@@ -27,6 +28,12 @@ embeddings <- rbind(
   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 )
-tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
+tree <- topic_hierarchy(topics(text, n_topics = 3, embeddings = embeddings,
+                               n_terms = 3))
 print(tree)
+}
+\seealso{
+\code{\link[=topic_hierarchy]{topic_hierarchy()}};
+\link[=as.data.frame.sbert_topic_hierarchy]{as.data.frame()};
+\link[=summary.sbert_topic_hierarchy]{summary()}.
 }

@@ -2,40 +2,54 @@
 % Please edit documentation in R/hierarchy.R
 \name{topic_hierarchy}
 \alias{topic_hierarchy}
-\title{Build the Topic Hierarchy of a Fitted Model}
+\title{Build the hierarchy of the topics of a model}
 \usage{
 topic_hierarchy(object, method = "average")
 }
 \arguments{
-\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
+\item{object}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
-\item{method}{Agglomeration method passed to \code{\link[stats:hclust]{stats::hclust()}}. Default
-\code{"average"}.}
+\item{method}{Agglomeration method passed to \code{\link[stats:hclust]{stats::hclust()}} (default
+\code{"average"}).}
 }
 \value{
-An \code{sbert_topic_hierarchy}: a list with \code{merges} (a tidy data
-frame with one row per merge — \code{step}, \code{height}, and the human-readable
-\code{left} and \code{right} branch descriptions) and \code{tree} (the underlying
-\code{hclust} object, labeled with topic labels). \code{print()} shows the merge
-table; \code{plot()} draws the labeled dendrogram.
+An object of class \code{sbert_topic_hierarchy}.
+\link[=as.data.frame.sbert_topic_hierarchy]{as.data.frame()} gives the merge
+table, one row per merge; \link[=summary.sbert_topic_hierarchy]{summary()}
+gives the nearest neighbor of every topic; \link[=plot.sbert_topic_hierarchy]{plot()}
+draws the dendrogram.
 }
 \description{
-Agglomeratively clusters the topic centroids by cosine distance and
-returns the merge tree: which topics are semantic neighbors, in what
-order they would fuse, and how far apart they are. Use it to judge
-whether a topic count is too fine (early merges at small heights are
-near-duplicate topics) and to choose a target count for
-\code{\link[=reduce_topics]{reduce_topics()}}. Deterministic — no sampling, no seed.
+\code{topic_hierarchy()} clusters the topic centers of a model hierarchically,
+showing which topics are nearest neighbors, in what order they would merge,
+and at what distance. The topics of a model are not equally distinct: some
+lie close together in the embedding space and describe facets of one broader
+theme, while others stand apart. Topics that merge early, at a small
+distance, are near-duplicates, which suggests that the number of topics is
+finer than the data support.
+
+It computes the cosine distances between the topic centers and clusters them
+with \code{\link[stats:hclust]{stats::hclust()}}. The result, an object of class
+\code{sbert_topic_hierarchy}, is deterministic. Use it to choose a smaller number
+of topics for \code{\link[=reduce_topics]{reduce_topics()}}, or to report how the topics group into
+themes.
 }
+\section{Conditions}{
+
+An error of class \code{sbert_bad_input} when the model has fewer than two
+topics.
+}
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-topic_model <- topics(text, 3, embeddings = embeddings, n_terms = 3)
-topic_hierarchy(topic_model)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings, label = "terms")
+tree <- topic_hierarchy(topic_model)
+tree
+summary(tree)
+}
+\seealso{
+\code{\link[=reduce_topics]{reduce_topics()}} to merge topics; \code{\link[=compare_topics]{compare_topics()}} to compare
+numbers of topics; \code{\link[=topic_similarity]{topic_similarity()}} for cosine similarities between
+embeddings.
 }

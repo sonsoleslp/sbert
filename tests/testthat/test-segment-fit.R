@@ -332,7 +332,9 @@ level_documents <- function() {
 
 level_embeddings <- function() {
   list(
-    document = rbind(c(0.7, 0.7), c(0.6, 0.8), c(0.8, 0.6)),
+    # Document 1 sits off the diagonal so that no document is equidistant
+    # from the other two; a tie there resolves differently across platforms.
+    document = rbind(c(0.74, 0.66), c(0.6, 0.8), c(0.8, 0.6)),
     sentence = rbind(
       c(1, 0), c(0, 1), c(0.9, 0.1), c(0.1, 0.9), c(0.95, 0.05), c(0.05, 0.95)
     )
@@ -350,7 +352,8 @@ testthat::test_that("compare_topics compares several segment levels in one table
   testthat::expect_s3_class(levels, "sbert_topic_sweep")
   testthat::expect_identical(
     names(levels),
-    c("segment", "n_topics", "coherence", "topic_diversity", "explained")
+    c("segment", "n_topics", "coherence", "topic_diversity", "explained",
+      "converged")
   )
   testthat::expect_identical(levels$segment, c("document", "sentence"))
   # each level's row is the single-level comparison of that level

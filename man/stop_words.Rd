@@ -2,42 +2,55 @@
 % Please edit documentation in R/topics.R
 \name{stop_words}
 \alias{stop_words}
-\title{Obtain and Adjust the Topic Stop-Word List}
+\title{Get and adjust the stop-word list}
 \usage{
 stop_words(language = "en", add = NULL, remove = NULL)
 }
 \arguments{
-\item{language}{Currently only \code{"en"} is supported.}
+\item{language}{Language of the list. Only \code{"en"} (default) is available.}
 
-\item{add}{Character vector of extra words to exclude (matched
-case-insensitively).}
+\item{add}{Words to add to the list, matched case-insensitively. Default
+\code{NULL}.}
 
-\item{remove}{Character vector of words to drop from the list.}
+\item{remove}{Words to remove from the list. Default \code{NULL}.}
 }
 \value{
-A sorted character vector of lowercase stop words.
+A character vector of lower-case stop words, sorted.
 }
 \description{
-Returns the stop words excluded from term extraction and keyword
-candidates. \code{add} extends the list — the standard way to remove a
-corpus-wide vocabulary from topic labels (words every document shares
-carry no discriminative information). \code{remove} un-lists built-in entries
-whose surface form is meaningful in a specific corpus.
+\code{stop_words()} returns the built-in English list of stop words, extended with
+\code{add} or reduced with \code{remove}. Stop words are frequent function words, such
+as articles, pronouns, and prepositions, that occur in texts of every topic
+and so say little about what distinguishes one topic from another; excluding
+them lets the terms that describe a topic be its content words.
+
+Adding words that every text of a corpus shares, such as the name of the
+course or the disease a corpus is about, removes them from the topic terms as
+well. The list filters only the terms and keyword candidates; the text that
+is embedded is unchanged.
+
+The result is passed as \verb{stop_words =} to \code{\link[=topics]{topics()}}, \code{\link[=compare_topics]{compare_topics()}},
+\code{\link[=topic_corpus]{topic_corpus()}}, \link[=terms.sbert_topic_model]{terms()}, or \code{\link[=keywords]{keywords()}}. A
+character vector of one's own replaces the list, and \code{character()} turns
+the filter off.
 }
-\details{
-For a fully custom list, pass any character vector straight to the
-\code{stop_words} argument of \code{\link[=topics]{topics()}}, \code{\link[=compare_topics]{compare_topics()}}, \code{\link[=topic_corpus]{topic_corpus()}}, or
-\code{\link[=keywords]{keywords()}} — for example \code{stop_words(add = c("covid", "patient"))} to keep
-the defaults plus domain terms, a bare \code{c("covid", "patient")} to replace the
-list entirely, or \code{character()} to disable stop-word filtering.
+\section{Conditions}{
+
+An error of class \code{sbert_bad_input} when \code{language} is not \code{"en"}.
 }
+
 \examples{
 head(stop_words())
-# keep the defaults and add domain terms
-custom <- stop_words(add = c("students", "learning"), remove = "against")
 
-# use a custom list when modeling
-text <- c("students learning math", "markets and trading stocks")
-embeddings <- rbind(c(1, 0), c(0, 1))
-topics(text, n_topics = 2, embeddings = embeddings, stop_words = custom)
+# Keep the defaults, add two domain words, and drop one entry
+custom <- stop_words(add = c("try", "again"), remove = "against")
+
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings, stop_words = custom)
+terms(topic_model, n = 3)
+}
+\seealso{
+\code{\link[=topics]{topics()}} and \link[=terms.sbert_topic_model]{terms()}, which use the
+list; \code{\link[=clean_corpus]{clean_corpus()}} to clean the text itself.
 }

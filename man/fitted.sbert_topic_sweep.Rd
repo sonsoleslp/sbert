@@ -2,7 +2,7 @@
 % Please edit documentation in R/compare.R
 \name{fitted.sbert_topic_sweep}
 \alias{fitted.sbert_topic_sweep}
-\title{Extract One Fitted Model from a Topic-Count Comparison}
+\title{Extract a fitted model from a topic-count comparison}
 \usage{
 \method{fitted}{sbert_topic_sweep}(object, n_topics, segment = NULL, ...)
 }
@@ -10,34 +10,43 @@
 \item{object}{A comparison returned by \code{\link[=compare_topics]{compare_topics()}} with
 \code{keep_models = TRUE} (the default).}
 
-\item{n_topics}{The topic count to extract. Must be one of the candidates
-in the comparison.}
+\item{n_topics}{The number of topics of the model to return; one of the
+candidates.}
 
-\item{segment}{The segment level to extract when the comparison spans
-several (\code{compare_topics(segment = c(...))}); one of its levels. Leave
-\code{NULL} for a single-level comparison.}
+\item{segment}{The segment level of the model to return, when the
+comparison spans several levels; \code{NULL} (default) for a single-level
+comparison.}
 
-\item{...}{Unused, present for generic consistency.}
+\item{...}{Ignored.}
 }
 \value{
-The \code{sbert_topic_model} fitted for that candidate.
+A topic model of class \code{sbert_topic_model}, as returned by
+\code{\link[=topics]{topics()}}.
 }
 \description{
-Returns the model \code{\link[=compare_topics]{compare_topics()}} already fitted for a given topic
-count, so choosing a granularity from the comparison table costs no
-refitting.
+\code{fitted()} returns one candidate model from a \code{\link[=compare_topics]{compare_topics()}} comparison,
+identical to a \code{\link[=topics]{topics()}} fit with the same settings, without fitting it
+again. \code{\link[=compare_topics]{compare_topics()}} fits a model for every candidate number of topics
+and, by default, keeps them, so once a candidate has been chosen from the
+comparison its model can be taken out directly.
 }
+\section{Conditions}{
+
+Errors of class \code{sbert_no_fitted_model} when the comparison kept no
+models or holds no model for \code{n_topics}, and \code{sbert_bad_input} when
+\code{segment} is given for a single-level comparison or missing for a
+comparison of several levels.
+}
+
 \examples{
-text <- c(
-  "Cats chase mice", "Kittens chase mice too", "Cats nap daily",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0, 0), c(0.98, 0.02, 0), c(0.96, 0, 0.04),
-  c(0, 1, 0), c(0.02, 0.98, 0), c(0, 0.96, 0.04)
-)
-comparison <- compare_topics(
-  text, n_topics = 2:3, embeddings = embeddings, n_terms = 3
-)
-fitted(comparison, n_topics = 2)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+comparison <- compare_topics(corpus, n_topics = c(4, 6),
+                             column = "translation",
+                             embeddings = feedback_embeddings)
+topic_model <- fitted(comparison, n_topics = 6)
+topic_sizes(topic_model, weights = "n")
+}
+\seealso{
+\code{\link[=compare_topics]{compare_topics()}}; \link[=summary.sbert_topic_sweep]{summary()} for
+the most coherent candidate.
 }

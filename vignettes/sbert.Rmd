@@ -1,0 +1,349 @@
+---
+title: "Semantic topic modeling with Sentence-BERT"
+author: "Written by [Mohammed Saqr](https://saqr.me) and [Sonsoles López-Pernas](https://sonsoles.me)"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Semantic topic modeling with Sentence-BERT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r options, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center", dpi = 96)
+old_options <- options(digits = 3, width = 90)
+```
+
+Educational software now writes much of the feedback that learners read.
+An application that generates its hints, corrections and explanations with
+a language model produces thousands of messages, many of them near copies
+of one another, and the question an evaluator asks of such a corpus is what
+kinds of feedback it contains and how often each kind is given. Counting
+words does not answer that question. Frequent words and phrases recover the
+templates the generator reuses ("choose all the pictures", "in the red
+box"), not what a message does for the learner: whether it hints, asks,
+corrects or explains.
+
+Semantic topic modeling groups texts by meaning instead of by shared words.
+Each text is encoded as a sentence embedding, a vector in which texts with
+similar meaning lie close together even when they share few words
+(Reimers & Gurevych, 2019). The embeddings are normalized to unit length
+and partitioned by k-means (Lloyd, 1982), so that a topic is a region of
+the embedding space. A topic is then described in two ways: by the texts
+nearest its center, which show what its members say, and by the words that
+are frequent in it and rare elsewhere, scored with class-based TF-IDF
+(Grootendorst, 2022). The `sbert` package computes the embeddings in R,
+without Python, and fits the topics deterministically, so the same input
+always gives the same topics, tables and figures.
+
+Encoding needs a model that is downloaded once on request. This article
+does not download one: the embeddings of the messages it models are
+bundled with the package, and every analysis below runs on them. The step
+that would compute them is shown, not run.
+
+```{r setup}
+library(sbert)
+```
+
+## Data
+
+`feedback_translations` holds `r format(nrow(feedback_translations), big.mark = ",")`
+AI-generated feedback messages from a mathematics learning application,
+written in ten source languages and translated into English.
+
+- **`feedback`:** the message in its source language. Carried along with
+  each modeled message, not modeled.
+- **`translation`:** the English translation. The text that is modeled.
+- **`n`:** added by `dedupe()`, the number of times the message occurs in
+  the full corpus. Used to weight topic sizes.
+
+Many messages repeat word for word. `dedupe()` keeps the first occurrence
+of each distinct translation, with all its columns, and counts its
+occurrences in `n`:
+
+```{r dedupe}
+messages <- dedupe(feedback_translations, column = "translation")
+nrow(messages)
+subset(messages, n >= 7, select = c(translation, n))
+```
+
+The corpus has 8,005 distinct translations. The most repeated message,
+"Try again.", occurs 11 times, and four more messages occur 7 times
+each. Repetition is therefore moderate, but it is uneven, which
+matters when topic sizes are reported.
+
+The analysis uses the first 600 distinct messages, whose embeddings ship
+with the package as `feedback_embeddings`: row *i* of that matrix is the
+embedding of row *i* of `corpus`.
+
+```{r corpus}
+corpus <- head(messages, 600)
+dim(feedback_embeddings)
+with(corpus, sum(n))
+```
+
+Each of the 600 messages is a vector of 384 numbers from the
+`all-MiniLM-L6-v2` model, and together they were shown 740 times. With a
+downloaded model, the same analysis starts from the text alone, and
+`topics()` encodes it; this chunk is not run here:
+
+```{r live, eval = FALSE}
+model_download()
+topic_model <- topics(corpus, n_topics = 6, column = "translation")
+```
+
+## How many kinds of feedback are there?
+
+There is no correct number of topics. `compare_topics()` fits one model for
+each candidate count and reports, for each:
+
+- `coherence`: whether each topic's top words occur together in the same
+  messages, as normalized pointwise mutual information (NPMI; Bouma, 2009),
+  from -1 to 1, averaged over topics.
+- `topic_diversity`: the share of distinct words among all topics' top-10
+  word lists; 1 when no two topics share a top word.
+- `explained`: the share of the variation in the embeddings that the
+  topics capture. It grows with every added topic, so it cannot choose the
+  count on its own.
+- `converged`: whether k-means reached a stable partition.
+
+Coherence and diversity are computed from words, so they are a guide; the
+test of a count is whether the messages of each topic do the same thing,
+which the following sections check.
+
+```{r sweep}
+sweep <- compare_topics(corpus, column = "translation",
+                        n_topics = c(4, 5, 6, 7, 8, 10, 12),
+                        embeddings = feedback_embeddings)
+sweep
+```
+
+```{r sweep-plot, fig.height = 4}
+plot(sweep)
+```
+
+Every candidate converged. Coherence is negative at every count, because
+the messages are short and two content words rarely occur in the same
+message, and it is highest at six topics (-0.104), with eight close behind
+(-0.118). Six topics explain 22.6% of the variation in the embeddings and
+keep a topic diversity of 0.917. `summary()` states the same choice in one
+row:
+
+```{r sweep-summary}
+summary(sweep)
+```
+
+The analysis proceeds with six topics. `fitted()` returns the six-topic
+model that `compare_topics()` already fitted, so nothing is refitted:
+
+```{r model}
+topic_model <- fitted(sweep, n_topics = 6)
+topic_model
+```
+
+## What are the topics?
+
+`topic_sizes()` lists the topics. The `label` of each topic is the message
+closest to its center, cut at 60 characters, and `n_documents` counts its
+messages:
+
+```{r sizes}
+topic_sizes(topic_model)
+```
+
+Reading the labels and the messages of each topic (shown in the next
+section) shows that the topics are not subjects but kinds of feedback,
+defined by what a message does for the learner:
+
+1. **Guiding question and instruction.** A question that makes the learner
+   find something, followed by an order to act on it: *Where is the cow and
+   the cake? Choose all the pictures that are between them.*
+2. **Short hint.** A fragment with no verb that restates the target: *All
+   the ones between the cat and the strawberry.*
+3. **Question about meaning.** A question that asks the learner what a
+   phrase means: *What does "all the ones between the leaf and the unicorn"
+   mean?*
+4. **Correction.** A statement of what should be true, or a question that
+   makes the learner check an answer: *Are you sure you have fewer pictures
+   in the red box than in the blue one?*
+5. **Definition.** An explanation of what a word or phrase means: *In the
+   top middle box, it means something is in the middle at the top.*
+6. **Negation.** A description built from what something is not, used to
+   rule out answers: *It is not a person, does not have a hat, and is
+   sitting.*
+
+Topics 1, 2 and 3 concern the same exercise, finding the pictures between
+two others, and use the same words. The embeddings still separate them,
+because an instruction, a hint and a question do different things. Topics
+3 and 5 both deal with meaning, but one asks the learner and the other
+tells them.
+
+`name_topics()` gives the topics these names, one per topic in topic order.
+The names replace the labels in every table and plot that follows; nothing
+is refitted.
+
+```{r name-topics}
+topic_model <- name_topics(topic_model, c(
+  "Guiding question and instruction", "Short hint",
+  "Question about meaning", "Correction", "Definition", "Negation"
+))
+topic_sizes(topic_model)
+```
+
+Instructions are the largest kind of feedback, with 223 of the 600
+distinct messages (37.2%), and negations the smallest, with 27 (4.5%).
+
+## How typical are the example messages?
+
+`representatives()` returns the messages of each topic ranked by how
+typical they are. With `rank = "distance"` the ranking is by the cosine
+distance from the message to its topic's center; `margin` is how much
+farther the message is from the next closest topic. The text column is
+long, so the table is printed with `knitr::kable()`:
+
+```{r representatives}
+knitr::kable(representatives(topic_model, n = 3, rank = "distance"),
+             digits = 2)
+```
+
+The most typical messages lie between 0.14 and 0.33 from their centers.
+Corrections and negations are the tightest topics: their nearest messages
+are within 0.17 of the center, and their margins (0.40 to 0.50) are the
+largest in the table, so these messages could belong to no other kind of
+feedback. Definitions are
+the loosest: their closest message is 0.29 from the center, and the topic
+mixes explanations of a phrase with questions about it, the boundary it
+shares with topic 3. The default, `rank = "margin"`, ranks by `margin`
+instead and favors messages that are unambiguous members of their topic.
+
+The plot shows the same messages, with the similarity to the center in
+parentheses:
+
+```{r plot-representatives, fig.height = 4.5}
+plot(topic_model, type = "representatives", n_representatives = 3)
+```
+
+## How large are the topics once repetition is counted?
+
+`n_documents` counts distinct messages, so a message shown four times
+counts once. Passing the name of the count column as `weights` adds
+`n_weighted` and `weighted_share`, which count every time a message was
+shown:
+
+```{r weighted-sizes}
+topic_sizes(topic_model, weights = "n")
+```
+
+Corrections grow from 8.2% of the distinct messages to 10.3% of all
+messages shown, and questions about meaning shrink from 21.8% to 18.6%. The
+application repeated its corrections more often than its other kinds of
+feedback, so a count of distinct messages understates how much correcting
+it did.
+
+```{r plot-sizes, fig.height = 4}
+plot(topic_model, type = "sizes")
+```
+
+## What words does each topic use?
+
+Words do not define these topics; the sentences do. The words a topic uses
+more than the others still help to search the messages or to see how a
+topic is phrased. `terms()` lists them; the `score` is class-based TF-IDF,
+high for words frequent in this topic and rare in the others:
+
+```{r terms}
+terms(topic_model, n = 5)
+```
+
+```{r plot-terms, fig.height = 6}
+plot(topic_model, type = "terms")
+```
+
+The words show why they make poor names. They describe what the messages
+are about, not what they do. The top words of the short hints, after
+*ones*, are names of pictures (*broccoli*, *candy*, *hippo*) that change
+from message to message, and nothing in them says that the topic is made
+of hints. The words of the negations (*person*, *animal*, *hat*) name the
+pictures, not the negation that defines the topic. Short hints and
+questions about meaning share the word *ones*, although one gives a hint
+and the other asks a question.
+
+`summary()` adds the coherence of each topic's top words:
+
+```{r summary}
+summary(topic_model)
+```
+
+Coherence is lowest for the short hints (-0.415), whose picture names
+rarely recur together, and highest for the corrections (0.301), whose
+messages repeat the same few words (*box*, *red*, *blue*). To name topics
+by their three top words instead of a message, fit with `label = "terms"`.
+
+## The whole model in one figure
+
+`type = "fit"` shows each topic's example messages and, beside them, its
+words, one row per topic:
+
+```{r plot-fit, fig.width = 9, fig.height = 9}
+plot(topic_model, type = "fit", n_terms = 4, n_representatives = 3)
+```
+
+The figure is the report of the analysis: six kinds of feedback, each with
+the messages that define it and the vocabulary that phrases it.
+
+## When to use which
+
+| Question | Verb |
+|----------|------|
+| How many topics, at which granularity? | `compare_topics()`, `summary()`, `fitted()` |
+| What are the topics and how large are they? | `topic_sizes()`, `topic_sizes(weights = )` |
+| What do the topics say? | `representatives()`, `name_topics()` |
+| Which words phrase them? | `terms()`, `coherence()`, `topic_diversity()` |
+| Which topic does a new message belong to? | `predict()`, `topic_membership()` |
+| What mix of topics is in a long document? | `topics(segment = "sentence")`, `topic_gamma()` |
+| Every table at once | `as.data.frame(topic_model, what = )` |
+
+## Further reading
+
+**Vignettes**
+
+- [Sentence embeddings without Python](https://sonsoles.me/sbert/articles/embeddings.html)
+
+**Guides**
+
+- [Choosing the number of topics and the granularity](https://sonsoles.me/sbert/articles/choosing-topics.html)
+- [Segmenting long documents](https://sonsoles.me/sbert/articles/segmenting.html)
+- [Preparing and cleaning a corpus](https://sonsoles.me/sbert/articles/preparing-corpus.html)
+- [Describing and naming topics](https://sonsoles.me/sbert/articles/describing-topics.html)
+- [Assigning new documents and topic mixtures](https://sonsoles.me/sbert/articles/assigning-topics.html)
+- [Models, the cache, and custom models](https://sonsoles.me/sbert/articles/models-and-cache.html)
+- [Parallel and high-throughput topic modeling](https://sonsoles.me/sbert/articles/parallel.html)
+- [Verification: Python parity and determinism](https://sonsoles.me/sbert/articles/verification.html)
+
+**Case studies**
+
+- [COVID-19 research abstracts](https://sonsoles.me/sbert/articles/case-covid.html)
+- [Multilingual feedback messages](https://sonsoles.me/sbert/articles/case-multilingual-feedback.html)
+
+## References
+
+Bouma, G. (2009). Normalized (pointwise) mutual information in collocation
+extraction. *Proceedings of GSCL*, 31--40.
+
+Grootendorst, M. (2022). BERTopic: Neural topic modeling with a class-based
+TF-IDF procedure. arXiv:2203.05794.
+
+Lloyd, S. P. (1982). Least squares quantization in PCM. *IEEE Transactions
+on Information Theory*, *28*(2), 129--137.
+https://doi.org/10.1109/TIT.1982.1056489
+
+Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP 2019*,
+3982--3992. https://doi.org/10.18653/v1/D19-1410
+
+```{r restore-options, include = FALSE}
+options(old_options)
+```

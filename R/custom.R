@@ -11,17 +11,17 @@ custom_model_directory <- function(cache_dir, id, revision) {
 
 read_hf_json <- function(url) {
   if (!requireNamespace("jsonlite", quietly = TRUE)) {
-    stop(
+    sbert_abort(
       "load_custom() requires the 'jsonlite' package. Install it first.",
-      call. = FALSE
+      class = "sbert_missing_package"
     )
   }
   tryCatch(
     jsonlite::fromJSON(url, simplifyVector = TRUE),
     error = function(error_condition) {
-      stop(
+      sbert_abort(
         sprintf("Could not read '%s': %s", url, conditionMessage(error_condition)),
-        call. = FALSE
+        class = "sbert_download_failed"
       )
     }
   )
@@ -31,7 +31,10 @@ resolve_hf_revision <- function(id) {
   info <- read_hf_json(sprintf("https://huggingface.co/api/models/%s", utils::URLencode(id)))
   revision <- info$sha
   if (is.null(revision) || !nzchar(revision)) {
-    stop(sprintf("Could not resolve the current revision of '%s'.", id), call. = FALSE)
+    sbert_abort(
+      sprintf("Could not resolve the current revision of '%s'.", id),
+      class = "sbert_download_failed"
+    )
   }
   revision
 }
@@ -45,7 +48,7 @@ find_hf_onnx_path <- function(id, revision) {
   candidates <- intersect(c("onnx/model.onnx", "model.onnx"), tree$path)
   if (length(candidates) == 0L) {
     onnx_files <- grep("\\.onnx$", tree$path, value = TRUE)
-    stop(
+    sbert_abort(
       sprintf(
         "No 'onnx/model.onnx' or 'model.onnx' in '%s' at revision %s.%s",
         id,
@@ -59,7 +62,7 @@ find_hf_onnx_path <- function(id, revision) {
           " The repository ships no ONNX export."
         }
       ),
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
   candidates[[1L]]
@@ -115,20 +118,20 @@ download_custom_artifact <- function(url, destination, quiet) {
   tryCatch(
     utils::download.file(url, temporary_path, mode = "wb", quiet = quiet),
     error = function(error_condition) {
-      stop(
+      sbert_abort(
         sprintf(
           "Could not download '%s': %s",
           basename(destination),
           conditionMessage(error_condition)
         ),
-        call. = FALSE
+        class = "sbert_download_failed"
       )
     }
   )
   if (!file.rename(temporary_path, destination)) {
-    stop(
+    sbert_abort(
       sprintf("Could not move '%s' into the cache.", basename(destination)),
-      call. = FALSE
+      class = "sbert_download_failed"
     )
   }
   invisible(destination)
@@ -168,49 +171,69 @@ verify_custom_files <- function(model_directory, manifest) {
   )
 }
 
-#' Load an Arbitrary Hugging Face Embedding Model
+#' Load a Hugging Face embedding model outside the pinned list
 #'
-#' Loads any public Hugging Face repository that ships an ONNX encoder export
-#' and a `tokenizer.json`, returning the same `sbert_model` object as
-#' [load_model()] so that [encode()], [topics()], and every
-#' downstream verb work unchanged.
+#' @description
+#' `load_custom()` loads a Hugging Face embedding model that is not in the
+#' pinned list, on a "trust on first use" basis. Many embedding models on
+#' Hugging Face publish an ONNX export of their encoder and a `tokenizer.json`;
+#' such a model can be used like a pinned one, but its configuration is not
+#' vouched for by the package: there is no pinned revision, no
+#' package-controlled hash, and no check that its embeddings match the reference
+#' implementation. The caller is responsible for the pooling rule, prefix and
+#' maximum length.
 #'
-#' This is the escape hatch below the curated registry. On first use the
-#' current revision is resolved (unless `revision` is given), the artifacts
-#' are downloaded, and their byte sizes and SHA-256 values are recorded in a
-#' local manifest ("trust on first use"); later loads verify the files
-#' against that manifest and never touch the network. Pooling, prefix, and
-#' maximum length are auto-detected from the repository's
-#' Sentence-Transformers configuration when present, and must be supplied
-#' explicitly otherwise. The ONNX input signature and embedding dimension are
-#' read from the graph itself. Unlike registry models, the package makes no
-#' numerical-parity claim: you vouch for the configuration.
+#' On first use it resolves the current revision (unless `revision` is given),
+#' downloads the ONNX graph and tokenizer, and records their sizes, hashes and
+#' the model's configuration in a local manifest; later loads verify the files
+#' against that manifest. A later load with the same `revision` given uses no
+#' network; with `revision = NULL` every call first asks Hugging Face for the
+#' current revision. Pooling and maximum length are read from the repository's
+#' Sentence-Transformers configuration when it has one and must be given
+#' otherwise; the embedding dimension is read from the ONNX graph.
+#'
+#' The result is an `sbert_model` like the one [load_model()] returns, so
+#' [encode()], [topics()] and every other verb accept it. For the pinned,
+#' verified models use [load_model()].
 #'
 #' @param id Hugging Face repository id, for example `"thenlper/gte-small"`.
-#' @param revision Optional commit hash to pin. `NULL` resolves the current
-#'   revision on first download (recorded in the manifest thereafter).
-#' @param onnx_path Repository path of the ONNX graph. `NULL` auto-detects
-#'   `onnx/model.onnx` or `model.onnx`.
-#' @param tokenizer_path Repository path of the tokenizer. Default
-#'   `"tokenizer.json"`.
-#' @param pooling `"mean"` or `"cls"`. `NULL` auto-detects from
-#'   `1_Pooling/config.json` and fails with a clear message when absent.
-#' @param prefix Text prepended to every input by [encode()]. `NULL`
-#'   (default) keeps the recorded value (`""` on first use); pass `""` to
-#'   clear a recorded prefix.
-#' @param max_length Maximum word pieces per input. `NULL` auto-detects from
-#'   `sentence_bert_config.json`, falling back to 512.
-#' @param cache_dir Cache root returned by [cache_dir()].
-#' @param backend ONNX execution backend accepted by [onnxr::onnx_model()].
-#' @param threads Positive number of inference threads.
-#' @param verify Whether to verify recorded byte sizes and SHA-256 hashes
-#'   when loading from an existing cache.
-#' @param quiet Whether to suppress download progress.
-#' @return An object of class `sbert_model`, with the same fields as
+#' @param revision Commit hash to pin, or `NULL` (default) to resolve the
+#'   current revision online on every call. Pin it for offline reuse.
+#' @param onnx_path Path of the ONNX graph in the repository, or `NULL`
+#'   (default) to use `onnx/model.onnx` or `model.onnx`.
+#' @param tokenizer_path Path of the tokenizer in the repository (default
+#'   `"tokenizer.json"`).
+#' @param pooling `"mean"` or `"cls"`, or `NULL` (default) to read it from
+#'   the repository's `1_Pooling/config.json`.
+#' @param prefix Text prepended to every input by [encode()]. `NULL` (default)
+#'   keeps the recorded prefix (`""` on first use); `""` clears it.
+#' @param max_length Maximum word pieces per input, or `NULL` (default) to
+#'   read it from `sentence_bert_config.json`, else 512.
+#' @param cache_dir Cache root (default [cache_dir()]).
+#' @param backend ONNX execution backend, as accepted by
+#'   [onnxr::onnx_model()] (default `"cpu"`).
+#' @param threads Number of inference threads (default 1).
+#' @param verify Check recorded sizes and SHA-256 hashes when loading from the
+#'   cache (default `TRUE`).
+#' @param quiet Suppress the download message and progress (default `FALSE`).
+#' @return An object of class `sbert_model` with the same fields as
 #'   [load_model()] returns; its `short_name` is `"custom:<id>"`.
+#' @section Conditions:
+#'   `sbert_runtime_missing` when ONNX Runtime is not installed;
+#'   `sbert_missing_package` when jsonlite is not installed;
+#'   `sbert_download_failed` when repository metadata or files cannot be
+#'   downloaded or the revision cannot be resolved; `sbert_model_error` when
+#'   the repository has no ONNX graph at the expected path, the pooling rule
+#'   cannot be detected and was not given, or the graph lacks a
+#'   `last_hidden_state` output or needs unsupported inputs;
+#'   `sbert_cache_invalid` when cached files no longer match the recorded
+#'   manifest.
+#' @seealso [load_model()] for the pinned models; [install_runtime()] for
+#'   ONNX Runtime; [encode()] to use the model; [cache_dir()] for where it is
+#'   stored.
 #' @export
 #' @examples
-#' # Cache root used for downloaded and custom models.
+#' # Custom models are stored under "custom" in this cache root.
 #' cache_dir()
 #'
 #' \donttest{
@@ -262,9 +285,9 @@ load_custom <- function(
     !is.na(quiet)
   )
   if (!sbert_onnx_is_installed()) {
-    stop(
+    sbert_abort(
       "ONNX Runtime is not installed. Run install_runtime() explicitly first.",
-      call. = FALSE
+      class = "sbert_runtime_missing"
     )
   }
 
@@ -291,12 +314,12 @@ load_custom <- function(
     if (is.null(pooling)) {
       pooling <- detect_custom_pooling(id, revision)
       if (is.null(pooling)) {
-        stop(
+        sbert_abort(
           paste0(
             "Could not auto-detect the pooling mode (no Sentence-Transformers ",
             "1_Pooling config). Pass pooling = \"mean\" or \"cls\" explicitly."
           ),
-          call. = FALSE
+          class = "sbert_model_error"
         )
       }
     }
@@ -361,13 +384,13 @@ load_custom <- function(
     write_custom_manifest(model_directory, manifest)
   } else {
     if (verify && !all(verify_custom_files(model_directory, manifest))) {
-      stop(
+      sbert_abort(
         paste0(
           "Cached files no longer match the recorded manifest. Delete '",
           model_directory,
           "' and load again."
         ),
-        call. = FALSE
+        class = "sbert_cache_invalid"
       )
     }
     # Explicit arguments override what was recorded on first use.
@@ -392,7 +415,7 @@ load_custom <- function(
   input_names <- onnx_instance$input_names
   output_names <- onnx_instance$output_names
   if (!"last_hidden_state" %in% output_names) {
-    stop(
+    sbert_abort(
       sprintf(
         paste0(
           "The ONNX graph outputs (%s) do not include 'last_hidden_state'. ",
@@ -400,7 +423,7 @@ load_custom <- function(
         ),
         paste(output_names, collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
   unsupported <- setdiff(
@@ -408,12 +431,12 @@ load_custom <- function(
     c("input_ids", "attention_mask", "token_type_ids")
   )
   if (length(unsupported) > 0L) {
-    stop(
+    sbert_abort(
       sprintf(
         "The ONNX graph requires unsupported inputs: %s.",
         paste(unsupported, collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_model_error"
     )
   }
 

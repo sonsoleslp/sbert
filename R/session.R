@@ -32,16 +32,16 @@ ensure_sbert_model_installed <- function(name, cache_dir) {
       model_download(name, cache_dir)
       return(invisible(name))
     }
-    stop(
+    sbert_abort(
       sprintf("Download of '%s' declined. Nothing was downloaded.", name),
-      call. = FALSE
+      class = "sbert_model_not_installed"
     )
   }
   if (isTRUE(getOption("sbert.download"))) {
     model_download(name, cache_dir, quiet = TRUE)
     return(invisible(name))
   }
-  stop(
+  sbert_abort(
     sprintf(
       paste0(
         "Model '%s' is not installed. Run model_download(\"%s\") once, ",
@@ -51,7 +51,7 @@ ensure_sbert_model_installed <- function(name, cache_dir) {
       name,
       name
     ),
-    call. = FALSE
+    class = "sbert_model_not_installed"
   )
 }
 
@@ -79,10 +79,9 @@ resolve_sbert_model <- function(model = NULL, cache_dir = default_cache_dir()) {
 .onAttach <- function(libname, pkgname) {
   packageStartupMessage(sprintf(
     paste0(
-      "sbert %s - sentence embeddings without Python.\n",
-      "  %d pinned models: models()  |  default: %s\n",
-      "  encode(text) just works; the first use of a model offers a\n",
-      "  one-time SHA-256-verified download (never without asking)."
+      "sbert %s: Sentence-BERT embeddings and topic models in R.\n",
+      "  %d pinned models (see models()); default: %s.\n",
+      "  A model is downloaded only on request, once, and verified by SHA-256."
     ),
     utils::packageVersion(pkgname),
     length(.sbert_registry),

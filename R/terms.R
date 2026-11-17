@@ -3,63 +3,71 @@
 # to run again. This is the verb that used to be reachable only as
 # sbert:::topic_term_scores().
 
-#' Topic Terms, Retuned Without Refitting
+#' Compute the terms of each topic
 #'
-#' Recomputes the ranked terms of a fitted topic model under different term
-#' settings. Term extraction depends only on the fitted topic assignments and
-#' the document text, so every argument here can be changed without repeating
-#' the clustering or the encoding.
+#' @description
+#' `terms()` computes the ranked terms of each topic of a fitted model: the
+#' words that distinguish its texts from the texts of the other topics.
+#' Class-based TF-IDF (Grootendorst 2022) treats all the texts of a topic as one
+#' document and weights each term by its frequency in the topic against its
+#' frequency across all topics, so that a word frequent everywhere ranks low and
+#' a word frequent in one topic ranks high.
 #'
-#' @param x A fitted model from [topics()].
-#' @param n Terms returned per topic, or `NULL` for the whole vocabulary
-#'   (useful together with `smoothing` to obtain a full \eqn{p(term | topic)}
-#'   distribution). Defaults to the model's fitted `n_terms`.
-#' @param stop_words Character vector excluded from terms. Defaults to the
-#'   model's fitted list; see [stop_words()].
-#' @param min_term_frequency Minimum corpus-wide token frequency.
-#' @param min_token_length Minimum Unicode character length for a token.
-#' @param weighting Class-based term weighting, `"ctfidf"` or `"bm25"`.
-#' @param reduce_frequent_words Square-root the within-topic frequency before
-#'   weighting, damping very frequent words.
-#' @param stem Collapse inflected forms onto a shared Porter stem, displaying
-#'   the most frequent surface form. Requires `SnowballC`.
-#' @param numbers How to treat purely numeric tokens: `"keep"` or `"remove"`
-#'   (drop digit-only tokens such as years and counts). Defaults to the model's
-#'   fitted setting.
-#' @param roman_numerals How to treat Roman-numeral tokens: `"keep"` or
-#'   `"remove"` (drop chapter/section markers such as `ii`, `iv`, up to 100).
-#'   Defaults to the model's fitted setting.
-#' @param section_numbers How to treat section, reference, and list numbering —
-#'   multi-level indices such as `1.2.3` and enumeration markers such as `1.`,
-#'   `2.`: `"keep"` or `"remove"`. Defaults to the model's fitted setting.
-#' @param smoothing Additive (Dirichlet) smoothing for the `beta` column. Only
-#'   terms a topic actually used are returned, so with `smoothing = 0`
-#'   (default) each topic's `beta` sums to one, while any positive value
-#'   reserves mass for the zero-count vocabulary and the returned rows sum to
-#'   less than one.
-#' @param sort_by Order terms within each topic by `"score"` (default, the
-#'   class-based weight — distinctive words) or `"beta"` (raw \eqn{p(term | topic)}
-#'   — the words the topic uses most). `n` is applied after ordering.
-#' @param ... Unused, present for generic consistency.
-#' @return A base data frame with one row per topic and term: `topic`,
-#'   `label`, `term`, `rank`, `score` (the class-based weight), `frequency`
-#'   (within-topic count), and `beta`, the multinomial \eqn{p(term | topic)}.
+#' The terms describe a topic in words and complement its representative texts.
+#' They depend only on the topic assignments and the text, so `terms()`
+#' recomputes them under any term settings: changing the weighting, the stop
+#' words, the number filters, or stemming does not refit the model or encode
+#' anything. Every argument left `NULL` keeps the value the model was fitted
+#' with. Besides the weight (`score`), each term has its frequency in the topic
+#' and its probability within the topic (`beta`), and `sort_by = "beta"` ranks
+#' the words a topic uses most rather than the most distinctive ones. The result
+#' is a data frame with one row per topic and term.
+#'
+#' @param x A topic model fitted by [topics()].
+#' @param n Terms per topic; `NULL` (default) uses the model's `n_terms`.
+#' @param stop_words Words excluded from the terms; `NULL` (default) uses the
+#'   model's list. See [stop_words()].
+#' @param min_term_frequency Minimum corpus-wide frequency of a term.
+#' @param min_token_length Minimum length of a term, in characters.
+#' @param weighting Term weighting: `"ctfidf"` or `"bm25"`.
+#' @param reduce_frequent_words Whether to take the square root of
+#'   within-topic frequencies before weighting.
+#' @param stem Whether to merge inflected forms under one Porter stem (needs
+#'   the SnowballC package).
+#' @param numbers,roman_numerals,section_numbers Whether to `"keep"` or
+#'   `"remove"` digit-only tokens, Roman-numeral tokens, and section or list
+#'   numbering.
+#' @param smoothing Additive smoothing of `beta` (default 0). With 0, each
+#'   topic's `beta` over its terms sums to one; a positive value reserves
+#'   probability for the terms a topic does not use.
+#' @param sort_by Order of the terms within a topic: `"score"` (default), the
+#'   class-based weight, or `"beta"`, the probability within the topic. `n` is
+#'   applied after ordering.
+#' @param ... Ignored.
+#' @return A base data frame with one row per topic and term, and columns
+#'   `topic`, `label`, `term`, `rank`, `score` (the class-based weight),
+#'   `frequency` (count within the topic), and `beta` (the probability of the
+#'   term within the topic).
+#' @section Conditions:
+#'   An error of class `sbert_no_terms` when no term passes the filters, and
+#'   `sbert_missing_package` for `stem = TRUE` without SnowballC.
+#' @seealso [topics()]; [keywords()] for the keywords of single documents;
+#'   [coherence()] and [topic_diversity()], which evaluate the terms;
+#'   [plot()][plot.sbert_topic_model] with `type = "terms"`.
+#' @references
+#' Grootendorst, M. (2022). BERTopic: Neural topic modeling with a class-based
+#' TF-IDF procedure. arXiv:2203.05794.
+#'
+#' Mendonca, M. and Figueira, A. (2025). Modeling political discourse with
+#' Sentence-BERT and BERTopic. arXiv:2510.22904.
 #' @importFrom stats terms
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Kittens chase mice too", "Cats nap daily",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0, 0), c(0.98, 0.02, 0), c(0.96, 0, 0.04),
-#'   c(0, 1, 0), c(0.02, 0.98, 0), c(0, 0.96, 0.04)
-#' )
-#' fitted <- topics(
-#'   text, n_topics = 2, embeddings = embeddings, min_term_frequency = 1
-#' )
-#' terms(fitted, n = 3)
-#' terms(fitted, n = 3, weighting = "bm25")
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' terms(topic_model, n = 3)
+#' terms(topic_model, n = 3, weighting = "bm25", sort_by = "beta")
 terms.sbert_topic_model <- function(
   x,
   n = NULL,

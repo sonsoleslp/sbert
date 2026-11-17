@@ -4,12 +4,28 @@ template:
   bootstrap: 5
   bootswatch: yeti
 
+authors:
+  Mohammed Saqr:
+    href: https://saqr.me
+  Sonsoles López-Pernas:
+    href: https://sonsoles.me
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+
 reference:
+- title: Overview
+  contents:
+  - sbert-package
+
 - title: Encoding text
-  desc: Turn text into Sentence-BERT embeddings.
+  desc: Turn text into Sentence-BERT embeddings and compare them.
   contents:
   - encode
   - pool
+  - topic_similarity
 
 - title: Models and runtime
   desc: >
@@ -27,7 +43,7 @@ reference:
   - cache_size
 
 - title: Preparing a corpus
-  desc: Deduplicate, segment, and context-blend documents before modeling.
+  desc: Deduplicate, clean, segment, and context-blend documents before modeling.
   contents:
   - dedupe
   - clean_corpus
@@ -38,8 +54,8 @@ reference:
   - blend
   - stop_words
 
-- title: Topic modeling
-  desc: Fit topic models, sweep the topic count, and merge topics down.
+- title: Fitting topic models
+  desc: Prepare a corpus once, fit topics, compare topic counts, and merge topics.
   contents:
   - topic_corpus
   - topics
@@ -48,7 +64,7 @@ reference:
   - reduce_topics
 
 - title: Describing topics
-  desc: Distinctive terms, representative documents, sizes, and keywords.
+  desc: Distinctive terms, representative texts, names, sizes, and keywords.
   contents:
   - terms.sbert_topic_model
   - representatives
@@ -56,42 +72,75 @@ reference:
   - topic_sizes
   - keywords
 
-- title: Topic inference
-  desc: Assign new documents and recover soft, generative, and mixed memberships.
+- title: Assigning topics
+  desc: Assign new documents and recover soft memberships and topic mixtures.
   contents:
   - predict.sbert_topic_model
   - topic_membership
   - topic_gamma
 
 - title: Evaluating topics
-  desc: Intrinsic coherence and topic diversity.
+  desc: Coherence, diversity, and the hierarchy of topic centers.
   contents:
   - coherence
   - topic_diversity
-
-- title: Visualizing and summarizing
-  desc: Deterministic base-graphics plots, hierarchies, and reports.
-  contents:
+  - topic_hierarchy
   - summary.sbert_topic_model
+  - summary.sbert_topic_sweep
+  - summary.sbert_topic_hierarchy
+
+- title: Plots
+  desc: Deterministic base-graphics displays of models, comparisons, and hierarchies.
+  contents:
   - plot.sbert_topic_model
   - plot.sbert_topic_sweep
   - plot.sbert_topic_hierarchy
-  - topic_hierarchy
-  - topic_similarity
   - topic_palette
 
-- title: Printing and conversion
-  desc: Print methods and tidy accessors for result objects.
+- title: Results
+  desc: Tidy tables of result objects, and their print methods.
   contents:
+  - as.data.frame.sbert_topic_model
+  - as.data.frame.sbert_topic_sweep
+  - as.data.frame.sbert_topic_hierarchy
+  - as.data.frame.sbert_topic_corpus
   - print.sbert_model
   - print.sbert_topic_corpus
   - print.sbert_topic_model
   - print.sbert_topic_hierarchy
   - print.sbert_topic_sweep
-  - as.data.frame.sbert_topic_sweep
+  - print.summary.sbert_topic_model
+  - print.summary.sbert_topic_sweep
+  - print.summary.sbert_topic_hierarchy
 
 - title: Data
-  desc: Bundled corpora for offline examples and topic modeling.
+  desc: Bundled corpora and precomputed embeddings for offline examples.
   contents:
   - feedback_translations
+  - feedback_embeddings
   - covid
+
+articles:
+- title: Vignettes
+  navbar: Vignettes
+  contents:
+  - sbert
+  - embeddings
+
+- title: Guides
+  navbar: Guides
+  contents:
+  - articles/choosing-topics
+  - articles/segmenting
+  - articles/preparing-corpus
+  - articles/describing-topics
+  - articles/assigning-topics
+  - articles/models-and-cache
+  - articles/parallel
+  - articles/verification
+
+- title: Case studies
+  navbar: Case studies
+  contents:
+  - articles/case-covid
+  - articles/case-multilingual-feedback

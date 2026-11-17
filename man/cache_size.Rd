@@ -2,22 +2,34 @@
 % Please edit documentation in R/cache.R
 \name{cache_size}
 \alias{cache_size}
-\title{Measure the sbert Cache}
+\title{Measure the disk space of the model cache}
 \usage{
-cache_size(cache_dir = cache_dir())
+cache_size(cache_dir = default_cache_dir())
 }
 \arguments{
-\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
+\item{cache_dir}{Cache root (default the package cache directory,
+\code{\link[=cache_dir]{cache_dir()}}).}
 }
 \value{
-A single number: the total bytes used by regular files beneath
-the cache root, or \code{0} when it does not exist.
+A number: the total size in bytes, or \code{0} when the directory does
+not exist or is empty.
 }
 \description{
-Reports how much disk space the files under a cache root take, for
-example the downloaded models, so the cache can be pruned with
-\code{\link[=model_remove]{model_remove()}}.
+\code{cache_size()} measures the disk space of the model cache: it sums the sizes
+of all regular files beneath a cache root, including downloaded models and
+the files of custom models. A pinned model takes from about 31 MB to 1.3 GB
+of disk (the \code{size_mb} column of \code{\link[=models]{models()}}), and the cache keeps every model
+and custom model downloaded until it is removed, so this total is the basis
+for deciding what to remove.
+
+It returns the total size in bytes. To list the files of one model, use
+\code{\link[=model_status]{model_status()}}; to delete one, use \code{\link[=model_remove]{model_remove()}}.
 }
 \examples{
 cache_size(tempdir())
+cache_size(file.path(tempdir(), "no-such-cache"))
+}
+\seealso{
+\code{\link[=cache_dir]{cache_dir()}} for the location; \code{\link[=model_status]{model_status()}} for one model's
+files; \code{\link[=model_remove]{model_remove()}} to free space.
 }

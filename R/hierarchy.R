@@ -63,44 +63,59 @@ topic_labels_from_terms <- function(terms, n_topics) {
   )
 }
 
-hierarchy_tree <- function(object, method) {
+topic_center_distance <- function(object) {
   centers <- normalize_rows(object$centers)
   cosine_distance <- 1 - tcrossprod(centers)
   cosine_distance[cosine_distance < 0] <- 0
+  cosine_distance
+}
+
+hierarchy_tree <- function(object, method) {
+  cosine_distance <- topic_center_distance(object)
   tree <- stats::hclust(stats::as.dist(cosine_distance), method = method)
   tree$labels <- topic_title(object$topics$topic, object$topics$label, 40L)
   tree
 }
 
-#' Build the Topic Hierarchy of a Fitted Model
+#' Build the hierarchy of the topics of a model
 #'
-#' Agglomeratively clusters the topic centroids by cosine distance and
-#' returns the merge tree: which topics are semantic neighbors, in what
-#' order they would fuse, and how far apart they are. Use it to judge
-#' whether a topic count is too fine (early merges at small heights are
-#' near-duplicate topics) and to choose a target count for
-#' [reduce_topics()]. Deterministic — no sampling, no seed.
+#' @description
+#' `topic_hierarchy()` clusters the topic centers of a model hierarchically,
+#' showing which topics are nearest neighbors, in what order they would merge,
+#' and at what distance. The topics of a model are not equally distinct: some
+#' lie close together in the embedding space and describe facets of one broader
+#' theme, while others stand apart. Topics that merge early, at a small
+#' distance, are near-duplicates, which suggests that the number of topics is
+#' finer than the data support.
 #'
-#' @param object An `sbert_topic_model` returned by [topics()].
-#' @param method Agglomeration method passed to [stats::hclust()]. Default
-#'   `"average"`.
-#' @return An `sbert_topic_hierarchy`: a list with `merges` (a tidy data
-#'   frame with one row per merge — `step`, `height`, and the human-readable
-#'   `left` and `right` branch descriptions) and `tree` (the underlying
-#'   `hclust` object, labeled with topic labels). `print()` shows the merge
-#'   table; `plot()` draws the labeled dendrogram.
+#' It computes the cosine distances between the topic centers and clusters them
+#' with [stats::hclust()]. The result, an object of class
+#' `sbert_topic_hierarchy`, is deterministic. Use it to choose a smaller number
+#' of topics for [reduce_topics()], or to report how the topics group into
+#' themes.
+#'
+#' @param object A topic model fitted by [topics()].
+#' @param method Agglomeration method passed to [stats::hclust()] (default
+#'   `"average"`).
+#' @return An object of class `sbert_topic_hierarchy`.
+#'   [as.data.frame()][as.data.frame.sbert_topic_hierarchy] gives the merge
+#'   table, one row per merge; [summary()][summary.sbert_topic_hierarchy]
+#'   gives the nearest neighbor of every topic; [plot()][plot.sbert_topic_hierarchy]
+#'   draws the dendrogram.
+#' @section Conditions:
+#'   An error of class `sbert_bad_input` when the model has fewer than two
+#'   topics.
+#' @seealso [reduce_topics()] to merge topics; [compare_topics()] to compare
+#'   numbers of topics; [topic_similarity()] for cosine similarities between
+#'   embeddings.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' topic_model <- topics(text, 3, embeddings = embeddings, n_terms = 3)
-#' topic_hierarchy(topic_model)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings, label = "terms")
+#' tree <- topic_hierarchy(topic_model)
+#' tree
+#' summary(tree)
 topic_hierarchy <- function(object, method = "average") {
   stopifnot(
     inherits(object, "sbert_topic_model"),
@@ -108,7 +123,10 @@ topic_hierarchy <- function(object, method = "average") {
     length(method) == 1L
   )
   if (nrow(object$topics) < 2L) {
-    stop("A topic hierarchy needs at least two topics.", call. = FALSE)
+    sbert_abort(
+      "A topic hierarchy needs at least two topics.",
+      class = "sbert_bad_input"
+    )
   }
   tree <- hierarchy_tree(object, method)
   branch_name <- function(node) {
@@ -126,19 +144,30 @@ topic_hierarchy <- function(object, method = "average") {
     stringsAsFactors = FALSE
   )
   structure(
-    list(merges = merges, tree = tree, n_topics = nrow(object$topics)),
+    list(
+      merges = merges,
+      tree = tree,
+      n_topics = nrow(object$topics),
+      topics = object$topics[, c("topic", "label")],
+      distance = unname(topic_center_distance(object))
+    ),
     class = "sbert_topic_hierarchy"
   )
 }
 
-#' Print a Topic Hierarchy
+#' Print a topic hierarchy
 #'
-#' Shows the merge table: one row per merge, with its height and the two
-#' branches that fused.
+#' @description
+#' `print()` shows a topic hierarchy: the number of topics and merges, and the
+#' merge table: one row per merge, with the cosine distance at which it happens
+#' and the two branches it joins.
 #'
-#' @param x An `sbert_topic_hierarchy` object.
+#' @param x A hierarchy built by [topic_hierarchy()].
 #' @param ... Ignored.
-#' @return The hierarchy object, invisibly.
+#' @return `x`, invisibly.
+#' @seealso [topic_hierarchy()];
+#'   [as.data.frame()][as.data.frame.sbert_topic_hierarchy];
+#'   [summary()][summary.sbert_topic_hierarchy].
 #' @export
 #' @examples
 #' text <- c(
@@ -149,7 +178,8 @@ topic_hierarchy <- function(object, method = "average") {
 #'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
 #'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 #' )
-#' tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
+#' tree <- topic_hierarchy(topics(text, n_topics = 3, embeddings = embeddings,
+#'                                n_terms = 3))
 #' print(tree)
 print.sbert_topic_hierarchy <- function(x, ...) {
   cat(sprintf(
@@ -161,29 +191,27 @@ print.sbert_topic_hierarchy <- function(x, ...) {
   invisible(x)
 }
 
-#' Plot a Topic Hierarchy Dendrogram
+#' Plot a topic hierarchy as a dendrogram
 #'
-#' Draws the merge tree as a dendrogram labeled with topic labels, with
-#' cosine distance on the height axis. Early merges at small heights are
-#' near-duplicate topics.
+#' @description
+#' `plot()` draws the hierarchy of the topics as a dendrogram with the topic
+#' labels as leaves and the cosine distance between topic centers on the
+#' vertical axis. Topics joined low in the tree are near-duplicates; topics
+#' joined only near the top are distinct from the rest.
 #'
-#' @param x An `sbert_topic_hierarchy` object.
-#' @param main Plot title.
-#' @param cex Character expansion factor for labels.
-#' @param ... Passed to [plot.dendrogram()].
-#' @return The hierarchy object, invisibly.
+#' @param x A hierarchy built by [topic_hierarchy()].
+#' @param main Plot title (default `"Topic hierarchy"`).
+#' @param cex Size of the leaf labels (default 0.8).
+#' @param ... Passed to the `plot()` method of [stats::hclust()].
+#' @return `x`, invisibly. Called for the plot.
+#' @seealso [topic_hierarchy()]; [summary()][summary.sbert_topic_hierarchy];
+#'   [reduce_topics()].
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
-#' plot(tree)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings, label = "terms")
+#' plot(topic_hierarchy(topic_model))
 plot.sbert_topic_hierarchy <- function(
   x,
   main = "Topic hierarchy",
@@ -209,42 +237,46 @@ plot.sbert_topic_hierarchy <- function(
   invisible(x)
 }
 
-#' Reduce a Fitted Topic Model to Fewer Topics
+#' Merge the topics of a model into fewer topics
 #'
-#' Cuts the topic hierarchy (see [topic_hierarchy()]) at the requested
-#' count and rebuilds the model: documents keep their cluster memberships
-#' (merged, never re-clustered), centroids are recomputed from the member
-#' documents, and terms, labels, sizes, and representatives are derived
-#' afresh for the merged topics. The result is a full `sbert_topic_model`
-#' — every downstream verb (`summary()`, `coherence()`, `predict()`,
-#' [representatives()], plots) works unchanged.
+#' @description
+#' `reduce_topics()` merges the closest topics of a fitted model into `n_topics`
+#' topics, giving a coarser model in which every document keeps its place:
+#' documents that shared a topic still share one. A model with more topics than
+#' the data support has near-duplicate topics that divide one theme between
+#' them; merging them differs from fitting a new model with fewer topics, in
+#' which documents may be regrouped.
 #'
-#' @param object An `sbert_topic_model` returned by [topics()].
-#' @param n_topics Target number of topics, at least 2 and below the
-#'   current count.
-#' @param embeddings The document embedding matrix used to fit `object`.
-#'   Only needed when the model was fitted with `keep_embeddings = FALSE`;
-#'   models fitted with `keep_embeddings = TRUE` carry their embeddings.
-#' @param method Agglomeration method passed to [stats::hclust()]. Default
-#'   `"average"`.
-#' @return An `sbert_topic_model` with `n_topics` topics and the same
-#'   structure as a [topics()] fit. Names given with [name_topics()] are
-#'   dropped, because the merged topics need new ones.
+#' It cuts the hierarchy of [topic_hierarchy()] into `n_topics` groups and
+#' merges the topics within each group. The new topic centers are the normalized
+#' means of their members' embeddings, and the terms, labels, sizes,
+#' representatives, and sums of squares are computed again for the merged
+#' topics. The result is a topic model like any other, so every verb applies to
+#' it. Names given with [name_topics()] are dropped, because the merged topics
+#' need new ones.
+#'
+#' @param object A topic model fitted by [topics()].
+#' @param n_topics Number of topics after merging: at least 2 and below the
+#'   current number.
+#' @param embeddings The embedding matrix the model was fitted on. Needed only
+#'   for a model fitted with `keep_embeddings = FALSE`. Default `NULL`.
+#' @param method Agglomeration method passed to [stats::hclust()] (default
+#'   `"average"`).
+#' @return A topic model of class `sbert_topic_model` with `n_topics` topics,
+#'   structured as a [topics()] fit.
+#' @section Conditions:
+#'   Errors of class `sbert_bad_input` when `n_topics` is not below the
+#'   current number of topics, and `sbert_no_embeddings` when the model holds
+#'   no embeddings and none are given.
+#' @seealso [topic_hierarchy()] to see which topics would merge;
+#'   [compare_topics()] to compare fits with different numbers of topics.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-#'   "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-#' )
-#' embeddings <- rbind(
-#'   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-#'   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-#' )
-#' topic_model <- topics(
-#'   text, 3,
-#'   embeddings = embeddings, n_terms = 3, keep_embeddings = TRUE
-#' )
-#' reduce_topics(topic_model, 2)
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' reduced <- reduce_topics(topic_model, n_topics = 4)
+#' topic_sizes(reduced, weights = "n")
 reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average") {
   stopifnot(
     inherits(object, "sbert_topic_model"),
@@ -256,20 +288,20 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
   )
   n_topics <- as.integer(n_topics)
   if (n_topics >= nrow(object$topics)) {
-    stop(
+    sbert_abort(
       "n_topics must be below the current topic count; ",
       "use the model as is for the same count.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   if (is.null(embeddings)) {
     embeddings <- object$embeddings
   }
   if (is.null(embeddings)) {
-    stop(
+    sbert_abort(
       "The model carries no embeddings; refit with keep_embeddings = TRUE ",
       "or supply the original embedding matrix through 'embeddings'.",
-      call. = FALSE
+      class = "sbert_no_embeddings"
     )
   }
   stopifnot(
@@ -342,13 +374,10 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
     seq_len(n_topics),
     function(topic_id) {
       member_rows <- normalized[documents$topic == topic_id, , drop = FALSE]
-      center_matrix <- matrix(
-        centers[topic_id, ],
-        nrow = nrow(member_rows),
-        ncol = ncol(centers),
-        byrow = TRUE
-      )
-      sum((member_rows - center_matrix)^2)
+      # Around the members' mean, not the unit-length stored center, so that
+      # between/total SS stays the share of variance the merged partition
+      # explains, in [0, 1].
+      sum(sweep(member_rows, 2L, colMeans(member_rows))^2)
     },
     numeric(1)
   )
@@ -382,6 +411,8 @@ reduce_topics <- function(object, n_topics, embeddings = NULL, method = "average
         tot_withinss = sum(withinss),
         betweenss = totss - sum(withinss),
         iterations = object$diagnostics$iterations,
+        converged = object$diagnostics$converged %||% NA,
+        warnings = object$diagnostics$warnings %||% character(),
         algorithm = "hierarchical merge of deterministic k-means topics"
       ),
       model = object$model,

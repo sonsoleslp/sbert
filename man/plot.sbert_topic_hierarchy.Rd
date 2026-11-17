@@ -2,36 +2,35 @@
 % Please edit documentation in R/hierarchy.R
 \name{plot.sbert_topic_hierarchy}
 \alias{plot.sbert_topic_hierarchy}
-\title{Plot a Topic Hierarchy Dendrogram}
+\title{Plot a topic hierarchy as a dendrogram}
 \usage{
 \method{plot}{sbert_topic_hierarchy}(x, main = "Topic hierarchy", cex = 0.8, ...)
 }
 \arguments{
-\item{x}{An \code{sbert_topic_hierarchy} object.}
+\item{x}{A hierarchy built by \code{\link[=topic_hierarchy]{topic_hierarchy()}}.}
 
-\item{main}{Plot title.}
+\item{main}{Plot title (default \code{"Topic hierarchy"}).}
 
-\item{cex}{Character expansion factor for labels.}
+\item{cex}{Size of the leaf labels (default 0.8).}
 
-\item{...}{Passed to \code{\link[=plot.dendrogram]{plot.dendrogram()}}.}
+\item{...}{Passed to the \code{plot()} method of \code{\link[stats:hclust]{stats::hclust()}}.}
 }
 \value{
-The hierarchy object, invisibly.
+\code{x}, invisibly. Called for the plot.
 }
 \description{
-Draws the merge tree as a dendrogram labeled with topic labels, with
-cosine distance on the height axis. Early merges at small heights are
-near-duplicate topics.
+\code{plot()} draws the hierarchy of the topics as a dendrogram with the topic
+labels as leaves and the cosine distance between topic centers on the
+vertical axis. Topics joined low in the tree are near-duplicates; topics
+joined only near the top are distinct from the rest.
 }
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
-plot(tree)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings, label = "terms")
+plot(topic_hierarchy(topic_model))
+}
+\seealso{
+\code{\link[=topic_hierarchy]{topic_hierarchy()}}; \link[=summary.sbert_topic_hierarchy]{summary()};
+\code{\link[=reduce_topics]{reduce_topics()}}.
 }

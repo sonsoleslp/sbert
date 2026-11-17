@@ -2,7 +2,7 @@
 % Please edit documentation in R/topics.R
 \name{topic_corpus}
 \alias{topic_corpus}
-\title{Prepare a Corpus Once to Fit Many Topic Models}
+\title{Prepare a corpus once for several topic models}
 \usage{
 topic_corpus(
   text,
@@ -24,128 +24,100 @@ topic_corpus(
 )
 }
 \arguments{
-\item{text}{Character vector containing one document per element, or a
-data frame together with \code{column}.}
+\item{text}{Documents: a character vector with one document per element,
+or a data frame together with \code{column}.}
 
-\item{column}{When \code{text} is a data frame, the name of the column
-holding the documents to model. Every other column is carried along
-with each document in the fitted document table, and rows whose text is
-missing, blank, or a bibliographic placeholder
-(\code{"[No abstract available]"}) are dropped. Precomputed
-\code{embeddings} may keep one row per supplied row; the dropped rows are
-removed from them too. Leave \code{NULL} for a character vector.}
+\item{column}{Name of the text column when \code{text} is a data frame. The other
+columns are carried into the document table. Rows whose text is missing,
+blank, or the placeholder \code{"[No abstract available]"} are dropped, and so
+are their rows of \code{embeddings}. \code{NULL} (default) for a character vector.}
 
-\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
-name from \code{\link[=models]{models()}}, or \code{NULL} for the default model. Ignored
-when \code{embeddings} are supplied.}
+\item{model}{The encoder: a model from \code{\link[=load_model]{load_model()}}, a pinned model name
+from \code{\link[=models]{models()}}, or \code{NULL} (default) for the default model. Not used when
+\code{embeddings} are given.}
 
-\item{embeddings}{Optional numeric matrix with one row per document;
-when supplied, no model is loaded or used.}
+\item{embeddings}{Optional numeric matrix of precomputed embeddings, one row
+per modeled unit (per document, or per segment with \code{segment}). When it
+is given, no model is loaded. Default \code{NULL}.}
 
-\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is used.}
+\item{batch_size}{Texts encoded per model call (default 32).}
 
-\item{stop_words}{Character vector excluded from topic terms. Use
-\code{character()} to disable stop-word filtering.}
+\item{stop_words}{Words excluded from the topic terms; default
+\code{\link[=stop_words]{stop_words()}}. \code{character()} turns the filter off.}
 
-\item{min_token_length}{Minimum Unicode character length for a topic token.}
+\item{min_token_length}{Minimum length of a term, in characters
+(default 2).}
 
-\item{stem}{Whether to collapse inflected forms (for example \code{animals} and
-\code{animal}) onto a shared Porter stem before scoring, displaying the most
-frequent surface form of each stem. Requires the \code{SnowballC} package.}
+\item{stem}{Whether to merge inflected forms of a term under one Porter
+stem, shown as its most frequent form (default \code{FALSE}; needs the
+SnowballC package).}
 
-\item{cores}{Number of forked worker processes used to tokenize documents for
-term scoring. Default \code{1} (serial). Values above one use
-\code{parallel::mclapply} on Unix-alikes and fall back to serial on Windows or
-for small corpora; the tokenization — and therefore every result — is
-identical regardless of the count. Ignored when a prepared \code{\link[=topic_corpus]{topic_corpus()}}
-is supplied (its tokens are already computed).}
+\item{cores}{Number of forked worker processes for tokenization (default 1;
+Unix-alikes only). Results do not depend on it.}
 
-\item{numbers}{How to treat purely numeric tokens (years, counts) in topic
-terms. \code{"keep"} (default) keeps them; \code{"remove"} drops tokens made only of
-digits, while retaining alphanumerics such as \code{covid19}.}
+\item{numbers, roman_numerals, section_numbers}{Whether to \code{"keep"} (default)
+or \code{"remove"} digit-only tokens, Roman-numeral tokens, and section or list
+numbering (\verb{1.2.3}, \code{1.}) from the topic terms. They change the terms
+only, not the text that is embedded; to clean the text, use
+\code{\link[=clean_corpus]{clean_corpus()}}.}
 
-\item{roman_numerals}{How to treat Roman-numeral tokens (chapter, section,
-and list markers such as \code{ii}, \code{iv}, \code{xii}). \code{"keep"} (default) keeps them;
-\code{"remove"} drops canonical Roman numerals up to 100. The bound is
-deliberate: larger Roman numerals collide with common abbreviations that
-are also valid numerals (\code{ml}, \code{mm}, \code{cc}, \code{ci}, \code{cv}), which are always
-kept. A few small numerals that are also words (\code{iv}, \code{vi}, \code{xl}) are
-removed when this is on.}
+\item{segment}{Unit of analysis: \code{"document"} (default), or \code{"sentence"},
+\code{"clause"}, or \code{"phrase"}, which split each document with \code{\link[=segment]{segment()}}
+and fit the topics to the segments, so that a document can take part in
+several topics.}
 
-\item{section_numbers}{How to treat section, reference, and list numbering.
-\code{"keep"} (default) keeps it; \code{"remove"} strips, before tokenizing, both
-multi-level indices (\verb{1.2.3}, \verb{4.5.6.7} — three or more dot-separated
-groups) and enumeration or list markers (\code{1.}, \code{2.}, \verb{figure 12.} — a
-standalone one- or two-digit number followed by a period). Decimals
-(\code{3.14}), four-digit years (\code{2020.}), hyphenated numbers (\code{covid-19.}), and
-larger counts are left untouched, so genuine values survive even when
-\code{numbers = "keep"}.
-These filter only the topic terms; the document text and its embedding are
-untouched. To clean the source text itself — list markers, reference noise,
-junk characters — before encoding, see \code{\link[=clean_corpus]{clean_corpus()}}.}
-
-\item{segment}{The unit the model is fitted on. \code{"document"} (default)
-embeds each document whole. \code{"sentence"}, \code{"clause"}, or \code{"phrase"} first
-splits every document with \code{\link[=segment]{segment()}} at that level and fits the topics
-on the segments, so long documents are modeled in full instead of being
-truncated to the encoder's context window, and a document can span several
-topics. The fitted document table then has one row per segment with its
-parent \code{document_id} and \code{segment} position; \code{\link[=topic_sizes]{topic_sizes()}} counts by
-segment or by document, \code{\link[=topic_gamma]{topic_gamma()}} recovers each document's topic
-mixture from the stored segments, and
-\link[=predict.sbert_topic_model]{predict()} segments new text the same way. A
-precomputed \code{embeddings} matrix must then have one row per
-segment, aligned with \code{segment(text, level = segment, ...)}.}
-
-\item{max_tokens}{Optional cap on segment length, passed to \code{\link[=segment]{segment()}}.
-When a \code{model} is used, the budget counts that model's exact tokens; with
-precomputed \code{embeddings} it counts words. Only with a segmented fit.}
-
-\item{merge_below}{Re-join segments shorter than this many words into their
-neighbor, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
-
-\item{min_content}{Minimum alphabetic-content ratio for a segment to be
-kept, passed to \code{\link[=segment]{segment()}}. Only with a segmented fit.}
+\item{max_tokens, merge_below, min_content}{Segmentation options passed to
+\code{\link[=segment]{segment()}}, for segmented fits only: the maximum segment length (in the
+model's tokens, or in words with precomputed \code{embeddings}; default
+\code{NULL}, no limit), the number of words below which a segment is joined to
+its neighbor (default 0), and the minimum share of letters for a segment
+to be kept (default 0; see \code{\link[=content_ratio]{content_ratio()}}).}
 }
 \value{
-An object of class \code{sbert_topic_corpus}: a list with the prepared
-\code{text} (one element per modeled unit), carried \code{metadata}, \code{units} (the
-\code{document_id}, \code{document_name}, and \code{segment} of every unit when the corpus
-is segmented, otherwise \code{NULL}), unit \code{embeddings}, cached \code{token_lists},
-\code{model} information, and the fixed segmentation and tokenization
-\code{settings}.
+An object of class \code{sbert_topic_corpus}. Its units (one row per
+document, or per segment) are given by
+\link[=as.data.frame.sbert_topic_corpus]{as.data.frame()}; printing it shows
+the number of documents and segments, the embedding dimension, the
+model, and the tokenization settings.
 }
 \description{
-Runs the corpus-level work that does not depend on the number of topics —
-segmenting (when \code{segment} asks for it), embedding every unit, and
-tokenizing it for term scoring — a single time, so that fitting many models
-(a \code{\link[=compare_topics]{compare_topics()}} sweep, a manual loop over topic counts, or repeated
-\code{\link[=topics]{topics()}} calls) reuses it instead of repeating it. Pass the returned
-object to \code{\link[=topics]{topics()}} or \code{\link[=compare_topics]{compare_topics()}} in place of the raw \code{text}.
+\code{topic_corpus()} prepares a corpus once for several topic models: it segments
+the texts, embeds them, and tokenizes them for term scoring, and returns a
+prepared corpus that \code{\link[=topics]{topics()}} and \code{\link[=compare_topics]{compare_topics()}} accept in place of the
+texts. Fitting topic models usually means fitting several (different numbers
+of topics, term settings, or seeds on the same texts), and these three steps
+do not depend on any of those choices; embedding is by far the most expensive
+step.
+
+Models fitted to the corpus are identical to models fitted to the raw texts.
+The corpus fixes the embeddings (from \code{model} or \code{embeddings}), the
+segmentation, and the tokenization settings; the settings of each model, such
+as \code{n_topics}, \code{n_terms}, \code{weighting}, and \code{seeds}, are still chosen per
+call. The result is an object of class \code{sbert_topic_corpus}.
+
+\code{\link[=compare_topics]{compare_topics()}} builds a corpus itself, so a corpus is needed only
+when models are fitted one at a time.
 }
-\details{
-The results are byte-identical to calling \code{\link[=topics]{topics()}} on the raw
-text: the corpus only \emph{caches} the segmentation, embedding, and
-tokenization steps, it does not change them. The corpus fixes the
-embedding source (\code{model} or \code{embeddings}), the segmentation (\code{segment},
-\code{max_tokens}, \code{merge_below}, \code{min_content}), and the tokenization settings
-(\code{stop_words}, \code{min_token_length}, \code{stem}, \code{numbers}, \code{roman_numerals},
-\code{section_numbers}). \code{\link[=topics]{topics()}} refuses a \code{model}, \code{embeddings}, or a
-different \code{segment} alongside a corpus, and takes the tokenization
-settings from the corpus, so set them when building it. Per-model
-settings (\code{n_topics}, \code{n_terms}, \code{min_term_frequency}, \code{weighting},
-\code{reduce_frequent_words}, \code{seeds}, ...) are still chosen per call.
+\section{Conditions}{
+
+Errors of class \code{sbert_bad_input} when both \code{model} and \code{embeddings} are
+given, a document is blank, the embeddings do not have one row per unit,
+the segmentation produces fewer than two segments, or \code{segment} is passed
+together with an existing corpus; \code{sbert_missing_package} for
+\code{stem = TRUE} without SnowballC. When a model is used, the errors of
+\code{\link[=load_model]{load_model()}} and \code{\link[=encode]{encode()}} apply.
 }
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-corpus <- topic_corpus(text, embeddings = embeddings)
-topic_sizes(topics(corpus, n_topics = 2))
-compare_topics(corpus, n_topics = 2:3)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+prepared <- topic_corpus(corpus, column = "translation",
+                         embeddings = feedback_embeddings)
+prepared
+topic_sizes(topics(prepared, n_topics = 4))
+topic_sizes(topics(prepared, n_topics = 6))
 }
 \seealso{
-\code{\link[=topics]{topics()}}, \code{\link[=compare_topics]{compare_topics()}}
+\code{\link[=topics]{topics()}} and \code{\link[=compare_topics]{compare_topics()}}, which take the corpus;
+\link[=as.data.frame.sbert_topic_corpus]{as.data.frame()} for its units;
+\code{\link[=segment]{segment()}} for the segmentation.
 }

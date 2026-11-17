@@ -2,7 +2,7 @@
 % Please edit documentation in R/keywords.R
 \name{keywords}
 \alias{keywords}
-\title{Extract Keywords from Documents by Embedding Similarity}
+\title{Extract the keywords of documents}
 \usage{
 keywords(
   text,
@@ -16,48 +16,63 @@ keywords(
 )
 }
 \arguments{
-\item{text}{A character vector of documents. Names, when present, are
-carried into the \code{document_name} column.}
+\item{text}{Documents: a character vector. Names, if any, are carried into
+\code{document_name}.}
 
-\item{model}{A loaded sbert model, a pinned model name, or \code{NULL} for the
-session default.}
+\item{model}{The encoder: a model from \code{\link[=load_model]{load_model()}}, a pinned model name,
+or \code{NULL} (default) for the default model.}
 
-\item{n}{Maximum keywords returned per document. Default \code{10}.}
+\item{n}{Maximum number of keywords per document (default 10).}
 
-\item{ngrams}{Maximum phrase length in tokens. Default \code{2} (unigrams and
-bigrams).}
+\item{ngrams}{Maximum length of a candidate phrase, in words (default 2).}
 
-\item{topic_diversity}{Maximal-marginal-relevance trade-off in \verb{[0, 1)}: \code{0}
-ranks purely by similarity, larger values penalize keywords similar to
-ones already selected. Default \code{0.3}.}
+\item{topic_diversity}{Trade-off between relevance and diversity, in
+\verb{[0, 1)}: 0 ranks by similarity to the document alone, and larger values
+penalize candidates similar to those already chosen (default 0.3).}
 
-\item{stop_words}{Words excluded from candidates. Defaults to
+\item{stop_words}{Words excluded from the candidates; default
 \code{\link[=stop_words]{stop_words()}}.}
 
-\item{min_token_length}{Minimum character length of a candidate token.
-Default \code{3}.}
+\item{min_token_length}{Minimum length of a candidate word, in characters
+(default 3).}
 
-\item{batch_size}{Number of texts encoded per model call. Default \code{32}.}
+\item{batch_size}{Texts encoded per model call (default 32).}
 }
 \value{
 A base data frame with one row per keyword and columns
-\code{document_id}, \code{document_name}, \code{rank}, \code{keyword}, and \code{topic_similarity}
-(cosine similarity between the keyword and its document).
+\code{document_id}, \code{document_name}, \code{rank}, \code{keyword}, and
+\code{topic_similarity} (the cosine similarity between the keyword and its
+document).
 }
 \description{
-Ranks each document's own words and phrases by cosine similarity between
-their embeddings and the document embedding, computed with the same model,
-and selects the top \code{n} by maximal marginal relevance so the keywords are
-relevant without being redundant (the KeyBERT design).
+\code{keywords()} extracts the keywords of each document: the words and short
+phrases that best express what it is about. Embedding-based keyword
+extraction compares the meaning of each candidate phrase with the meaning of
+the whole document, and a phrase whose embedding is close to the document's
+embedding summarizes it well; because picking the closest phrases alone tends
+to return near-synonyms, the selection also rewards phrases that differ from
+those already chosen, by maximal marginal relevance (Carbonell and Goldstein
+1998), as in KeyBERT (Grootendorst 2020).
+
+The candidates are the words and phrases of up to \code{ngrams} consecutive words
+of each document after stop words are removed; the documents and the
+candidates are encoded with the same model, and up to \code{n} keywords per
+document are selected. The result is a data frame with one row per keyword.
+\code{keywords()} describes single documents; to describe topics, use
+\link[=terms.sbert_topic_model]{terms()}, which compares the words of a topic with
+those of the other topics.
+
+\code{keywords()} encodes text, so it needs a downloaded model.
 }
-\details{
-Candidates are consecutive-token n-grams (lengths \code{1} to \code{ngrams}) drawn
-from the document after stop-word removal, so a candidate phrase never
-crosses a removed stop word silently: "analysis of networks" yields the
-candidates "analysis", "networks", and "analysis networks".
+\section{Conditions}{
+
+An error of class \code{sbert_no_terms} when no candidate is left after stop
+words and short words are removed; the errors of \code{\link[=load_model]{load_model()}} and
+\code{\link[=encode]{encode()}}.
 }
+
 \examples{
-# Pinned models that can encode the text.
+# Pinned models that can encode the text
 models()
 
 \donttest{
@@ -70,11 +85,14 @@ if (interactive()) {
 }
 }
 \references{
-Carbonell, J. and Goldstein, J. (1998). The use of MMR,
-diversity-based reranking for reordering documents and producing
-summaries. \emph{Proceedings of SIGIR 1998}, 335--336.
-\doi{10.1145/290941.291025}
+Carbonell, J. and Goldstein, J. (1998). The use of MMR, diversity-based
+reranking for reordering documents and producing summaries. \emph{Proceedings
+of SIGIR 1998}, 335--336. \doi{10.1145/290941.291025}
 
 Grootendorst, M. (2020). KeyBERT: Minimal keyword extraction with BERT.
 \doi{10.5281/zenodo.4461265}
+}
+\seealso{
+\link[=terms.sbert_topic_model]{terms()} for the terms of topics;
+\code{\link[=stop_words]{stop_words()}}; \code{\link[=model_download]{model_download()}} to download a model.
 }

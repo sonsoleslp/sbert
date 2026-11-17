@@ -1,5 +1,5 @@
 local_fixture <- function() {
-  readRDS(system.file("extdata", "feedback_embeddings.rds", package = "sbert"))
+  feedback_fixture()
 }
 model_surfaces <- function(m) {
   m[c("documents", "topics", "terms", "representatives", "centers")]

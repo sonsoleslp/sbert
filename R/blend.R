@@ -5,61 +5,64 @@
 # aligned, so a plain convex combination mostly re-adds shared direction and
 # lets the document term wash out unit-level nuance.
 
-#' Blend Segment Embeddings with Their Document Context
+#' Blend segment embeddings with their document context
 #'
-#' Computes context-aware embeddings for text segments: each segment vector is
-#' decomposed against its parent document embedding, and the blend keeps
-#' `alpha` of the segment's context-orthogonal residual plus `1 - alpha` of
-#' the document direction, renormalized to unit length:
-#' \deqn{m = normalize(\alpha (u - (u \cdot d) d) + (1 - \alpha) d)}
-#' with `u` the unit-normalized segment embedding and `d` the unit-normalized
-#' parent document embedding.
+#' @description
+#' `blend()` computes context-aware embeddings of segments: it combines what
+#' each segment says beyond its parent document with the direction of the
+#' document itself. A short segment is often ambiguous on its own ("It was too
+#' hard."), and identical segments can occur in different documents with
+#' different meanings; the parent document supplies the missing context.
 #'
-#' This is the principled version of "mixing two embeddings": granularities
-#' are mixed per unit, never by pooling units of different levels into one
-#' training set (which lets clusters form along a length axis — see
-#' length-induced embedding collapse, arXiv:2410.24200). A segment that is
-#' ambiguous in isolation inherits its document's context; identical segment
-#' texts from different documents get different blended vectors, which keeps
-#' repeated boilerplate from collapsing into a single artificial topic.
+#' Each segment vector `u` is split into the part along its unit-length
+#' document vector `d` and the residual orthogonal to it; the blend keeps
+#' `alpha` of the residual and `1 - alpha` of the document direction, scaled
+#' to unit length:
+#' \deqn{m = \mathrm{normalize}\left(\alpha \left(u - (u \cdot d)\, d\right) +
+#' (1 - \alpha)\, d\right)}{m = normalize(alpha (u - (u . d) d) + (1 - alpha) d)}
+#' with `u` and `d` normalized first. `alpha = 0` returns the document vector,
+#' `alpha = 1` only what the segment adds to it. Identical segments from
+#' different documents therefore receive different vectors. A segment that
+#' points exactly along its document receives the document vector.
 #'
-#' `alpha = 0` returns the parent document embedding; `alpha = 1` keeps only
-#' what the segment says beyond its document; the default `0.5` balances the
-#' two. A segment exactly collinear with its document falls back to the
-#' document vector.
+#' The result, a matrix with one unit-length row per segment, replaces the
+#' segment embeddings in the `embeddings` argument of [topics()],
+#' [representatives()] and [predict()][predict.sbert_topic_model]. To cluster
+#' segments by their own meaning alone, pass the plain segment embeddings from
+#' [encode()] instead.
 #'
-#' @param segments A data frame from [segment()] (or any data frame
-#'   with integer `document_id` and character `text` columns), one row per
-#'   segment.
+#' @param segments A data frame from [segment()], or any data frame with a
+#'   numeric `document_id` and a `text` column, one row per segment.
 #' @param documents The character vector of documents that was segmented;
-#'   `segments$document_id` indexes into it. Required unless both embedding
-#'   matrices are supplied.
-#' @param model A loaded sbert model, a pinned model name, or `NULL` for the
-#'   session default (see [load_model()]). Ignored when embeddings are
-#'   supplied.
-#' @param alpha Blend weight in `[0, 1]` for the segment's
-#'   context-orthogonal residual. Default `0.5`.
-#' @param embeddings Optional precomputed segment embeddings (one row per
-#'   row of `segments`). Supply together with `document_embeddings` to skip
-#'   encoding.
-#' @param document_embeddings Optional precomputed document embeddings (one
-#'   row per document; `segments$document_id` indexes its rows).
-#' @param batch_size Number of texts encoded per model call when encoding is
-#'   needed. Default `32`.
-#' @return A numeric matrix with one L2-normalized row per segment, suitable
-#'   for the `embeddings` argument of [topics()],
-#'   [representatives()], and [predict.sbert_topic_model()].
+#'   `document_id` indexes it. Needed unless both embedding matrices are given.
+#' @param model A model from [load_model()], a pinned model name, or `NULL`
+#'   (default) for the default model; ignored when embeddings are given.
+#' @param alpha Weight of the segment's residual, in `[0, 1]` (default 0.5).
+#' @param embeddings Segment embeddings, one row per row of `segments`, or
+#'   `NULL` (default) to encode them. Give together with
+#'   `document_embeddings`.
+#' @param document_embeddings Document embeddings, one row per document, or
+#'   `NULL` (default) to encode `documents`.
+#' @param batch_size Texts per model call when encoding (default 32).
+#' @return A numeric matrix with one unit-length row per row of `segments`
+#'   and the columns of the embeddings.
+#' @section Conditions:
+#'   `sbert_bad_input` when only one of `embeddings` and
+#'   `document_embeddings` is given, or neither they nor `documents`; when
+#'   encoding, the conditions of [encode()].
+#' @seealso [segment()] for the segments; [encode()] for the embeddings;
+#'   [topics()] to fit topics on the blended vectors.
 #' @export
 #' @examples
 #' segments <- segment("The model works. It is fast.", level = "sentence")
-#' unit_vectors <- matrix(c(1, 0, 0.6, 0.8), nrow = 2, byrow = TRUE)
-#' document_vectors <- matrix(c(0, 1), nrow = 1)
-#' blend(
-#'   segments,
-#'   alpha = 0.5,
-#'   embeddings = unit_vectors,
-#'   document_embeddings = document_vectors
-#' )
+#' segment_vectors <- matrix(c(1, 0, 0.6, 0.8), nrow = 2, byrow = TRUE)
+#' document_vector <- matrix(c(0, 1), nrow = 1)
+#' blend(segments, embeddings = segment_vectors,
+#'       document_embeddings = document_vector)
+#'
+#' # alpha = 0 returns the document vector for every segment.
+#' blend(segments, alpha = 0, embeddings = segment_vectors,
+#'       document_embeddings = document_vector)
 blend <- function(
   segments,
   documents = NULL,
@@ -82,16 +85,18 @@ blend <- function(
     alpha <= 1
   )
   if (is.null(embeddings) != is.null(document_embeddings)) {
-    stop(
+    sbert_abort(
       "blend: supply both 'embeddings' and 'document_embeddings', ",
-      "or neither."
+      "or neither.",
+      class = "sbert_bad_input"
     )
   }
   if (is.null(embeddings)) {
     if (is.null(documents)) {
-      stop(
+      sbert_abort(
         "blend: supply 'documents' (with an optional 'model') or ",
-        "both 'embeddings' and 'document_embeddings'."
+        "both 'embeddings' and 'document_embeddings'.",
+        class = "sbert_bad_input"
       )
     }
     stopifnot(is.character(documents), !anyNA(documents))

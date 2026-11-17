@@ -2,34 +2,51 @@
 % Please edit documentation in R/evaluate.R
 \name{summary.sbert_topic_model}
 \alias{summary.sbert_topic_model}
-\title{Summarize a Semantic Topic Model}
+\title{Summarize a topic model}
 \usage{
 \method{summary}{sbert_topic_model}(object, measure = c("npmi", "umass"), n_terms = 10L, ...)
 }
 \arguments{
-\item{object}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
+\item{object}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
-\item{measure}{Coherence measure passed to \code{\link[=coherence]{coherence()}}.}
+\item{measure}{Coherence measure passed to \code{\link[=coherence]{coherence()}}: \code{"npmi"}
+(default) or \code{"umass"}.}
 
-\item{n_terms}{Number of top terms per topic used for coherence and
-topic diversity.}
+\item{n_terms}{Top terms per topic used for coherence and diversity
+(default 10).}
 
-\item{...}{Unused; present for S3 compatibility.}
+\item{...}{Ignored.}
 }
 \value{
-Invisibly, a data frame with one row per topic containing \code{topic},
-\code{label}, \code{n_documents}, \code{proportion}, and \code{coherence}.
+A data frame of class \code{summary.sbert_topic_model} with one row per
+topic and columns \code{topic}, \code{label}, \code{n_documents}, \code{proportion}, and
+\code{coherence}. The overview is kept with it and printed above the table;
+\code{\link[=as.data.frame]{as.data.frame()}} returns the table as a plain data frame.
 }
 \description{
-Prints a compact scientific report -- corpus size, cluster separation,
-coherence, and topic diversity -- and returns a tidy per-topic quality table.
+\code{summary()} reports the quality of a fitted topic model: the number of
+documents (and segments), topics, and the embedding model; the share of the
+embedding variance between topics; the mean coherence of the topics' terms;
+and the diversity of the terms. Below this overview, a table gives the size
+and coherence of every topic, so that small or incoherent topics stand out. A
+fit whose k-means did not converge is reported as such.
+
+The result is an object that prints as the report; calling \code{summary()}
+does not print by itself.
 }
+\section{Conditions}{
+
+An error of class \code{sbert_no_terms} when the model has no terms.
+}
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
 summary(topic_model)
+as.data.frame(summary(topic_model))
+}
+\seealso{
+\code{\link[=coherence]{coherence()}} and \code{\link[=topic_diversity]{topic_diversity()}} for the measures;
+\code{\link[=topic_sizes]{topic_sizes()}}; \code{\link[=print.summary.sbert_topic_model]{print.summary.sbert_topic_model()}}.
 }

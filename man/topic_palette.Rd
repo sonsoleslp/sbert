@@ -2,24 +2,43 @@
 % Please edit documentation in R/plots.R
 \name{topic_palette}
 \alias{topic_palette}
-\title{Qualitative Color Palette for Topics}
+\title{Get colors that distinguish topics in plots}
 \usage{
 topic_palette(n)
 }
 \arguments{
-\item{n}{Number of colors to return.}
+\item{n}{Number of colors, a positive whole number.}
 }
 \value{
-A character vector of \code{n} hex colors.
+A character vector of \code{n} hex color codes.
 }
 \description{
-The qualitative palette the package plots use to tell topics apart: \code{n}
-colors from the qualitative HCL palette \code{"Dark 3"}
-(\code{\link[grDevices:palettes]{grDevices::hcl.colors()}}), which vary only in hue at fixed lightness and
-chroma, so no topic looks more prominent than another. Pass your own
-vector to the \code{colors} argument of \code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}} to override
-it.
+\code{topic_palette()} returns \code{n} colors that distinguish topics in plots, from
+the HCL palette \code{"Dark 3"}, through
+\code{grDevices::hcl.colors(n, palette = "Dark 3")}. Topics are unordered
+categories, so their colors should differ in hue without suggesting that one
+topic matters more than another; qualitative palettes from the HCL color
+space hold lightness and chroma fixed and vary hue only, which serves that
+purpose.
+
+It is the default of the \code{colors} argument of \code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}}.
+Hues alone can be hard to tell apart for readers with color-vision
+deficiency; the plots therefore also label each topic by number and name. To
+use other colors, for example the Okabe-Ito palette from
+\code{grDevices::palette.colors()}, pass them to \code{colors}.
 }
 \examples{
-topic_palette(4)
+topic_palette(6)
+
+# The Okabe-Ito colors instead, for a toy model of three topics.
+text <- c("Cats chase mice", "Dogs chase balls", "Stocks trade",
+          "Markets price shares", "Nets learn", "Models train")
+embeddings <- rbind(c(1, 0, 0), c(0.9, 0.1, 0), c(0, 1, 0),
+                    c(0.1, 0.9, 0), c(0, 0, 1), c(0.05, 0, 0.95))
+toy_model <- topics(text, 3, embeddings = embeddings)
+plot(toy_model, type = "sizes",
+     colors = grDevices::palette.colors(3, palette = "Okabe-Ito"))
+}
+\seealso{
+\code{\link[=plot.sbert_topic_model]{plot.sbert_topic_model()}}, which uses the palette.
 }

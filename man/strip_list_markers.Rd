@@ -2,42 +2,36 @@
 % Please edit documentation in R/corpus.R
 \name{strip_list_markers}
 \alias{strip_list_markers}
-\title{Strip Enumeration and List Markers from Text}
+\title{Remove list and enumeration markers from text}
 \usage{
 strip_list_markers(text)
 }
 \arguments{
-\item{text}{A character vector.}
+\item{text}{A character vector without missing values.}
 }
 \value{
-\code{text} with markers removed and runs of whitespace collapsed to a
-single space; each element trimmed.
+\code{text} with the markers removed, runs of white space collapsed to
+one space, and each element trimmed.
 }
 \description{
-Removes list and enumeration markers — \code{"1."}, \code{"2."}, \code{"(i)"}, \code{"(a)"},
-\code{"(iv)"}, \code{"IV."}, \code{"V."} — from each document. The \code{numbers},
-\code{roman_numerals}, and \code{section_numbers} arguments of \code{\link[=topics]{topics()}} clean only the
-extracted \emph{terms}; this cleans the source \emph{text}, so markers no longer
-over-fragment \code{\link[=segment]{segment()}}, skew the embeddings, or surface in
-\link[=representatives]{representatives()}. Run it once, before embedding or
-segmentation, as a companion to \code{\link[=dedupe]{dedupe()}}.
-}
-\details{
-A marker must stand alone — whitespace or a string boundary on both sides —
-so real words in parentheses (\code{"(civil)"}), four-digit years (\code{"(2020)"}),
-counts (\code{"(n=100)"}), multi-word parentheticals (\code{"(see Fig 1)"}), and
-decimals (\code{"1.5"}) are left untouched. Removed forms are a standalone one- or
-two-digit number followed by a period (\code{"1."}, \code{"12."}) where a list can
-be: at the start of the text or of a sentence, as the \code{"1."} directly
-followed by a \code{"2."}, or as the next number of a list already under way. A
-number that ends a sentence (\code{"in the top 20."}) is content and kept; a
-parenthesized
-one- or two-digit number, single letter, or Roman numeral up to 39 (\code{"(1)"},
-\code{"(a)"}, \code{"(iv)"}); and a bare upper-case Roman-numeral section marker with a
-period (\code{"II."}, \code{"IV."}). A multi-letter numeral is removed anywhere; a
-single-letter one (\code{"V."}, \code{"X."}) only at the start of the text, so a
-mid-sentence initial (\code{"by V. Nabokov"}), unit (\code{"5 V."}), and lower-case
-\code{"v."} (versus) are kept.
+\code{strip_list_markers()} removes the markers of numbered and lettered lists,
+such as \code{"1."}, \code{"(ii)"}, \code{"(a)"} and \code{"IV."}, from the text itself, before
+segmentation and encoding. Such markers, common in texts taken from
+documents, forms, or reports, carry no meaning, but they split sentences
+where there is no sentence boundary, shift the embeddings, and appear in the
+representative texts.
+
+It removes a one- or two-digit number with a period where a list can be (at
+the start of the text or of a sentence, or continuing a list); a
+parenthesized number, single letter, or Roman numeral; and an upper-case
+Roman numeral with a period. A marker must stand alone, so a number that ends
+a sentence (\code{"in the top 20."}), years, decimals, and words in parentheses
+are kept. The result is \code{text} with the markers removed and white space
+collapsed.
+
+The \code{numbers}, \code{roman_numerals}, and \code{section_numbers} arguments of
+\code{\link[=topics]{topics()}} filter the terms only. \code{\link[=clean_corpus]{clean_corpus()}} applies this function
+together with other cleaning steps.
 }
 \examples{
 strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
@@ -45,6 +39,6 @@ strip_list_markers("the concept of (civil) society in (2020)")
 strip_list_markers("The student ranks in the top 20. Good work.")
 }
 \seealso{
-\code{\link[=dedupe]{dedupe()}}, and the \code{numbers} / \code{roman_numerals} / \code{section_numbers}
-arguments of \code{\link[=topics]{topics()}} for cleaning the terms rather than the text.
+\code{\link[=clean_corpus]{clean_corpus()}}, which includes this step; \code{\link[=dedupe]{dedupe()}};
+\code{\link[=segment]{segment()}}.
 }

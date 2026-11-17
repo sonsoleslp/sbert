@@ -23,7 +23,8 @@ testthat::test_that("topic-count comparison returns one tidy row per candidate",
   testthat::expect_s3_class(result, "data.frame")
   testthat::expect_identical(
     names(result),
-    c("n_topics", "coherence", "topic_diversity", "explained")
+    c("n_topics", "coherence", "topic_diversity", "explained",
+      "converged")
   )
   testthat::expect_identical(result$n_topics, 2:3)
   testthat::expect_true(all(is.finite(result$coherence)))
@@ -177,7 +178,8 @@ testthat::test_that("as.data.frame drops the models and keeps the columns", {
   testthat::expect_null(attr(plain, "models"))
   testthat::expect_identical(
     names(plain),
-    c("n_topics", "coherence", "topic_diversity", "explained")
+    c("n_topics", "coherence", "topic_diversity", "explained",
+      "converged")
   )
 })
 
@@ -299,7 +301,7 @@ testthat::test_that("the sweep plots and prints with missing coherence", {
 })
 
 testthat::test_that("size-weighted coherence is the size-weighted mean of the topic scores", {
-  fixture <- readRDS(system.file("extdata", "feedback_embeddings.rds", package = "sbert"))
+  fixture <- feedback_fixture()
   model <- topics(fixture$text, 6, embeddings = fixture$embeddings)
   plain <- coherence(model)
   weighted <- coherence(model, weight = "size")

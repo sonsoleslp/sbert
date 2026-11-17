@@ -1,5 +1,5 @@
-# Build inst/extdata/feedback_embeddings.rds — the precomputed fixture the
-# math vignette uses so it stays buildable without a model download.
+# Build data/feedback_embeddings.rda — the precomputed embeddings the
+# vignettes, examples, and tests use so they run without a model download.
 #
 # Recipe (matches the vignette narrative): the first 600 distinct English
 # translations of feedback_translations, in order of first appearance, encoded
@@ -32,22 +32,14 @@ stopifnot(
 # reference, and rounding keeps the shipped .rds small (~0.4 MB vs ~1.7 MB).
 embeddings <- round(embeddings, 4L)
 
-fixture <- list(
-  text = corpus$text,
-  n = corpus$n,
-  embeddings = embeddings,
-  model_id = model$id,
-  model_revision = model$revision
-)
-
-saveRDS(
-  fixture,
-  file.path("inst", "extdata", "feedback_embeddings.rds"),
+feedback_embeddings <- unname(embeddings)
+save(
+  feedback_embeddings,
+  file = file.path("data", "feedback_embeddings.rda"),
   compress = "xz"
 )
-cat(
-  "Wrote inst/extdata/feedback_embeddings.rds:",
-  length(fixture$text), "texts,",
-  nrow(fixture$embeddings), "x", ncol(fixture$embeddings), "embeddings,",
-  file.size(file.path("inst", "extdata", "feedback_embeddings.rds")), "bytes\n"
-)
+message(sprintf(
+  "Wrote data/feedback_embeddings.rda: %d x %d, %d bytes",
+  nrow(feedback_embeddings), ncol(feedback_embeddings),
+  file.size(file.path("data", "feedback_embeddings.rda"))
+))

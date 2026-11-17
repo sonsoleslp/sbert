@@ -2,35 +2,41 @@
 % Please edit documentation in R/topics.R
 \name{name_topics}
 \alias{name_topics}
-\title{Name the Topics of a Fitted Model}
+\title{Name the topics of a fitted model}
 \usage{
 name_topics(object, labels)
 }
 \arguments{
-\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
+\item{object}{A topic model fitted by \code{\link[=topics]{topics()}}.}
 
-\item{labels}{Character vector with one distinct, non-empty name per
-topic, in topic order (topic 1 first).}
+\item{labels}{Character vector of distinct, non-empty names, one per topic,
+in topic order (topic 1 first).}
 }
 \value{
-The model with its labels replaced: an \code{sbert_topic_model} whose
-\verb{$settings$topic_names} records the names. \code{\link[=reduce_topics]{reduce_topics()}} merges
-topics, so it drops the names and labels the merged topics afresh.
+The topic model with its labels replaced; an object of class
+\code{sbert_topic_model}.
 }
 \description{
-Replaces each topic's label with a name you choose after reading its
-representative texts, for example the kind of message a topic holds
-(\code{"Correction"}, \code{"Short hint"}). The names replace the \code{label} column of
-every table keyed by topic, so they appear in
-\link[=summary.sbert_topic_model]{summary()}, \code{\link[=topic_sizes]{topic_sizes()}},
+\code{name_topics()} replaces the label of every topic of a fitted model with the
+names given, in topic order. The labels that \code{\link[=topics]{topics()}} gives are drawn from
+the data (the most central text of each topic, or its most distinctive
+terms); once the representative texts of each topic have been read, a short
+name for what the topic is about, such as the kind of message it holds,
+communicates the result better.
+
+The names then appear in every table and figure that refers to a topic,
+including \link[=summary.sbert_topic_model]{summary()}, \code{\link[=topic_sizes]{topic_sizes()}},
 \link[=terms.sbert_topic_model]{terms()}, \code{\link[=representatives]{representatives()}},
-\link[=predict.sbert_topic_model]{predict()}, \code{\link[=topic_hierarchy]{topic_hierarchy()}}, and every
-plot. Nothing is refitted.
+\link[=predict.sbert_topic_model]{predict()}, \code{\link[=topic_hierarchy]{topic_hierarchy()}}, and
+\link[=plot.sbert_topic_model]{plot()}. The model is not refitted; the result is
+the topic model with its labels replaced.
+
+\code{\link[=reduce_topics]{reduce_topics()}} drops the names, because merged topics need new ones.
 }
-\section{Errors}{
- Raises a condition of class \code{sbert_bad_topic_names} when
-\code{labels} is not a character vector with one distinct, non-empty,
-non-missing name per topic.
+\section{Conditions}{
+
+An error of class \code{sbert_bad_topic_names} when \code{labels} is not a
+character vector of distinct, non-empty, non-missing names, one per topic.
 }
 
 \examples{
@@ -39,7 +45,11 @@ text <- c(
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-fitted <- topics(text, 2, embeddings = embeddings)
-named <- name_topics(fitted, c("Pets", "Finance"))
+topic_model <- topics(text, n_topics = 2, embeddings = embeddings)
+named <- name_topics(topic_model, c("Pets", "Finance"))
 topic_sizes(named)
+}
+\seealso{
+\code{\link[=representatives]{representatives()}} to read each topic before naming it;
+\code{\link[=topics]{topics()}}.
 }

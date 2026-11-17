@@ -31,3 +31,7 @@
 ^covid\.csv$
 ^README\.Rmd$
 ^README\.html$
+^\.mini-ci$
+^Project_docs$
+^AGENT-NOTE.*\.md$
+^\.ci$

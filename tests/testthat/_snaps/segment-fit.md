@@ -30,9 +30,9 @@
       print(levels)
     Output
       <sbert_topic_sweep> 2 candidates, coherence measure: npmi
-        segment n_topics  coherence topic_diversity explained
-       document        2  0.0000000               1 0.7491596
-       sentence        2 -0.1934264               1 0.9954323
+        segment n_topics  coherence topic_diversity explained converged
+       document        2  0.0000000               1 0.9148509      TRUE
+       sentence        2 -0.1934264               1 0.9954323      TRUE
       
       Fitted models retained: fitted(x, n_topics = 2, segment = "document")
 

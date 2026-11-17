@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{plot.sbert_topic_model}
 \alias{plot.sbert_topic_model}
-\title{Plot a Semantic Topic Model}
+\title{Plot a fitted topic model}
 \usage{
 \method{plot}{sbert_topic_model}(
   x,
@@ -19,59 +19,74 @@
 )
 }
 \arguments{
-\item{x}{An \code{sbert_topic_model} returned by \code{\link[=topics]{topics()}}.}
+\item{x}{A fitted model from \code{\link[=topics]{topics()}}.}
 
-\item{type}{One of \code{"sizes"} (document count per topic), \code{"terms"} (top
-terms per topic), \code{"representatives"} (a ranked text list of the
-centroid-nearest documents per topic), \code{"fit"} (a per-topic report with the
-representative documents followed by all three term views -- count,
-TF-IDF, beta -- one row per topic), or \code{"map"} (a two-dimensional classical-MDS
-projection of the document embeddings, colored by topic). The \code{"map"} view
-requires a model fitted with \code{keep_embeddings = TRUE}.}
+\item{type}{\code{"sizes"} (default), \code{"terms"}, \code{"representatives"}, \code{"fit"},
+or \code{"map"}.}
 
-\item{by}{For \code{type = "terms"}, one or more of \code{"score"} (class-based
-TF-IDF, the default and most distinctive terms), \code{"beta"} (the generative
-within-topic word probability), and \code{"frequency"} (the raw within-topic
-count). A single value draws one panel per topic; several values draw one
-row per topic with a column for each metric.}
+\item{by}{For \code{type = "terms"}, one or more of \code{"score"} (default;
+class-based TF-IDF), \code{"beta"} (within-topic word probability) and
+\code{"frequency"} (within-topic count). Several values draw one row per
+topic with a column per measure.}
 
-\item{topics}{For \code{type} \code{"terms"}, \code{"representatives"}, or \code{"fit"}, an
-optional vector of topic numbers to restrict the plot to. Defaults to all
-topics.}
+\item{topics}{Topic numbers to draw for \code{"terms"}, \code{"representatives"} and
+\code{"fit"}, or \code{NULL} (default) for all.}
 
-\item{per_topic}{For \code{type} \code{"terms"}, \code{"representatives"}, or \code{"fit"}, draw
-a separate figure for each topic instead of arranging all topics into one
-gridded figure. Most useful with a device or \code{knitr} chunk that keeps every
-figure (each topic then becomes its own image).}
+\item{per_topic}{For \code{"terms"}, \code{"representatives"} and \code{"fit"}, draw one
+figure per topic instead of one grid (default \code{FALSE}).}
 
-\item{n_terms}{Number of top terms shown per panel when \code{type} is \code{"terms"}
-or \code{"fit"}.}
+\item{n_terms}{Terms per panel for \code{"terms"} and \code{"fit"} (default 8).}
 
-\item{n_representatives}{Number of representative documents shown per panel
-when \code{type} is \code{"representatives"} or \code{"fit"}. When more are requested than
-the model stored at fit time, they are recomputed from the retained
-embeddings; if the model was fitted with \code{keep_embeddings = FALSE}, the
-stored set is used and a warning is issued.}
+\item{n_representatives}{Texts per topic for \code{"representatives"} and
+\code{"fit"} (default 5). More than the model stored are recomputed from its
+stored embeddings, if any.}
 
-\item{colors}{Optional vector of topic colors; defaults to \code{\link[=topic_palette]{topic_palette()}}.}
+\item{colors}{Topic colors, at least one per topic (default
+\code{\link[=topic_palette]{topic_palette()}}).}
 
-\item{max_points}{Maximum documents drawn when \code{type = "map"}. Larger corpora
-are thinned to a deterministic stratified subsample so the classical-MDS
-projection stays tractable.}
+\item{max_points}{Maximum number of units drawn by \code{"map"} (default 1500).}
 
-\item{main}{Optional figure title for \code{type = "fit"} drawn as one figure
-(it is not used with \code{per_topic = TRUE}). The default names the layout
-(term columns and representative documents).}
+\item{main}{Title for \code{"fit"} drawn as one figure, or \code{NULL} (default) for
+a title naming the layout.}
 
-\item{...}{Unused; present for S3 compatibility.}
+\item{...}{Unused.}
 }
 \value{
-Invisibly, \code{x}.
+\code{x}, invisibly. The plot is drawn on the current device.
 }
 \description{
-Draws one of five deterministic base-graphics views of a fitted topic
-model.
+\code{plot()} draws one of five base-graphics views of a fitted topic model: how
+large the topics are, which words distinguish them, which texts exemplify
+them, and how they lie relative to one another in the embedding space.
+Together the views support naming the topics and judging whether the chosen
+number of topics is adequate.
+
+\code{"sizes"} is a bar chart of the number of units (documents, or segments for a
+segmented model) in each topic. \code{"terms"} shows each topic's top terms by
+class-based TF-IDF score, within-topic probability (beta), or count.
+\code{"representatives"} lists each topic's representative texts, those closest to
+its center. \code{"fit"} combines both in one row per topic: the representative
+texts, then the terms by count, TF-IDF and beta. \code{"map"} places the units in
+two dimensions by classical multidimensional scaling of their cosine
+distances, colored by topic and labeled at each topic's mean position; large
+corpora are thinned to \code{max_points} by an even, non-random sample within each
+topic.
+
+The data behind each view are available as tables: \code{\link[=topic_sizes]{topic_sizes()}},
+\link[=terms.sbert_topic_model]{terms()}, \code{\link[=representatives]{representatives()}}, and
+\code{as.data.frame(x, what = "documents")}. To compare models with different
+numbers of topics, plot a \code{\link[=compare_topics]{compare_topics()}} result.
 }
+\section{Conditions}{
+
+\code{sbert_no_embeddings} when \code{type = "map"} and the model stores no
+embeddings; \code{sbert_bad_input} when \code{type = "map"} and the model has fewer
+than three units; \code{sbert_plot_too_small} when the device is too small for
+the \code{"fit"} grid. Warning \code{sbert_few_representatives} when more
+representatives are requested than stored and the model has no
+embeddings to recompute them.
+}
+
 \examples{
 text <- c(
   "Cats chase mice", "Dogs chase balls",
@@ -83,13 +98,18 @@ embeddings <- rbind(
   c(0, 1, 0), c(0.1, 0.9, 0),
   c(0, 0, 1), c(0.05, 0, 0.95)
 )
-topic_model <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
+topic_model <- topics(text, 3, embeddings = embeddings)
 plot(topic_model, type = "sizes")
 plot(topic_model, type = "terms")
-plot(topic_model, type = "terms", by = "frequency")
-plot(topic_model, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
+plot(topic_model, type = "terms", by = c("frequency", "score", "beta"),
+     topics = 1)
 plot(topic_model, type = "representatives")
 plot(topic_model, type = "fit")
 plot(topic_model, type = "fit", per_topic = TRUE)
 plot(topic_model, type = "map")
+}
+\seealso{
+\code{\link[=topic_sizes]{topic_sizes()}}, \link[=terms.sbert_topic_model]{terms()},
+\code{\link[=representatives]{representatives()}} for the tables behind the views; \code{\link[=topic_palette]{topic_palette()}}
+for the colors; \code{\link[=compare_topics]{compare_topics()}} to compare numbers of topics.
 }

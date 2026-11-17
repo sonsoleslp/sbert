@@ -1,25 +1,99 @@
-#' Deduplicate a Text Corpus with Frequencies
+#' Collapse repeated texts and count them
 #'
-#' Collapses a character vector to its distinct non-blank texts, keeping the
-#' order of first appearance and counting how often each text occurred.
-#' Embedding and clustering operate on the distinct texts (so repeated
-#' templates cannot drag the cluster geometry), while the returned counts
-#' carry the original frequencies back into reporting, for example through
-#' [topic_sizes()].
+#' @description
+#' `dedupe()` collapses repeated texts: it keeps the first occurrence of every
+#' distinct non-blank text, in order of first appearance, and adds its number of
+#' occurrences as `n`. Many corpora repeat texts (templates, standard replies,
+#' and copied messages); repeated texts carry no new information about the
+#' topics, but in a clustering they pull the topic centers toward themselves and
+#' inflate the size of the topics they fall in.
 #'
-#' @param text A character vector. `NA` and blank (whitespace-only) elements
-#'   are dropped before deduplication.
-#' @return A base data frame with one row per distinct text and columns
-#'   `text` (in order of first appearance) and `n` (number of occurrences).
+#' Modeling each distinct text once, and carrying how often it occurred,
+#' separates what kinds of text there are from how often each kind is used. The
+#' result is a data frame with one row per distinct text. The counts can be used
+#' as weights after fitting, for example with `topic_sizes(weights = "n")`.
+#'
+#' @param text A character vector, or a data frame together with `column`.
+#'   Missing and blank texts are dropped.
+#' @param column Name of the text column when `text` is a data frame; `NULL`
+#'   (default) for a character vector.
+#' @return A base data frame with one row per distinct text, in order of first
+#'   appearance. For a character vector, the columns are `text` and `n`; for a
+#'   data frame, all its columns, with the values of the row where the text
+#'   first occurs, followed by `n`.
+#' @section Conditions:
+#'   An error of class `sbert_bad_input` when no non-blank text remains, when
+#'   `column` is missing, not found, or given for a character vector, or when
+#'   the data frame already has a column `n`.
+#' @seealso [topic_sizes()] to weight topic sizes by the counts;
+#'   [clean_corpus()] to clean the texts first.
 #' @export
 #' @examples
 #' dedupe(c("Very good!", "Try again.", "Very good!", NA, "  "))
-dedupe <- function(text) {
-  stopifnot(is.character(text), length(text) >= 1L)
+#'
+#' corpus <- dedupe(feedback_translations, column = "translation")
+#' head(corpus)
+dedupe <- function(text, column = NULL) {
+  if (is.data.frame(text)) {
+    if (is.null(column)) {
+      sbert_abort(
+        "dedupe: supply `column` naming the text column of the data frame.",
+        class = "sbert_bad_input"
+      )
+    }
+    stopifnot(
+      "`column` must be a single column name" =
+        is.character(column) && length(column) == 1L && !is.na(column)
+    )
+    if (!column %in% names(text)) {
+      sbert_abort(
+        sprintf("dedupe: column '%s' not found in the data frame.", column),
+        class = "sbert_bad_input"
+      )
+    }
+    if ("n" %in% names(text)) {
+      sbert_abort(
+        "dedupe: the data frame already has a column `n`; rename it first.",
+        class = "sbert_bad_input"
+      )
+    }
+    values <- as.character(text[[column]])
+    usable <- !is.na(values) & nzchar(trimws(values))
+    if (!any(usable)) {
+      sbert_abort(
+        "dedupe: the text column contains no non-blank elements.",
+        class = "sbert_bad_input"
+      )
+    }
+    kept <- text[usable, , drop = FALSE]
+    kept_values <- values[usable]
+    first <- !duplicated(kept_values)
+    out <- kept[first, , drop = FALSE]
+    out$n <- as.integer(tabulate(
+      match(kept_values, kept_values[first]),
+      nbins = sum(first)
+    ))
+    rownames(out) <- NULL
+    stopifnot(sum(out$n) == length(kept_values))
+    return(out)
+  }
+  if (!is.null(column)) {
+    sbert_abort(
+      "dedupe: `column` applies only when `text` is a data frame.",
+      class = "sbert_bad_input"
+    )
+  }
+  stopifnot(
+    "`text` must be a non-empty character vector or a data frame" =
+      is.character(text) && length(text) >= 1L
+  )
 
   kept <- text[!is.na(text) & nzchar(trimws(text))]
   if (length(kept) == 0L) {
-    stop("text contains no non-blank elements.", call. = FALSE)
+    sbert_abort(
+      "text contains no non-blank elements.",
+      class = "sbert_bad_input"
+    )
   }
   counts <- table(factor(kept, levels = unique(kept)))
   data.frame(
@@ -30,37 +104,33 @@ dedupe <- function(text) {
   )
 }
 
-#' Strip Enumeration and List Markers from Text
+#' Remove list and enumeration markers from text
 #'
-#' Removes list and enumeration markers — `"1."`, `"2."`, `"(i)"`, `"(a)"`,
-#' `"(iv)"`, `"IV."`, `"V."` — from each document. The `numbers`,
-#' `roman_numerals`, and `section_numbers` arguments of [topics()] clean only the
-#' extracted *terms*; this cleans the source *text*, so markers no longer
-#' over-fragment [segment()], skew the embeddings, or surface in
-#' [representatives()][representatives]. Run it once, before embedding or
-#' segmentation, as a companion to [dedupe()].
+#' @description
+#' `strip_list_markers()` removes the markers of numbered and lettered lists,
+#' such as `"1."`, `"(ii)"`, `"(a)"` and `"IV."`, from the text itself, before
+#' segmentation and encoding. Such markers, common in texts taken from
+#' documents, forms, or reports, carry no meaning, but they split sentences
+#' where there is no sentence boundary, shift the embeddings, and appear in the
+#' representative texts.
 #'
-#' A marker must stand alone — whitespace or a string boundary on both sides —
-#' so real words in parentheses (`"(civil)"`), four-digit years (`"(2020)"`),
-#' counts (`"(n=100)"`), multi-word parentheticals (`"(see Fig 1)"`), and
-#' decimals (`"1.5"`) are left untouched. Removed forms are a standalone one- or
-#' two-digit number followed by a period (`"1."`, `"12."`) where a list can
-#' be: at the start of the text or of a sentence, as the `"1."` directly
-#' followed by a `"2."`, or as the next number of a list already under way. A
-#' number that ends a sentence (`"in the top 20."`) is content and kept; a
-#' parenthesized
-#' one- or two-digit number, single letter, or Roman numeral up to 39 (`"(1)"`,
-#' `"(a)"`, `"(iv)"`); and a bare upper-case Roman-numeral section marker with a
-#' period (`"II."`, `"IV."`). A multi-letter numeral is removed anywhere; a
-#' single-letter one (`"V."`, `"X."`) only at the start of the text, so a
-#' mid-sentence initial (`"by V. Nabokov"`), unit (`"5 V."`), and lower-case
-#' `"v."` (versus) are kept.
+#' It removes a one- or two-digit number with a period where a list can be (at
+#' the start of the text or of a sentence, or continuing a list); a
+#' parenthesized number, single letter, or Roman numeral; and an upper-case
+#' Roman numeral with a period. A marker must stand alone, so a number that ends
+#' a sentence (`"in the top 20."`), years, decimals, and words in parentheses
+#' are kept. The result is `text` with the markers removed and white space
+#' collapsed.
 #'
-#' @param text A character vector.
-#' @return `text` with markers removed and runs of whitespace collapsed to a
-#'   single space; each element trimmed.
-#' @seealso [dedupe()], and the `numbers` / `roman_numerals` / `section_numbers`
-#'   arguments of [topics()] for cleaning the terms rather than the text.
+#' The `numbers`, `roman_numerals`, and `section_numbers` arguments of
+#' [topics()] filter the terms only. [clean_corpus()] applies this function
+#' together with other cleaning steps.
+#'
+#' @param text A character vector without missing values.
+#' @return `text` with the markers removed, runs of white space collapsed to
+#'   one space, and each element trimmed.
+#' @seealso [clean_corpus()], which includes this step; [dedupe()];
+#'   [segment()].
 #' @export
 #' @examples
 #' strip_list_markers(c("1. background 2. methods", "(i) first (ii) second"))
@@ -103,17 +173,23 @@ strip_list_markers <- function(text) {
   trimws(gsub("[[:space:]]+", " ", text, perl = TRUE))
 }
 
-#' Alphabetic Content Ratio of Text
+#' Compute the share of letters in text
 #'
-#' The fraction of a string's non-space characters that are letters. A
-#' domain-agnostic measure of how much of a unit is prose rather than numbers,
-#' punctuation, or symbols: real sentences score near 1, while citation
-#' fragments, reference lists, number tables, and identifiers (`"OJ No L 297,
-#' 24.11.1979, p. 1."`, `"doi:10.1007/..."`) score low. Used by the
-#' `min_content` filters of [segment()] and [topics()].
+#' @description
+#' `content_ratio()` computes the share of letters among the non-space
+#' characters of each element of `text`. The share separates prose from other
+#' units without relying on a language: sentences score close to one, while
+#' reference lists, citations, tables of numbers, and identifiers, which consist
+#' mostly of digits and punctuation and form spurious topics of their own when
+#' they are clustered, score low.
+#'
+#' It returns one value between 0 and 1 per element and is the measure behind
+#' the `min_content` filters of [clean_corpus()], [segment()], and [topics()].
 #'
 #' @param text A character vector.
-#' @return A numeric vector in `[0, 1]`; empty or space-only elements score `0`.
+#' @return A numeric vector of the same length as `text`, with values between
+#'   0 and 1; an empty or all-space element scores 0.
+#' @seealso [clean_corpus()] and [segment()], which filter on it.
 #' @export
 #' @examples
 #' content_ratio(c("A real sentence here.", "OJ No L 297, 24.11.1979, p. 1."))
@@ -257,51 +333,54 @@ clean_roman_numerals <- function(text) {
   gsub(pattern, " ", text, perl = TRUE)
 }
 
-#' Clean a Text Corpus Before Encoding
+#' Clean a corpus before encoding
 #'
-#' One place for the text-level cleaning that should happen *before* embedding,
-#' so the same clean text feeds the encoder, the topic terms, and the
-#' representative examples. Junk characters are always repaired; the structured
-#' removals are opt-in. Because cleaning happens up front, encode the result and
-#' pass those embeddings on — nothing downstream needs to re-clean.
+#' @description
+#' `clean_corpus()` removes material without topical meaning from a corpus
+#' before encoding: markup, links, citation numbers, list markers, and broken
+#' characters. Text exported from web pages, databases, and documents carries
+#' such material; left in place, it shifts the embeddings, appears among the
+#' topic terms, and can form topics of its own. Cleaning the text once, before
+#' encoding, means that the encoder, the topic terms, and the representative
+#' texts all see the same clean text.
 #'
-#' The operations, in order: repair junk and strip non-content markup (decode
-#' HTML entities and tags; remove URLs, DOIs, emails, and bracketed numeric
-#' citations such as `[12]`; normalize curly quotes, dashes, and bullets; drop
-#' control, zero-width, BOM, and replacement characters; normalize whitespace);
-#' strip list and section numbering; optionally remove numeric and Roman-numeral
-#' tokens; then drop documents that fall below `min_content` (see
-#' [content_ratio()]) or are left empty. Content-bearing text — real words,
-#' author citations, dates, decimals, inline numbers — is left intact. When
-#' `text` is a data frame the surviving rows are returned whole, so metadata
-#' stays aligned.
+#' It always repairs broken characters and removes markup, links, e-mail
+#' addresses, DOIs, and bracketed citation numbers. It removes list markers and
+#' section numbering by default, and on request numbers, Roman numerals, and the
+#' matches of patterns of one's own (`remove`). Words, author citations, dates,
+#' decimals, and numbers within sentences are kept. Documents left empty, or
+#' with a share of letters below `min_content` (see [content_ratio()]), are
+#' dropped. For a data frame, the dropped rows are removed whole, so other
+#' columns stay aligned with the text. It returns the cleaned texts that are
+#' kept or, for a data frame, the kept rows with `column` cleaned.
+#'
+#' The `numbers`, `roman_numerals`, and `section_numbers` arguments of
+#' [topics()], by contrast, filter only the topic terms and leave the text
+#' unchanged.
 #'
 #' @param text A character vector, or a data frame together with `column`.
-#' @param column When `text` is a data frame, the name of the text column to
-#'   clean. Every other column rides along and is filtered in step.
-#' @param list_markers Remove enumeration and list markers (`1.`, `(i)`,
-#'   `(a)`); default `TRUE`. See [strip_list_markers()].
-#' @param section_numbers Remove multi-level indices (`1.2.3`) and enumeration
-#'   markers; default `TRUE`.
-#' @param numbers Remove stand-alone numeric tokens (years, counts) while
-#'   keeping alphanumerics such as `covid19`; default `FALSE`.
-#' @param roman_numerals Remove stand-alone Roman-numeral tokens (`ii`, `iv`,
-#'   up to 100); default `FALSE`. A few numerals that are also words (`iv`,
-#'   `vi`) go too.
-#' @param remove Optional character vector of custom Perl-compatible regular
-#'   expressions. Each match is replaced with a space, before the other steps.
-#'   The extension point for domain-specific noise the generic cleaners leave —
-#'   for example `remove = "OJ No L?\\s*\\d+"` for European Union Official
-#'   Journal references, or a journal-citation pattern. Matching is
-#'   case-insensitive.
-#' @param min_content Minimum alphabetic-content ratio, in `[0, 1]`, for a
-#'   document to be kept (see [content_ratio()]). Documents below the floor —
-#'   citation lists, reference footnotes, number tables — are dropped. `0`
-#'   (default) keeps every non-empty document.
-#' @return If `text` is a character vector, the cleaned vector with dropped
-#'   documents removed. If a data frame, the surviving rows with the `column`
-#'   cleaned in place.
-#' @seealso [strip_list_markers()], [content_ratio()], [dedupe()].
+#' @param column Name of the text column when `text` is a data frame; `NULL`
+#'   (default) for a character vector.
+#' @param list_markers Remove list and enumeration markers (default `TRUE`);
+#'   see [strip_list_markers()].
+#' @param section_numbers Remove section numbering such as `1.2.3` and
+#'   `II.2` (default `TRUE`).
+#' @param numbers Remove stand-alone numbers such as years and counts, keeping
+#'   words with digits such as `covid19` (default `FALSE`).
+#' @param roman_numerals Remove stand-alone Roman numerals of two or more
+#'   letters, such as `ii` and `xiv` (default `FALSE`).
+#' @param remove Optional character vector of Perl-compatible regular
+#'   expressions, matched case-insensitively; each match is replaced by a
+#'   space. Default `NULL`.
+#' @param min_content Minimum share of letters for a document to be kept,
+#'   between 0 and 1 (default 0, keep every non-empty document).
+#' @return For a character vector, the cleaned texts that are kept. For a data
+#'   frame, the rows that are kept, with `column` cleaned.
+#' @section Conditions:
+#'   An error of class `sbert_bad_input` when `column` is given for a
+#'   character vector.
+#' @seealso [strip_list_markers()] and [content_ratio()], which it uses;
+#'   [dedupe()] to collapse repeated texts after cleaning.
 #' @export
 #' @examples
 #' clean_corpus(c(
@@ -309,7 +388,7 @@ clean_roman_numerals <- function(text) {
 #'   "OJ No L 297, 24.11.1979, p. 1."
 #' ), min_content = 0.5)
 #'
-#' # strip a domain-specific reference form the generic cleaner leaves
+#' # Remove a reference form of one's own corpus
 #' clean_corpus("as set out in OJ No L 313 it applies.",
 #'              remove = "OJ No L?\\s*\\d+")
 clean_corpus <- function(
@@ -338,7 +417,10 @@ clean_corpus <- function(
   } else {
     stopifnot(is.character(text))
     if (!is.null(column)) {
-      stop("`column` applies only when `text` is a data frame.", call. = FALSE)
+      sbert_abort(
+        "`column` applies only when `text` is a data frame.",
+        class = "sbert_bad_input"
+      )
     }
     text
   }
@@ -391,41 +473,44 @@ clean_corpus <- function(
   }
 }
 
-#' Topic Sizes on the Distinct and Weighted Scales
+#' Compute the size of each topic
 #'
-#' Returns the size of every topic as fitted (distinct units) and,
-#' when `weights` are supplied, on the weighted scale — for example the
-#' original row frequencies from [dedupe()]. The gap between
-#' `proportion` and `weighted_share` measures how template-driven a topic
-#' is: a topic whose weighted share far exceeds its distinct share is a
-#' small repertoire of heavily repeated texts.
+#' @description
+#' `topic_sizes()` returns the number and proportion of units in every topic of
+#' a fitted model and, with `weights`, the weighted size and share. The size of
+#' a topic can be counted in several ways: counted in distinct texts, it says
+#' how varied the content of the topic is; weighted by how often each text
+#' occurred, it says how much of the original corpus the topic accounts for.
 #'
-#' For a model fitted with `segment = "sentence"`, `"clause"`, or `"phrase"`,
-#' `by` picks the scale: `"segment"` counts the fitted segments, `"document"`
-#' counts the source documents that have at least one segment in the topic.
-#' A document that spans several topics is counted in each, so document
-#' proportions need not sum to one. On a document-level model the two scales
-#' coincide.
+#' A topic whose weighted share far exceeds its share of distinct texts is a
+#' small set of texts that are repeated many times. For a segmented model, a
+#' topic can be counted in segments or, with `by = "document"`, in the documents
+#' that have at least one segment in it; a document with segments in several
+#' topics then counts in each of them, so the proportions need not sum to one.
+#' For a model fitted to documents, the two scales are the same.
 #'
-#' @param object A fitted [topics()] model.
-#' @param weights Optional numeric vector with one non-negative weight per
-#'   unit on the chosen scale — per fitted document (in document order),
-#'   typically the `n` column of [dedupe()], or per segment when
-#'   `by = "segment"` on a segmented model.
-#' @param by `"segment"` (default; every fitted unit) or `"document"` (the
-#'   distinct source documents).
+#' @param object A topic model fitted by [topics()].
+#' @param weights Optional weights: the name of a numeric column carried in
+#'   the model (for example `"n"` from [dedupe()]), or a numeric vector of
+#'   non-negative weights, one per unit on the chosen scale. Default `NULL`.
+#' @param by Unit counted: `"segment"` (default), every modeled unit, or
+#'   `"document"`, the source documents.
 #' @return A base data frame with one row per topic and columns `topic`,
-#'   `label`, `n_documents`, and `proportion`, plus `n_weighted` and
-#'   `weighted_share` when `weights` are supplied.
+#'   `label`, `n_documents`, and `proportion`, followed by `n_weighted` and
+#'   `weighted_share` when `weights` are given.
+#' @section Conditions:
+#'   An error of class `sbert_bad_input` when `weights` names a column that
+#'   the model does not carry.
+#' @seealso [dedupe()] for the counts; [topics()];
+#'   [as.data.frame()][as.data.frame.sbert_topic_model] for the full tables;
+#'   [plot()][plot.sbert_topic_model] with `type = "sizes"`.
 #' @export
 #' @examples
-#' text <- c(
-#'   "Cats chase mice", "Dogs chase balls",
-#'   "Stocks and bonds trade", "Markets price shares"
-#' )
-#' embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-#' fitted <- topics(text, 2, embeddings = embeddings)
-#' topic_sizes(fitted, weights = c(10, 1, 1, 1))
+#' corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+#' topic_model <- topics(corpus, n_topics = 6, column = "translation",
+#'                       embeddings = feedback_embeddings)
+#' topic_sizes(topic_model)
+#' topic_sizes(topic_model, weights = "n")
 topic_sizes <- function(object, weights = NULL, by = c("segment", "document")) {
   by <- match.arg(by)
   stopifnot(inherits(object, "sbert_topic_model"))
@@ -446,6 +531,34 @@ topic_sizes <- function(object, weights = NULL, by = c("segment", "document")) {
     n_units <- nrow(documents)
     counts <- object$topics$n_documents
     proportion <- object$topics$proportion
+  }
+  weight_column <- NULL
+  if (is.character(weights)) {
+    stopifnot(
+      "`weights` must be a single column name or a numeric vector" =
+        length(weights) == 1L && !is.na(weights)
+    )
+    weight_column <- weights
+    if (!weight_column %in% setdiff(names(documents), c("document_id", "topic"))) {
+      sbert_abort(
+        sprintf(
+          paste0(
+            "topic_sizes: column '%s' is not carried in the model. Fit the ",
+            "model on a data frame with `column =` so its other columns are kept."
+          ),
+          weight_column
+        ),
+        class = "sbert_bad_input"
+      )
+    }
+    values <- documents[[weight_column]]
+    weights <- if (by == "document") {
+      values[match(unit_id, documents$document_id)]
+    } else {
+      values
+    }
+    unit_id <- seq_along(unit_id)
+    n_units <- length(unit_id)
   }
   stopifnot(
     "`weights` must be a finite non-negative vector with one value per unit on the chosen scale" =
@@ -488,10 +601,10 @@ topic_sizes <- function(object, weights = NULL, by = c("segment", "document")) {
 prepare_topic_input <- function(text, column = NULL) {
   if (!is.data.frame(text)) {
     if (!is.null(column)) {
-      stop(
+      sbert_abort(
         "topics: 'column' applies only when the first argument is a ",
         "data frame.",
-        call. = FALSE
+        class = "sbert_bad_input"
       )
     }
     return(list(
@@ -503,21 +616,21 @@ prepare_topic_input <- function(text, column = NULL) {
   }
 
   if (is.null(column)) {
-    stop(
+    sbert_abort(
       "topics: supply 'column' naming the text column of the data ",
       "frame, for example column = \"abstract\".",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   stopifnot(is.character(column), length(column) == 1L, !is.na(column))
   if (!column %in% names(text)) {
-    stop(
+    sbert_abort(
       sprintf(
         "topics: column '%s' not found. Available: %s.",
         column,
         paste(utils::head(names(text), 12L), collapse = ", ")
       ),
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
 
@@ -528,10 +641,10 @@ prepare_topic_input <- function(text, column = NULL) {
   n_supplied <- length(values)
   kept <- which(usable_document_text(values))
   if (length(kept) < 2L) {
-    stop(
+    sbert_abort(
       "topics: fewer than two usable documents after dropping missing, ",
       "blank, and placeholder text.",
-      call. = FALSE
+      class = "sbert_bad_input"
     )
   }
   metadata <- text[kept, setdiff(names(text), column), drop = FALSE]

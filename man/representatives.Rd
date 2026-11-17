@@ -2,7 +2,7 @@
 % Please edit documentation in R/inference.R
 \name{representatives}
 \alias{representatives}
-\title{Representative Text Units for Every Topic}
+\title{Select representative texts for each topic}
 \usage{
 representatives(
   object,
@@ -15,58 +15,92 @@ representatives(
 )
 }
 \arguments{
-\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
+\item{object}{A fitted model from \code{\link[=topics]{topics()}}.}
 
-\item{text}{Character vector of candidate units, for example the \code{text}
-column of \code{\link[=segment]{segment()}}. \code{NULL} (the default) ranks the units the model
-was fitted on — its documents, or its segments for a model fitted with
-\verb{segment =} — from their stored embeddings, with no encoding.}
+\item{text}{Character vector of candidate texts, or \code{NULL} (default) for
+the documents or segments the model was fitted on.}
 
-\item{model}{A loaded \link[=load_model]{sbert_model}, a pinned model
-name, or \code{NULL} for the default model; ignored when \code{embeddings} are
-supplied.}
+\item{model}{A model from \code{\link[=load_model]{load_model()}}, a pinned model name, or \code{NULL}
+(default) for the default model, used to embed \code{text}; ignored when
+\code{embeddings} are given.}
 
-\item{embeddings}{Optional numeric matrix with one row per unit.}
+\item{embeddings}{Numeric matrix with one row per candidate, or \code{NULL}
+(default): the stored embeddings when \code{text} is \code{NULL}, else encode
+\code{text}.}
 
-\item{n}{Number of units returned per topic.}
+\item{n}{Number of texts per topic (default 3).}
 
-\item{rank}{\code{"margin"} (default) or \code{"distance"} (raw closeness to the
-topic centroid).}
+\item{rank}{\code{"margin"} (default) or \code{"distance"}.}
 
-\item{batch_size}{Batch size passed to \code{\link[=encode]{encode()}} when \code{model} is
-used.}
+\item{batch_size}{Texts per model call when encoding (default 32).}
 }
 \value{
-A base data frame with columns \code{topic}, \code{rank}, \code{text},
-\code{distance} (to the unit's own centroid), and \code{margin}, ordered by topic
-and rank. When the fitted units are ranked (\code{text = NULL}), \code{document_id}
-— and \code{segment}, for a segmented model — sit between \code{rank} and \code{text}
-so every example can be traced to its source. Topics to which no unit is
-assigned contribute no rows.
+A base data frame with one row per selected text and columns
+\code{topic}, \code{rank}, \code{text}, \code{distance} (cosine distance to the unit's own
+center), and \code{margin}, ordered by topic and rank. When the fitted units
+are ranked, \code{document_id} (and \code{segment}, for a segmented model) follow
+\code{rank}. Topics without units have no rows.
 }
 \description{
-Selects, for each fitted topic, the text units (documents, sentences, or
-clause segments) that best evidence it. The default ranking is by
-\emph{distinctiveness margin} — the unit's cosine distance to its second-best
-centroid minus the distance to its own — rather than by raw closeness.
-Raw closeness systematically favors long units, because topic centroids
-are averages of whole-document embeddings and long units resemble whole
-documents; the margin instead rewards units that are unambiguously about
-one topic and no other, which are naturally short and pointed. Ties break
-toward the shorter unit, then alphabetically, so the selection is fully
-deterministic.
+\code{representatives()} selects representative texts for each topic of a fitted
+model: it ranks the units of each topic and returns the first \code{n}. A topic in
+an embedding model is a region of meaning, and it is read most directly from
+the texts it contains.
+
+Each unit is assigned to the topic whose unit-length center has the highest
+cosine similarity with it. The texts closest to a topic's center are typical
+of it but tend to be long, because long texts resemble the average of many
+texts; texts that are clearly about one topic and no other are usually more
+telling. With \code{rank = "margin"}, the default, units are ranked by their
+margin: the cosine distance to the second-nearest center minus the distance
+to their own. With \code{rank = "distance"} they are ranked by closeness to their
+own center. Ties go to the shorter text; repeated texts and texts without a
+word of two or more letters are skipped. By default the units the model was
+fitted on are ranked, from their stored embeddings; given \code{text}, any
+candidate texts are. The result is a data frame with one row per selected
+text, ordered by topic and rank.
+
+Because the assignment uses cosine similarity to the unit-length centers,
+while \code{\link[=topics]{topics()}} fits Lloyd's k-means (squared Euclidean distance to the
+raw means of the normalized embeddings), a few fitted units on topic
+boundaries can be ranked under a different topic from the one they were
+fitted to. The representatives stored at fitting time, shown by
+\code{as.data.frame(fit, what = "representatives")}, are the units of each
+fitted topic closest to its center. For topic words use
+\link[=terms.sbert_topic_model]{terms()} or \code{\link[=keywords]{keywords()}}.
 }
+\section{Conditions}{
+
+\code{sbert_no_embeddings} when \code{text} is \code{NULL} and the model stores no
+embeddings; \code{sbert_dimension_mismatch} when the embeddings have a
+different number of columns from the fitted model; \code{sbert_bad_input} when
+both \code{model} and \code{embeddings} are given or \code{embeddings} has the wrong
+number of rows; when encoding, the conditions of \code{\link[=encode]{encode()}}.
+}
+
 \examples{
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+representatives(topic_model, n = 2)
+representatives(topic_model, n = 2, rank = "distance")
+
+# Rank new candidate texts, giving their embeddings.
 text <- c(
   "Cats chase mice", "Dogs chase balls",
   "Stocks and bonds trade", "Markets price shares"
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-fitted <- topics(text, 2, embeddings = embeddings)
+toy_model <- topics(text, 2, embeddings = embeddings)
 representatives(
-  fitted,
+  toy_model,
   c("kittens pounce", "bond yields", "pets and prices"),
   embeddings = rbind(c(1, 0.1), c(0.1, 1), c(0.7, 0.7)),
   n = 1
 )
+}
+\seealso{
+\link[=terms.sbert_topic_model]{terms()} and \code{\link[=keywords]{keywords()}} for topic
+words; \code{\link[=name_topics]{name_topics()}} to label topics; \code{plot(fit, type = "representatives")} to draw them; \code{\link[=topic_membership]{topic_membership()}} for graded
+membership.
 }

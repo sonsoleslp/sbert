@@ -57,9 +57,9 @@ read_embedding_cache <- function(path, dimension) {
   if (!usable) {
     # Discard rather than trust. A corrupt or foreign cache that still matches a
     # key returns silently wrong embeddings; recomputing merely costs time.
-    warning(
+    sbert_warn(
       "Ignoring an unreadable or incompatible embedding cache; it will be rebuilt.",
-      call. = FALSE
+      class = "sbert_cache_rebuilt"
     )
     return(empty_embedding_cache(dimension))
   }

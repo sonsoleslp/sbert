@@ -1,231 +1,283 @@
 ---
-title: "Parallel and High-Throughput Topic Modeling"
-output: html_document
+title: "Parallel and high-throughput topic modeling"
+author: "Written by [Mohammed Saqr](https://saqr.me) and [Sonsoles López-Pernas](https://sonsoles.me)"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Parallel and high-throughput topic modeling}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
+```{r options, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center", dpi = 96)
+old_options <- options(digits = 3, width = 90)
+```
+
+A topic model in `sbert` is built in three stages. Each text is encoded
+into an embedding by a neural model; each text is tokenized into words,
+which label the topics and measure their coherence; and the embeddings are
+clustered into topics by k-means. Encoding is by far the most expensive of
+the three, because it runs a transformer over every text, while
+tokenization and clustering are base-R operations on data already in
+memory. A large corpus is therefore fast to model mainly when it is encoded
+as few times as possible, and only then when the remaining work uses the
+processor cores the machine has.
+
+Speed is worth little if it changes the answer. A setting that makes a fit
+faster but moves a document to another topic would make results depend on
+the machine they were computed on. This guide covers, in order of the time
+they save, reusing embeddings within and across sessions, threads and
+cores, and the settings that reduce the cost of encoding sentences, and for
+each it states whether the result can change.
+
+```{r setup}
 library(sbert)
 ```
 
-A topic model in **sbert** is built in three stages:
+## Data
 
-1. **Encode**: each text becomes an embedding, computed by the ONNX model.
-2. **Tokenize**: each text is split into words, which label the topics and
-   measure their coherence.
-3. **Cluster**: the embeddings are grouped into topics by k-means.
+Two corpora are used. The steps that need no model run on the feedback
+messages, whose embeddings are bundled; the steps that encode are shown on
+the COVID-19 abstracts and are not run, because they need a downloaded
+model (see [models and the cache](models-and-cache.html)).
 
-Encoding takes far longer than the other two stages. A large corpus is
-therefore fast to model mainly when it is encoded as few times as possible.
-This article shows how, in order of how much time each step saves:
-
-1. Encode a corpus once and reuse the result, within a session and across
-   sessions.
-2. Use several processor cores and threads.
-3. Avoid wasted work when encoding sentences.
-
-None of these steps changes the topics, except three settings that are
-flagged below.
-
-Only the last code chunk runs when this article is built. The others need a
-downloaded model, so they are shown but not run. They use the `covid`
-abstracts that ship with the package:
+- **`corpus`:** the first 600 distinct English feedback messages
+  (`translation`), with their source-language text (`feedback`) and number
+  of occurrences (`n`). Their `all-MiniLM-L6-v2` embeddings are the bundled
+  matrix `feedback_embeddings`, one row per message.
+- **`abstracts`:** the `covid` abstracts with an abstract (`Abstract`).
 
 ```{r data}
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
 abstracts <- subset(covid, Abstract != "[No abstract available]")
+c(messages = nrow(corpus), abstracts = nrow(abstracts))
 ```
 
-# Encode once, fit many times
+The feedback corpus has `r nrow(corpus)` messages and the abstracts
+`r format(nrow(abstracts), big.mark = ",")` texts.
 
-`topics()` and `compare_topics()` encode the text themselves. If you fit
-several models to the same corpus, encode it once with `encode()` and pass
-the result as `embeddings`:
+## Encode once, fit many times
 
-```{r embed-once}
-embeddings <- encode(abstracts$Abstract)
+`topics()` and `compare_topics()` encode the texts themselves when given a
+model. An analysis rarely fits one model, so the first saving is to encode
+once with `encode()` and pass the matrix as `embeddings` to every fit.
 
-model_8 <- topics(abstracts, column = "Abstract", n_topics = 8, embeddings = embeddings)
-model_12 <- topics(abstracts, column = "Abstract", n_topics = 12, embeddings = embeddings)
+```{r embed-once, eval = FALSE}
+model <- load_model("all-MiniLM-L6-v2")
+embeddings <- with(abstracts, encode(Abstract, model))
+
+model_8 <- topics(abstracts, column = "Abstract", n_topics = 8,
+                  embeddings = embeddings)
+model_12 <- topics(abstracts, column = "Abstract", n_topics = 12,
+                   embeddings = embeddings)
 ```
 
-`topic_corpus()` goes one step further. It stores both the embeddings and the
-tokenized words, so later fits repeat neither:
+Each fit still tokenizes the texts. `topic_corpus()` goes one step further:
+it stores the embeddings and the tokenized words together, so that later
+fits repeat neither. On the feedback messages:
 
 ```{r corpus-once}
-prepared <- topic_corpus(abstracts, column = "Abstract", embeddings = embeddings)
-
-sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12))
-model_8 <- fitted(sweep, n_topics = 8)
+prepared <- topic_corpus(corpus, column = "translation",
+                         embeddings = feedback_embeddings)
+prepared
+direct <- topics(corpus, n_topics = 6, column = "translation",
+                 embeddings = feedback_embeddings)
+from_corpus <- topics(prepared, n_topics = 6)
+identical(as.data.frame(direct), as.data.frame(from_corpus))
+identical(terms(direct), terms(from_corpus))
 ```
 
-`compare_topics()` already prepares the corpus once for all the counts it
-compares. A `topic_corpus()` object is useful when you run several sweeps, or
-your own loop, on the same text.
+The prepared corpus holds `r nrow(as.data.frame(prepared))` documents with
+384-dimensional embeddings. The model fitted to it is identical to the
+model fitted to the raw texts, in its document table and in its terms: the
+corpus saves work and changes nothing. It also fixes the segmentation and
+tokenization settings, so a later call that asks for different ones is
+refused with an error rather than silently re-tokenized.
 
-# Reuse embeddings across sessions
+`compare_topics()` prepares a corpus itself, once for all the counts it
+compares. A `topic_corpus()` object is useful when several comparisons, or
+fits one at a time, are run on the same texts.
 
-`encode(cache = )` saves embeddings to a file and reads them back the next
-time. Each text is stored under a SHA-256 digest of the text and the model's
-settings, so only texts that are not yet in the file are encoded:
+## Reuse embeddings across sessions
 
-```{r cache}
-store <- file.path(tools::R_user_dir("sbert", "cache"), "covid_embeddings.rds")
+`encode(cache = )` writes embeddings to a file and reads them back the next
+time. Each text is stored under a SHA-256 digest of the text and the
+model's settings, so only texts that are not yet in the file are encoded.
 
-embeddings <- encode(abstracts$Abstract, cache = store)  # encodes everything
-embeddings <- encode(abstracts$Abstract, cache = store)  # encodes nothing
+```{r cache, eval = FALSE}
+store <- file.path(cache_dir(), "covid_embeddings.rds")
+embeddings <- with(abstracts, encode(Abstract, model, cache = store))  # encodes all
+embeddings <- with(abstracts, encode(Abstract, model, cache = store))  # encodes none
 ```
 
-Because each text has its own entry, the cache also works when the corpus
-changes. If you correct some abstracts, add new ones, reorder the rows, or
-take a subset, only the new or changed texts are encoded. Repeated texts are
-encoded once per call.
+Because each text has its own entry, the cache also serves a corpus that
+changes. If some abstracts are corrected, new ones added, rows reordered or
+a subset taken, only the new or changed texts are encoded. Texts repeated
+within one call are encoded once.
 
-The digest covers the text exactly as the model sees it (including any
-`prefix`) and the model's name, revision, dimension, maximum length, pooling,
-and `normalize`. Change any of these and the texts are encoded again; a
-different model never reuses another model's embeddings.
+The digest covers the text exactly as the model sees it, including any
+`prefix`, and the model's name, revision, dimension, maximum length,
+pooling and `normalize`. Change any of these and the texts are encoded
+again; a different model never reuses another model's embeddings.
 
 `batch_size` and `sort_by_length` are not part of the digest. They change
-embeddings only by about 1e-7, and including them would make the cache miss
-every time the batch size changed. A cached embedding is therefore the one
-computed the first time, whatever the batch size of later calls.
+which texts share a batch, which moves embeddings by about 1e-7, and
+including them would make the cache miss whenever the batch size changed.
+A cached embedding is therefore the one computed the first time, whatever
+the batch settings of later calls. A cache file that cannot be read, or was
+written for another embedding dimension, is rebuilt with a warning of class
+`sbert_cache_rebuilt`.
 
-# Use several threads and cores
+## Threads: encoding
 
-## `threads`: encoding
+`load_model(threads = )` sets how many threads ONNX Runtime uses to encode.
+Encoding is the only part of the package that uses threads. The default is
+one thread, which keeps runs comparable across machines.
 
-`load_model(threads = )` sets how many threads the ONNX model uses to encode.
-`threads = "auto"` uses the number of performance cores on Apple Silicon and
-half the logical cores elsewhere. Encoding speeds up only up to the number of
-performance cores; more threads than that can make it slower.
-
-```{r threads}
+```{r threads, eval = FALSE}
 model <- load_model("all-MiniLM-L6-v2", threads = "auto")
-embeddings <- encode(abstracts$Abstract, model)
+embeddings <- with(abstracts, encode(Abstract, model))
 ```
 
-The number of threads never changes the embeddings.
+`threads = "auto"` uses the number of performance cores on Apple Silicon
+and half the logical cores elsewhere, at most eight. Encoding gains from
+threads only up to the number of performance cores; efficiency cores add
+contention rather than speed. The gain depends on the machine and is noisy
+from run to run, so a thread count is best chosen by timing a few repeated
+encodes of the corpus at hand. `?load_model` reports the package's own
+measurements, including that the embeddings were identical at every thread
+count measured.
 
-## `cores`: tokenizing, splitting, and comparing
+## Cores: tokenizing, splitting and comparing
 
 `cores` is an argument of `topics()`, `compare_topics()`, `topic_corpus()`,
-`coherence()`, `segment()`, and `topic_gamma()`. With more than one core,
-these functions tokenize and split documents in parallel, and
-`compare_topics()` fits its topic counts in parallel.
+`coherence()`, `segment()` and `topic_gamma()`. With more than one core,
+these functions tokenize and split documents in forked worker processes,
+and `compare_topics()` also fits its candidate numbers of topics in
+parallel. Forking uses `parallel::mclapply()`, which is available on Linux
+and macOS; on Windows everything runs on one core.
 
-```{r cores}
-prepared <- topic_corpus(
-  abstracts, column = "Abstract", embeddings = embeddings, cores = 4
-)
-sweep <- compare_topics(prepared, n_topics = c(6, 8, 10, 12), cores = 4)
+Tokenizing and splitting run on one core when there are fewer than 2,000
+texts, because starting processes would cost more than it saves. Fitting
+the candidates of `compare_topics()` has no such threshold: each candidate
+is a separate k-means fit, so with `cores = 2` two candidates are fitted at
+once even on a small corpus. The result is the same either way.
+
+```{r cores-compare}
+one_core <- compare_topics(prepared, n_topics = c(4, 6, 8, 10), cores = 1)
+two_cores <- compare_topics(prepared, n_topics = c(4, 6, 8, 10), cores = 2)
+one_core
+identical(as.data.frame(one_core), as.data.frame(two_cores))
+identical(as.data.frame(fitted(one_core, n_topics = 8)),
+          as.data.frame(fitted(two_cores, n_topics = 8)))
 ```
 
-`cores` uses `parallel::mclapply()`, which works on Linux and macOS. On
-Windows, and for inputs of fewer than 2,000 texts, the work runs on one core,
-because starting extra processes would cost more than it saves.
+The comparison tables are identical, and so are the fitted eight-topic
+models taken from them. Every candidate is fitted independently and
+deterministically, and no random numbers are drawn in a fit, so the order
+in which the workers finish cannot matter.
 
-# Encoding sentences efficiently
+Splitting is parallel only above 2,000 texts, so the abstracts show it.
 
-Splitting documents into sentences multiplies the number of texts to encode.
-Two settings reduce that cost.
+```{r cores-segment}
+serial <- with(abstracts, segment(Abstract, level = "sentence", cores = 1))
+forked <- with(abstracts, segment(Abstract, level = "sentence", cores = 2))
+nrow(forked)
+identical(serial, forked)
+```
 
-`sort_by_length = TRUE` encodes texts of similar length together. Every text
-in a batch is padded to the length of the longest one, so a batch of mixed
-lengths spends much of its time on padding. The more the lengths vary, as
-they do for sentences and clauses, the more this saves.
+The `r format(nrow(abstracts), big.mark = ",")` abstracts are split into
+`r format(nrow(forked), big.mark = ",")` sentences on one core and, on
+Linux and macOS, on two worker processes, with identical results: each document is split
+independently and the pieces are put back in input order. On Windows both
+calls run on one core, and the comparison is identical trivially.
 
-`dedupe_segments = TRUE` in `topic_gamma()` encodes each distinct sentence
-only once. How much it saves depends on how often sentences repeat in your
-corpus.
+For a large corpus on Linux or macOS, the full set of cores is set once and
+reused.
 
-```{r gamma}
-gamma <- topic_gamma(
-  model_8, abstracts$Abstract,
+```{r cores-large, eval = FALSE}
+prepared_abstracts <- topic_corpus(abstracts, column = "Abstract",
+                                   embeddings = embeddings, cores = 4)
+sweep <- compare_topics(prepared_abstracts, n_topics = c(6, 8, 10, 12),
+                        cores = 4)
+```
+
+## Encoding sentences efficiently
+
+Splitting documents into sentences, as described in [segmenting long
+documents](segmenting.html), multiplies the number of texts to encode. Two
+settings reduce that cost.
+
+`sort_by_length = TRUE` (in `encode()` and `topic_gamma()`) encodes texts of
+similar length together. Every text in a batch is padded to the length of
+the longest one, so a batch of mixed lengths spends much of its work on
+padding. The more the lengths vary, as they do for sentences and clauses,
+the more sorting saves. `dedupe_segments = TRUE` in `topic_gamma()`
+encodes each distinct segment once; the saving depends on how often
+segments repeat.
+
+```{r gamma, eval = FALSE}
+gamma <- with(abstracts, topic_gamma(
+  model_8, Abstract,
   model = model,
   level = "sentence",
   sort_by_length = TRUE,
   dedupe_segments = TRUE,
   cores = 4
-)
+))
 ```
 
-Both settings are off by default, because they change which texts share a
-batch and therefore move the embeddings by about 1e-7. That can, rarely,
-move a sentence that lies on the border between two topics.
+Both settings are off by default because they change which texts share a
+batch, which moves embeddings by about 1e-7. That can, rarely, move a
+segment that lies on the border between two topics. Once chosen, they
+should be kept fixed for the whole analysis.
 
-The cheapest route is to fit the model on sentences in the first place.
-`topics(segment = "sentence")` splits, encodes, and stores every sentence
+The cheapest route is to fit the model to sentences in the first place.
+`topics(segment = "sentence")` splits, encodes and stores every sentence
 with its abstract, so `topic_gamma()` needs no further encoding:
 
-```{r fit-segments}
-sentence_model <- topics(
-  abstracts,
-  column = "Abstract",
-  n_topics = 8,
-  segment = "sentence",
-  model = model,
-  cores = 4
-)
+```{r fit-segments, eval = FALSE}
+sentence_model <- topics(abstracts, column = "Abstract", n_topics = 8,
+                         segment = "sentence", max_tokens = 256,
+                         model = model, cores = 4)
 topic_gamma(sentence_model)
 ```
 
-# The static model
+## The static model
 
-`potion-base-8M` is a static model: it looks up a vector for each word and
-averages them, without a neural network and without the ONNX Runtime. It
-encodes much faster than `all-MiniLM-L6-v2`, but it ignores word order.
-Whether its topics are as good depends on the corpus, so compare the two with
-`compare_topics()` before you switch.
+`potion-base-8M` is a static model: it looks up a vector for each token and
+averages them, with no neural network and no ONNX Runtime. Encoding is
+therefore far cheaper than with `all-MiniLM-L6-v2`, but the average
+ignores word order. Whether its topics are as good depends on the corpus,
+so the two are best compared with `compare_topics()` before switching.
 
-```{r static}
+```{r static, eval = FALSE}
 fast <- load_model("potion-base-8M")
-embeddings <- encode(abstracts$Abstract, fast)
+fast_embeddings <- with(abstracts, encode(Abstract, fast))
+compare_topics(abstracts, n_topics = c(6, 8, 10, 12), column = "Abstract",
+               embeddings = fast_embeddings)
 ```
 
-# Results do not depend on cores or threads
+## Which setting for which bottleneck
 
-Tokenization is split by document and put back together in order, and every
-topic count is fitted independently, so `cores` never changes the result.
-The topic model itself uses no random numbers. The chunk below runs when the
-article is built: it fits the same model on one core and on four and
-compares the results. It uses random vectors in place of real embeddings, so
-it needs no download.
+- Several models on one corpus: pass `embeddings`, or prepare a
+  `topic_corpus()` once.
+- The same corpus in a later session, or an edited corpus: `encode(cache =
+  )`.
+- Slow encoding: `load_model(threads = "auto")`, or the static
+  `potion-base-8M`.
+- A large corpus, or many candidate counts, on Linux or macOS: `cores`.
+- Sentence-level models: `sort_by_length = TRUE`, or fit with `segment =
+  "sentence"`.
+- Exact reproducibility: `cores` and `cache` do not change results, and
+  `?load_model` reports none from `threads`; `batch_size`, `sort_by_length` and `dedupe_segments` can move
+  embeddings by about 1e-7, so they are fixed once chosen. The [verification
+  guide](verification.html) shows how determinism is tested.
 
-```{r repro, eval = TRUE}
-set.seed(1)
-n <- 2500L
-text <- paste(
-  "document", seq_len(n),
-  sample(c("alpha beta gamma", "delta epsilon zeta", "eta theta iota"), n, TRUE)
-)
-centers <- matrix(rnorm(8L * 64L), 8L, 64L)
-embeddings <- centers[sample(8L, n, replace = TRUE), ] +
-  matrix(rnorm(n * 64L, sd = 0.6), n, 64L)
-
-one_core <- topics(text, n_topics = 6, embeddings = embeddings, cores = 1)
-four_cores <- topics(text, n_topics = 6, embeddings = embeddings, cores = 4)
-
-all.equal(terms(one_core), terms(four_cores))
-all.equal(topic_sizes(one_core), topic_sizes(four_cores))
+```{r reset, include = FALSE}
+options(old_options)
 ```
-
-On Windows both fits run on one core, so the comparison is trivially true
-there.
-
-# Summary
-
-- Fitting several models to one corpus: pass `embeddings`, or use
-  `topic_corpus()`.
-- Running the same corpus again later: use `encode(cache = )`.
-- Encoding is slow: use `load_model(threads = "auto")`, or try the
-  `potion-base-8M` model.
-- Large corpus on Linux or macOS: set `cores`.
-- Sentence-level models: use `sort_by_length = TRUE`, or fit with
-  `segment = "sentence"`.
-- Exact reproducibility: `cores`, `threads`, and `cache` never change
-  results. Keep `batch_size`, `sort_by_length`, and `dedupe_segments` fixed
-  once chosen.

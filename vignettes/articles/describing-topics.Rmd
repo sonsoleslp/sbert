@@ -1,0 +1,357 @@
+---
+title: "Describing and naming topics"
+author: "Written by [Mohammed Saqr](https://saqr.me) and [Sonsoles López-Pernas](https://sonsoles.me)"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Describing and naming topics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r options, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, fig.align = "center", dpi = 96)
+old_options <- options(digits = 3, width = 90)
+```
+
+A semantic topic is a region of an embedding space: a set of texts whose
+vectors lie close to a common center. The region itself has no words, so a
+topic has to be described before it can be reported, and the description
+is an interpretation that should be traceable to evidence. Two kinds of
+evidence are available. The texts nearest the center show what the
+members of a topic say. The words that are frequent in a topic and rare in
+the others show how it is phrased. The first defines the topic; the
+second helps to search and summarize it, and can mislead when it is taken
+for the definition.
+
+This guide describes the six topics of the feedback model from both kinds
+of evidence, shows which settings change the words and that none of them
+changes the topics, and names the topics once they have been read.
+
+```{r setup}
+library(sbert)
+```
+
+## Data
+
+The model is fitted on the first 600 distinct feedback messages of
+`feedback_translations`, with their bundled embeddings, so nothing is
+downloaded.
+
+- **`translation`:** the English text of each message; the modeled text.
+- **`n`:** the number of times the message occurs in the full corpus.
+- **`feedback_embeddings`:** one 384-dimensional `all-MiniLM-L6-v2`
+  embedding per message, in the order of `corpus`.
+
+```{r fit}
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+topic_model
+```
+
+The six topics hold 223, 133, 131, 49, 37 and 27 messages. Why six is
+discussed in
+[Choosing the number of topics and the granularity](choosing-topics.html).
+
+## Which texts show what a topic is?
+
+`representatives()` returns, for every topic, the messages that best
+evidence it, ranked in one of two ways.
+
+- `distance` is the cosine distance from a message to the center of its
+  own topic: 0 for a message at the center, larger for one at the edge.
+  Ranking by distance (`rank = "distance"`) returns the most typical
+  messages.
+- `margin` is the distance to the nearest other topic minus the distance
+  to the message's own topic. A large margin means that the message is
+  much closer to its own topic than to any other. Ranking by margin
+  (`rank = "margin"`, the default) returns the messages that could belong
+  to no other topic.
+
+The text column is long, so the tables are printed with `knitr::kable()`.
+The most typical messages first:
+
+```{r reps-distance}
+knitr::kable(representatives(topic_model, n = 3, rank = "distance"),
+             digits = 2)
+```
+
+The most typical messages lie between 0.14 and 0.33 from their centers,
+and they make each topic readable: guiding questions followed by an
+instruction (topic 1), short hints (topic 2), questions about the meaning
+of a phrase (topic 3), corrections (topic 4), explanations of a phrase
+mixed with questions about one (topic 5), and descriptions built from
+negations (topic 6).
+
+The same topics ranked by margin:
+
+```{r reps-margin}
+knitr::kable(representatives(topic_model, n = 3), digits = 2)
+```
+
+The two rankings agree where a topic is compact and well separated. For
+corrections and negations the margins are 0.40 or more in both tables,
+the largest of any topic. They disagree where a topic is diffuse. The most typical
+explanations of a phrase (topic 5) have margins of 0.15 to 0.23, because
+they also resemble the questions about meaning of topic 3. Ranked by
+margin, topic 5 is represented by definitions such as *"Sitting" means
+your bottom is on the ground or on a chair*, which lie 0.44 to 0.50 from
+the center but cannot be mistaken for a question. Distance shows the
+center of a topic; margin shows what separates it from its neighbors.
+Reading both is the safer description of a diffuse topic.
+
+## Which words phrase each topic?
+
+`terms()` lists the words that distinguish each topic. By default the
+score is class-based TF-IDF (c-TF-IDF; Grootendorst, 2022): the messages
+of a topic are treated as one document, and a word scores high when it is
+frequent in that document and rare across the others. Each row also gives
+the word's `frequency` in the topic and `beta`, its share of the topic's
+words.
+
+```{r terms}
+terms(topic_model, n = 5)
+```
+
+The words describe what the messages are about, not what they do. The
+short hints of topic 2 are described, after *ones*, by names of pictures
+(*broccoli*, *candy*, *hippo*) that change from message to message. The
+negations of topic 6 are described by *person*, *animal* and *hat*, the
+objects being ruled out, not by the negation itself. Topics 2 and 3 share
+*ones*, although one hints and the other asks.
+
+`terms()` recomputes the words under other settings without refitting
+anything. `weighting = "bm25"` replaces the inverse-frequency part of the
+score with the BM25 form, which penalizes words shared by many topics more
+strongly (Mendonca & Figueira, 2025):
+
+```{r terms-bm25}
+terms(topic_model, n = 5, weighting = "bm25")
+```
+
+`reduce_frequent_words = TRUE` takes the square root of the within-topic
+frequencies before weighting, which keeps a word that a topic repeats many
+times from dominating its list:
+
+```{r terms-reduce}
+terms(topic_model, n = 3, reduce_frequent_words = TRUE)
+```
+
+With either setting the near-ties at the top of topic 1 (*picture*,
+*pictures*, *choose*) are reordered, and *choose* now leads topic 1.
+`sort_by = "beta"` ranks by the share of the topic instead of by
+distinctiveness, which lists the words a topic uses most even when other
+topics use them too:
+
+```{r terms-beta}
+terms(topic_model, n = 3, sort_by = "beta")
+```
+
+## Which words should be left out?
+
+Function words are removed with a stop-word list. `stop_words()` returns
+the default English list, and `add` extends it with words that carry no
+meaning in a particular corpus. In these messages *ones*, *picture* and
+*pictures* occur across the exercises and tell little about a topic:
+
+```{r stop-words}
+length(stop_words())
+feedback_stop_words <- stop_words(add = c("ones", "picture", "pictures"))
+terms(topic_model, n = 3, stop_words = feedback_stop_words)
+```
+
+Without them, topic 1 is described by the verbs of its instructions
+(*choose*, *pick*, *select*) and topic 2 by its picture names alone.
+
+`stem = TRUE` merges inflected forms under one Porter stem, so *picture*
+and *pictures* count as one word. It needs the SnowballC package:
+
+```{r stem, eval = requireNamespace("SnowballC", quietly = TRUE)}
+terms(topic_model, n = 3, stem = TRUE)
+```
+
+Numbers and Roman numerals are filtered with `numbers = "remove"` and
+`roman_numerals = "remove"`, and section numbering with
+`section_numbers = "remove"`. The feedback messages contain no digits:
+
+```{r digits}
+with(corpus, sum(grepl("[0-9]", translation)))
+```
+
+A small example with four invented reports shows the effect. The
+embeddings are two-dimensional and made up, and serve only to put the
+first two and the last two reports in different topics:
+
+```{r numbers}
+reports <- c("Enrolment fell in 2020 and 2021.",
+             "Enrolment fell again in 2021, phase II.",
+             "Schools reopened in 2022 after closures.",
+             "Schools reopened and enrolment rose in 2022, phase III.")
+toy_embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
+toy_model <- topics(reports, n_topics = 2, embeddings = toy_embeddings)
+terms(toy_model, n = 4)
+terms(toy_model, n = 4, numbers = "remove", roman_numerals = "remove")
+```
+
+With the default settings the years lead both topics' lists; removed, the
+words that describe the events (*reopened*, *fell*) move up. These filters
+apply to the terms only. The text and the embeddings are untouched; to
+clean the text itself before encoding, see
+[Preparing and cleaning a corpus](preparing-corpus.html).
+
+## Do the term settings change the topics?
+
+They do not. The topics are formed from the embeddings, and the terms are
+computed afterwards from the topic assignments and the text. Fitting the
+model again with BM25 weighting and the extended stop words, and
+cross-tabulating the topic of every message under the two fits, shows the
+same partition:
+
+```{r sensitivity}
+retuned <- topics(corpus, n_topics = 6, column = "translation",
+                  embeddings = feedback_embeddings, weighting = "bm25",
+                  stop_words = feedback_stop_words)
+assignments <- merge(as.data.frame(topic_model), as.data.frame(retuned),
+                     by = "document_id", suffixes = c("_default", "_retuned"))
+with(assignments, table(topic_default, topic_retuned))
+```
+
+Every message keeps its topic: the table is diagonal, with 223, 133, 131,
+49, 37 and 27 messages. The term settings change how a topic is worded,
+never which messages it holds, so they can be tuned for readability
+without reopening the analysis. Fitting with them, rather than calling
+`terms()`, also changes the terms stored in the model, which the plots and
+`label = "terms"` use.
+
+## How should the topics be labeled?
+
+By default `topics()` labels each topic with its most central message,
+cut at 60 characters. `label = "terms"` labels each topic by its three
+top terms instead:
+
+```{r label-terms}
+term_labeled <- topics(corpus, n_topics = 6, column = "translation",
+                       embeddings = feedback_embeddings, label = "terms")
+topic_sizes(term_labeled)
+```
+
+Term labels are compact but repeat the weakness of the terms: the labels
+of topics 2 and 3 both contain *ones*, and topic 6 is labeled by the objects it
+mentions. A message label shows a real member of the topic.
+
+`keywords()` extracts keywords from single documents (the KeyBERT design:
+candidate words and phrases are ranked by the cosine similarity of their
+embeddings to the document's embedding, then selected by maximal marginal
+relevance; Carbonell & Goldstein, 1998). It encodes every candidate, so it
+needs a downloaded model and is not run here:
+
+```{r keywords, eval = FALSE}
+model_download()
+keywords("Where is the cow and the cake? Choose all the pictures that are between them.",
+         n = 5, ngrams = 2)
+```
+
+Once the representatives have been read, `name_topics()` gives the topics
+names that state what they are, one per topic in topic order. The names
+replace the labels in every table and plot; nothing is refitted.
+
+```{r name-topics}
+topic_model <- name_topics(topic_model, c(
+  "Guiding question and instruction", "Short hint",
+  "Question about meaning", "Correction", "Definition", "Negation"
+))
+topic_sizes(topic_model)
+```
+
+## How coherent are the descriptions?
+
+`summary()` reports the size of every topic and the coherence of its top
+ten terms, measured as normalized pointwise mutual information (NPMI;
+Bouma, 2009): whether the words that describe a topic occur together in
+its messages, from -1 to 1.
+
+```{r summary}
+summary(topic_model)
+```
+
+Coherence is highest for the corrections (0.301), whose messages repeat
+*box*, *red* and *blue*, and lowest for the short hints (-0.415), whose
+picture names rarely occur together. Low coherence here does not mean a
+poor topic: the hints are a clear kind of feedback whose words vary by
+design. Coherence evaluates the description, not the topic.
+`coherence()` returns the scores as a table. `measure = "umass"` gives
+UMass coherence instead (Mimno et al., 2011), a log ratio of co-occurrence
+counts that is usually negative and is read the same way, higher being
+more coherent:
+
+```{r coherence}
+coherence(topic_model, measure = "umass")
+```
+
+## How are topics shown in figures?
+
+`type = "terms"` draws the top terms of every topic as bars:
+
+```{r plot-terms, fig.height = 6}
+plot(topic_model, type = "terms", n_terms = 6)
+```
+
+`type = "representatives"` draws the representative messages, with their
+similarity to the center in parentheses:
+
+```{r plot-representatives, fig.height = 6}
+plot(topic_model, type = "representatives", n_representatives = 3)
+```
+
+`type = "fit"` combines both, one row per topic, and is the figure to
+report:
+
+```{r plot-fit, fig.width = 8, fig.height = 9}
+plot(topic_model, type = "fit", n_terms = 6, n_representatives = 3)
+```
+
+## When to use which
+
+| Question | Verb |
+|----------|------|
+| What does a topic say? | `representatives(rank = "distance")` |
+| What separates it from its neighbors? | `representatives(rank = "margin")` |
+| How is it worded? | `terms()`, `terms(weighting = "bm25")`, `terms(sort_by = "beta")` |
+| Which words to drop? | `stop_words(add = )`, `numbers = "remove"`, `stem = TRUE` |
+| Keywords of one document | `keywords()` (needs a model) |
+| Give the topics names | `name_topics()`, or `topics(label = "terms")` |
+| How coherent are the words? | `summary()`, `coherence()` |
+| Figures | `plot(type = "terms" / "representatives" / "fit")` |
+| Every table | `as.data.frame(topic_model, what = "terms" / "representatives")` |
+
+New messages are assigned to the named topics in
+[Assigning new documents and topic mixtures](assigning-topics.html), and
+the complete analysis of the feedback corpus is in
+[Semantic topic modeling with Sentence-BERT](sbert.html).
+
+## References
+
+Bouma, G. (2009). Normalized (pointwise) mutual information in collocation
+extraction. *Proceedings of GSCL*, 31--40.
+
+Carbonell, J., & Goldstein, J. (1998). The use of MMR, diversity-based
+reranking for reordering documents and producing summaries. *Proceedings
+of SIGIR 1998*, 335--336. https://doi.org/10.1145/290941.291025
+
+Grootendorst, M. (2022). BERTopic: Neural topic modeling with a
+class-based TF-IDF procedure. arXiv:2203.05794.
+
+Mendonca, M., & Figueira, A. (2025). Modeling political discourse with
+Sentence-BERT and BERTopic. arXiv:2510.22904.
+
+Mimno, D., Wallach, H. M., Talley, E., Leenders, M., & McCallum, A.
+(2011). Optimizing semantic coherence in topic models. *Proceedings of
+EMNLP 2011*, 262--272.
+
+```{r restore-options, include = FALSE}
+options(old_options)
+```

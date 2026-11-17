@@ -3,15 +3,14 @@
 \docType{data}
 \name{feedback_translations}
 \alias{feedback_translations}
-\title{AI-generated Mathematics Feedback with English Translations}
+\title{AI-generated mathematics feedback with English translations}
 \format{
 A data frame with 8,757 rows and 2 character columns:
 \describe{
 \item{feedback}{The original feedback message in the source language.}
 \item{translation}{The English translation of the message.}
 }
-There are 8,005 distinct translations. Messages are at most 193 characters
-long.
+There are 8,005 distinct translations, of at most 193 characters.
 }
 \source{
 Anonymized export of the AI mathematics feedback of the Levebee
@@ -23,23 +22,32 @@ identifiers.
 feedback_translations
 }
 \description{
-AI-generated feedback messages shown to young learners solving mathematics
-exercises in an educational application, paired with their English
-translations. The messages are short instructional hints and encouragements
-("Choose the picture...", "Try listening to the instruction again.") whose
-source languages include Czech, Slovak, Polish, German, Hungarian,
-Romanian, Ukrainian, Russian, Mongolian, and Vietnamese. The corpus is a
-realistic, quirk-preserving benchmark for the package's embedding,
-similarity, segmentation, and topic-modeling workflow: translations repeat
-(templates such as "Try again." recur), some source messages remain in
-their original language, and a few are identical to their translation.
+\code{feedback_translations} is a dataset of AI-generated feedback messages shown
+to young learners solving mathematics exercises in an educational
+application, paired with their English translations. The messages are short
+instructional hints and encouragements ("Choose the picture...", "Try
+listening to the instruction again.") whose source languages include Czech,
+Slovak, Polish, German, Hungarian, Romanian, Ukrainian, Russian, Mongolian,
+and Vietnamese.
+
+The corpus keeps the quirks of real data: translations repeat (templates
+such as "Try again." recur), some source messages remain in their original
+language, and a few are identical to their translation. It is the example
+corpus of the package for embedding, similarity, segmentation, and topic
+modeling; \link{feedback_embeddings} holds precomputed embeddings of its first
+600 distinct translations.
 }
 \examples{
 head(feedback_translations)
 
-# Repeated messages collapse to one row with their count.
-head(with(feedback_translations, dedupe(translation)))
+# Repeated messages collapse to one row with their count
+head(dedupe(feedback_translations, column = "translation"))
 
+# Split the first five translations into sentences
 with(head(feedback_translations, 5), segment(translation, level = "sentence"))
+}
+\seealso{
+\link{feedback_embeddings} for precomputed embeddings; \code{\link[=dedupe]{dedupe()}} to
+collapse repeated messages; \link{covid} for a corpus of longer texts.
 }
 \keyword{datasets}

@@ -2,46 +2,77 @@
 % Please edit documentation in R/inference.R
 \name{topic_membership}
 \alias{topic_membership}
-\title{Soft Topic Membership Probabilities}
+\title{Compute graded topic membership}
 \usage{
 topic_membership(object, embeddings = NULL, sharpness = 1.15)
 }
 \arguments{
-\item{object}{A fitted \code{\link[=topics]{topics()}} model.}
+\item{object}{A fitted model from \code{\link[=topics]{topics()}}.}
 
-\item{embeddings}{Optional numeric matrix of document embeddings. When
-omitted, the embeddings stored by \code{topics(keep_embeddings = TRUE)}
-are used.}
+\item{embeddings}{Numeric matrix of embeddings, one row per unit, or \code{NULL}
+(default) for the embeddings stored in the model (fitted with
+\code{keep_embeddings = TRUE}, the default).}
 
-\item{sharpness}{Fuzzy-c-means fuzzifier \code{m}. Must be greater than 1;
-values close to 1 give crisper memberships.}
+\item{sharpness}{The fuzzifier \eqn{m}, greater than 1 (default 1.15);
+values near 1 give crisper weights.}
 }
 \value{
-A base data frame with one row per document-topic pair and columns
-\code{document_id}, \code{topic}, \code{probability}, and \code{rank} (1 is the strongest
-topic of the document). Probabilities sum to 1 within each document.
+A base data frame with one row per unit-topic pair and columns
+\code{document_id} (row of \code{embeddings}, or of the fitted units), \code{topic},
+\code{probability}, and \code{rank} (1 for the unit's highest weight), ordered by
+unit and rank. Probabilities sum to one within each unit.
 }
 \description{
-Computes fuzzy-c-means-style membership of every document in every topic
-from cosine distances to the stored centroids, without changing the
-deterministic hard clustering. In high-dimensional embedding spaces
-distances concentrate, so the textbook fuzzifier \code{sharpness = 2} collapses
-memberships toward the uniform \code{1/k}; the default \code{sharpness = 1.15}
-preserves contrast. The membership ranking of topics within a document is
-invariant to \code{sharpness}; the probability magnitudes are not, and should be
-interpreted relative to the chosen value.
+\code{topic_membership()} computes graded (fuzzy) topic membership: a
+probability-like weight of every unit on every topic, so that units on a
+boundary and units squarely inside a topic can be told apart, whereas a hard
+assignment places each unit in one topic. The weights follow the membership
+function of fuzzy c-means (Bezdek, 1981): a unit's weight on a topic falls
+with its distance to that topic's center relative to its distances to the
+other centers.
+
+The weights are computed from the cosine distance of each unit to each topic
+center, after scaling the centers to unit length:
+\eqn{u_{ij} \propto d_{ij}^{-2/(m-1)}}{u_ij ~ d_ij^(-2/(m-1))}, normalized to
+sum to one over topics, with \eqn{m} the \code{sharpness}. The topics themselves
+are not refitted. In high-dimensional embedding spaces distances are similar
+in size, so the usual \eqn{m = 2} gives nearly uniform weights; the default
+1.15 keeps them distinct. The order of topics within a unit does not depend
+on \code{sharpness}; the size of the weights does, and should be read relative to
+the chosen value. The result is a data frame with one row per unit-topic
+pair, with weights that sum to one within each unit.
+
+The rank-1 topic is the topic \link[=predict.sbert_topic_model]{predict()} assigns,
+by cosine similarity to the unit-length centers. \code{\link[=topics]{topics()}} fits Lloyd's
+k-means, which assigns by squared Euclidean distance to the raw means of the
+normalized embeddings; on the fitted units the two rules agree for almost
+every unit but can differ for a few units on topic boundaries. For the share
+of a long document's segments in each topic, use \code{\link[=topic_gamma]{topic_gamma()}}.
 }
+\section{Conditions}{
+
+\code{sbert_no_embeddings} when \code{embeddings} is \code{NULL} and the model stores
+none; \code{sbert_dimension_mismatch} when the embeddings have a different
+number of columns from the fitted model; \code{sbert_bad_input} when an
+embedding row is zero.
+}
+
 \examples{
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-fitted <- topics(text, 2, embeddings = embeddings, keep_embeddings = TRUE)
-topic_membership(fitted)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+head(topic_membership(topic_model), 12)
+
+# The textbook fuzzifier spreads the weights more evenly.
+head(topic_membership(topic_model, sharpness = 2), 6)
 }
 \references{
 Bezdek, J. C. (1981). \emph{Pattern Recognition with Fuzzy
 Objective Function Algorithms}. Plenum Press, New York.
 \doi{10.1007/978-1-4757-0450-1}
+}
+\seealso{
+\link[=predict.sbert_topic_model]{predict()} for single assignments;
+\code{\link[=topic_gamma]{topic_gamma()}} for document mixtures from segments; \code{\link[=topics]{topics()}} for the
+fit.
 }

@@ -2,20 +2,36 @@
 % Please edit documentation in R/segment.R
 \name{abbreviations}
 \alias{abbreviations}
-\title{Obtain the Built-in Abbreviation Gazetteer}
+\title{List the abbreviations protected from sentence splitting}
 \usage{
 abbreviations()
 }
 \value{
-A sorted character vector of uppercase abbreviations, each ending
-in a period.
+A sorted character vector of abbreviations in upper case, each
+ending in a period.
 }
 \description{
-Returns the abbreviations whose periods are never treated as sentence
-boundaries by \code{\link[=segment]{segment()}}. Matching is case-insensitive and anchored
-at a word boundary, so \code{"ST."} protects \code{"St. Petersburg"} but never the
-end of \code{"cost."}.
+\code{abbreviations()} returns the built-in list of abbreviations whose period
+does not end a sentence, which \code{\link[=segment]{segment()}} uses by default. A period ends a
+sentence far more often than not, but abbreviations such as "e.g.", "Fig." or
+"et al." also end in one, so rule-based sentence splitting needs such a list.
+
+Matching in \code{\link[=segment]{segment()}} ignores case and starts at a word boundary, so
+\code{"ST."} protects \code{"St. Petersburg"} but not the end of \code{"cost."}.
+
+To protect further abbreviations, pass an extended vector to the
+\code{abbreviations} argument of \code{\link[=segment]{segment()}}.
 }
 \examples{
-head(abbreviations())
+abbreviations()
+
+# "App." is not in the list, so its period ends a sentence ...
+segment("See App. B for the items. Then stop.", level = "sentence")
+
+# ... unless it is added.
+segment("See App. B for the items. Then stop.", level = "sentence",
+        abbreviations = c(abbreviations(), "APP."))
+}
+\seealso{
+\code{\link[=segment]{segment()}}, which uses the list.
 }

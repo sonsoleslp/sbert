@@ -7,16 +7,25 @@
 install_runtime(cuda = NULL)
 }
 \arguments{
-\item{cuda}{Passed to \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}. Use \code{FALSE} for the portable
-CPU runtime, \code{TRUE} to request CUDA on supported systems, or \code{NULL} for
-automatic detection.}
+\item{cuda}{\code{FALSE} for the CPU runtime, \code{TRUE} to request CUDA on
+supported systems, or \code{NULL} (default) for automatic detection; passed
+to \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}.}
 }
 \value{
-The result returned by \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}, invisibly.
+The value of \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}, invisibly.
 }
 \description{
-Explicitly downloads the native ONNX Runtime used by the CRAN package
-\code{onnxr}. This is never called during package installation or loading.
+\code{install_runtime()} downloads and installs ONNX Runtime, the native inference
+library on which transformer models run, through \code{\link[onnxr:onnx_install]{onnxr::onnx_install()}}: the
+portable CPU build, a CUDA build where supported, or the build chosen by
+automatic detection. The CRAN package onnxr provides the R interface but
+leaves the library itself, a large platform-specific binary that is not part
+of R, to be installed on request.
+
+Nothing is installed when the package is installed or loaded; this function
+is the only path. Run it once per R library before \code{\link[=load_model]{load_model()}} or
+\code{\link[=load_custom]{load_custom()}}. The static \verb{potion-base-8M} model does not need it. Model
+files are installed separately with \code{\link[=model_download]{model_download()}}.
 }
 \examples{
 # Whether the ONNX Runtime is already available; nothing is installed here.
@@ -27,4 +36,8 @@ if (interactive()) {
   install_runtime()
 }
 }
+}
+\seealso{
+\code{\link[=load_model]{load_model()}}, which needs the runtime; \code{\link[=model_download]{model_download()}} for
+the model files; \code{\link[onnxr:onnx_is_installed]{onnxr::onnx_is_installed()}} to check the installation.
 }

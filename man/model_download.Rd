@@ -2,7 +2,7 @@
 % Please edit documentation in R/cache.R
 \name{model_download}
 \alias{model_download}
-\title{Download a Pinned Sentence-BERT Model}
+\title{Download a pinned model}
 \usage{
 model_download(
   model = "all-MiniLM-L6-v2",
@@ -12,24 +12,46 @@ model_download(
 )
 }
 \arguments{
-\item{model}{Name of a pinned model listed by \code{\link[=models]{models()}}.}
+\item{model}{Name of a pinned model, as listed by \code{\link[=models]{models()}} (default
+\code{"all-MiniLM-L6-v2"}).}
 
-\item{cache_dir}{Cache root returned by \code{\link[=cache_dir]{cache_dir()}}.}
+\item{cache_dir}{Cache root (default \code{\link[=cache_dir]{cache_dir()}}).}
 
-\item{quiet}{Whether to suppress download progress.}
+\item{quiet}{Suppress the start message and download progress (default
+\code{FALSE}).}
 
-\item{timeout}{Minimum download timeout in seconds.}
+\item{timeout}{Minimum download timeout in seconds (default 600); a larger
+\code{getOption("timeout")} is kept.}
 }
 \value{
-Invisibly, the model directory.
+The model's directory in the cache, invisibly.
 }
 \description{
-Downloads the official ONNX graph and tokenizer of a pinned model only
-after this function is called. Files are locked to an immutable repository
-revision and checked against package-controlled SHA-256 values. See
-\code{\link[=models]{models()}} for the available models; the default remains
-\code{all-MiniLM-L6-v2}.
+\code{model_download()} downloads the files of one pinned model into the cache. A
+pinned model is a fixed set of files (an ONNX graph and a tokenizer, or an
+embedding table for the static model) at an immutable Hugging Face revision;
+installing it locally once makes encoding work offline and keeps the model
+identical across machines and over time.
+
+Only files that are missing or fail verification are fetched, and each is
+checked against its pinned size and SHA-256 hash before it is kept. The
+function runs only when called; the package never downloads during
+installation, loading, examples or tests. It returns the model's directory in
+the cache, invisibly.
+
+Verbs given a model name that is not installed offer this download
+themselves (see \code{\link[=encode]{encode()}}). ONNX Runtime, needed by transformer models, is
+installed separately with \code{\link[=install_runtime]{install_runtime()}}. For models outside the
+pinned list, see \code{\link[=load_custom]{load_custom()}}.
 }
+\section{Conditions}{
+
+\code{sbert_unknown_model} when \code{model} names no pinned model;
+\code{sbert_download_failed} when a file cannot be downloaded or moved into
+the cache; \code{sbert_cache_invalid} when a downloaded file fails size or
+hash verification.
+}
+
 \examples{
 # Report what is already cached; nothing is downloaded here.
 model_status(tempdir())
@@ -39,4 +61,9 @@ if (interactive()) {
   model_download()
 }
 }
+}
+\seealso{
+\code{\link[=models]{models()}} for the pinned models; \code{\link[=model_status]{model_status()}} to check an
+installation; \code{\link[=load_model]{load_model()}} to load it; \code{\link[=model_remove]{model_remove()}} to delete it;
+\code{\link[=install_runtime]{install_runtime()}} for ONNX Runtime.
 }
