@@ -1,7 +1,6 @@
-# sbert 0.5.14
+# sbert 0.6.0
 
-This release collects the changes made since the CRAN release 0.5.8
-(versions 0.5.9 to 0.5.13 were not released separately).
+This release collects the changes made since the CRAN release 0.5.8.
 
 ## New features
 
@@ -24,13 +23,12 @@ This release collects the changes made since the CRAN release 0.5.8
   remains the default.
 * New dataset `feedback_embeddings`: the all-MiniLM-L6-v2 embeddings of the
   first 600 distinct English messages of `feedback_translations`, so the
-  vignettes, examples, and tests fit topic models without a model download.
+  vignettes and examples fit topic models without a model download.
   It replaces the file `inst/extdata/feedback_embeddings.rds`.
 * `topics()` records whether k-means converged: `diagnostics` gains
   `converged` and `warnings`. When `iter_max` is reached the fit warns with
   class `sbert_no_converge`, `summary()` says so, and the table returned by
-  `compare_topics()` gains a `converged` column (forked candidates cannot
-  pass warnings back, so the table carries it).
+  `compare_topics()` gains a `converged` column.
 * Errors raised by the package carry classes (`sbert_bad_input`,
   `sbert_no_embeddings`, `sbert_dimension_mismatch`,
   `sbert_model_not_installed`, `sbert_runtime_missing`, `sbert_unknown_model`,
@@ -47,8 +45,6 @@ This release collects the changes made since the CRAN release 0.5.8
   The header line "topic topic_diversity" now reads "topic diversity".
 * The startup message is shorter and no longer says that encoding "just
   works".
-* `select_topics()` is documented as warning on every call, which is what
-  it has always done.
 
 ## Bug fixes
 
@@ -67,17 +63,14 @@ This release collects the changes made since the CRAN release 0.5.8
   (four pinned models are MIT, not Apache-2.0).
 * `name_topics()` and the fit plot's size guard raise conditions that also
   inherit from `sbert_error`.
-* `?topics` described the stored topic centers as unit length. They are the
-  k-means means of the normalized embeddings, whose norms are below one; the
-  documentation now says so.
 
 ## Documentation
 
 * New vignettes "Semantic topic modeling with Sentence-BERT" and "Sentence
   embeddings without Python", which run on the bundled embeddings; new
-  website guides and case studies. Help pages were rewritten.
+  website guides and case studies.
 
-## Changes from 0.5.9 to 0.5.12
+## Other changes
 
 * `compare_topics()` gains `coherence_weight = c("none", "size")` and
   `coherence()` gains `weight =`. With `"size"`, each topic's coherence
@@ -111,31 +104,6 @@ This release collects the changes made since the CRAN release 0.5.8
   instead of failing: an empty panel says "not available", and the title
   drops the "highest coherence" marker when no candidate has a score.
 
-* Documentation revision. roxygen markdown is now switched on
-  (`Roxygen: list(markdown = TRUE)`): the help pages had shown raw
-  backticks and `[topic()]` brackets instead of code and links, and every
-  `%` silently cut the rest of its line (for example the padding and
-  cache-cost figures in `?encode` and `?load_model`). Links to the
-  generics now point at this package's methods (`terms()`, `summary()`,
-  `predict()`, `plot()`, `fitted()`).
-* `?topics` describes the fields of a fitted model and the verbs that read
-  them, its error conditions, and its references (Reimers and Gurevych 2019;
-  Grootendorst 2022; Mendonca and Figueira 2025; Lloyd 1982). References
-  were added to `topic_membership()` (Bezdek 1981), `keywords()` (Carbonell
-  and Goldstein 1998; KeyBERT), and `coherence()` (Bouma 2009 for NPMI).
-* Corrected statements: `print()` of a topic model and of a loaded model
-  list what they actually show; `topic_corpus()` says that `topics()` takes
-  the tokenization settings from the corpus; `?covid` gives 3,670 distinct
-  abstracts and `?encode` 177 repeated ones; `?topic_palette` names the
-  HCL palette it returns; `?as.data.frame.sbert_topic_sweep` keeps the
-  `measure` attribute; `?topic_membership` and `?topic_gamma` no longer say
-  "topic_membership" where they mean membership.
-* Examples, the README, and the articles use the package's verbs instead of
-  reaching into results: `topic_sizes()`, `representatives()`, and
-  `topic_gamma()` replace `$topics` and `$documents`, and `topics()` and
-  `topic_corpus()` take `column =` instead of `df$column`. The README now
-  shows sentence labels, matching 0.5.9.
-
 * New `name_topics(object, labels)` names the topics of a fitted model, for
   example by the kind of message each holds, after reading its
   representatives. The names replace the `label` column of every topic
@@ -143,7 +111,6 @@ This release collects the changes made since the CRAN release 0.5.8
   `topic_hierarchy()`, and every plot; nothing is refitted. They are recorded
   in `$settings$topic_names`, and `reduce_topics()` drops them because merged
   topics need new names. Invalid names raise `sbert_bad_topic_names`.
-* The vignette names its six topics with `name_topics()`.
 
 * Topics are named by sentences, not words. `topics()` gains
   `label = c("representative", "terms")`: by default each topic's `label` is
@@ -151,22 +118,12 @@ This release collects the changes made since the CRAN release 0.5.8
   boundary; `label = "terms"` restores the three-word labels
   (`"box / red / blue"`). The choice is recorded in `$settings`, so
   `reduce_topics()` relabels the same way; models saved before 0.5.9 keep
-  word labels. Clusters, terms, and representatives are unchanged; the golden
-  test fixture was regenerated for its label columns only.
+  word labels. Clusters, terms, and representatives are unchanged.
 * Plots read sentences first. `type = "fit"` puts the representative
   documents in the first column (or the top row with `per_topic = TRUE`),
   before the term panels. Representative texts wrap onto two lines instead of
   being cut after a few words, panel titles are shortened to fit their
   panel, and the sizes, map, and hierarchy plots show numbered labels.
-* The vignette and both website articles are rewritten in plain language.
-  Every statement about a result now matches the output printed beside it,
-  and the vignette describes what each topic is about from its example
-  messages. The COVID-19 article drops the hypergraph section, which needed
-  the GitHub-only `hypernets` package, and strips copyright notices with
-  `clean_corpus(remove = )` before encoding. The parallel article drops
-  hard-coded benchmark figures that the article itself never computed, and
-  its code now uses one consistent example.
-
 # sbert 0.5.8
 
 * The cross-platform numeric tests now compare at rounding tolerance instead
