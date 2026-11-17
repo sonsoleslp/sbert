@@ -1,16 +1,25 @@
-# Strip Enumeration and List Markers from Text
+# Remove list and enumeration markers from text
 
-Removes list and enumeration markers — `"1."`, `"2."`, `"(i)"`, `"(a)"`,
-`"(iv)"`, `"IV."`, `"V."` — from each document. The `numbers`,
-`roman_numerals`, and `section_numbers` arguments of
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) clean only
-the extracted *terms*; this cleans the source *text*, so markers no
-longer over-fragment
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md), skew the
-embeddings, or surface in
-[representatives()](https://sonsoles.me/sbert/reference/representatives.md).
-Run it once, before embedding or segmentation, as a companion to
-[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md).
+`strip_list_markers()` removes the markers of numbered and lettered
+lists, such as `"1."`, `"(ii)"`, `"(a)"` and `"IV."`, from the text
+itself, before segmentation and encoding. Such markers, common in texts
+taken from documents, forms, or reports, carry no meaning, but they
+split sentences where there is no sentence boundary, shift the
+embeddings, and appear in the representative texts.
+
+It removes a one- or two-digit number with a period where a list can be
+(at the start of the text or of a sentence, or continuing a list); a
+parenthesized number, single letter, or Roman numeral; and an upper-case
+Roman numeral with a period. A marker must stand alone, so a number that
+ends a sentence (`"in the top 20."`), years, decimals, and words in
+parentheses are kept. The result is `text` with the markers removed and
+white space collapsed.
+
+The `numbers`, `roman_numerals`, and `section_numbers` arguments of
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) filter the
+terms only.
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
+applies this function together with other cleaning steps.
 
 ## Usage
 
@@ -22,37 +31,19 @@ strip_list_markers(text)
 
 - text:
 
-  A character vector.
+  A character vector without missing values.
 
 ## Value
 
-`text` with markers removed and runs of whitespace collapsed to a single
-space; each element trimmed.
-
-## Details
-
-A marker must stand alone — whitespace or a string boundary on both
-sides — so real words in parentheses (`"(civil)"`), four-digit years
-(`"(2020)"`), counts (`"(n=100)"`), multi-word parentheticals
-(`"(see Fig 1)"`), and decimals (`"1.5"`) are left untouched. Removed
-forms are a standalone one- or two-digit number followed by a period
-(`"1."`, `"12."`) where a list can be: at the start of the text or of a
-sentence, as the `"1."` directly followed by a `"2."`, or as the next
-number of a list already under way. A number that ends a sentence
-(`"in the top 20."`) is content and kept; a parenthesized one- or
-two-digit number, single letter, or Roman numeral up to 39 (`"(1)"`,
-`"(a)"`, `"(iv)"`); and a bare upper-case Roman-numeral section marker
-with a period (`"II."`, `"IV."`). A multi-letter numeral is removed
-anywhere; a single-letter one (`"V."`, `"X."`) only at the start of the
-text, so a mid-sentence initial (`"by V. Nabokov"`), unit (`"5 V."`),
-and lower-case `"v."` (versus) are kept.
+`text` with the markers removed, runs of white space collapsed to one
+space, and each element trimmed.
 
 ## See also
 
-[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md), and the
-`numbers` / `roman_numerals` / `section_numbers` arguments of
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) for cleaning
-the terms rather than the text.
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md),
+which includes this step;
+[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md);
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md).
 
 ## Examples
 

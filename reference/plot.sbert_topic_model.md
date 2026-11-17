@@ -1,7 +1,31 @@
-# Plot a Semantic Topic Model
+# Plot a fitted topic model
 
-Draws one of five deterministic base-graphics views of a fitted topic
-model.
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) draws one of
+five base-graphics views of a fitted topic model: how large the topics
+are, which words distinguish them, which texts exemplify them, and how
+they lie relative to one another in the embedding space. Together the
+views support naming the topics and judging whether the chosen number of
+topics is adequate.
+
+`"sizes"` is a bar chart of the number of units (documents, or segments
+for a segmented model) in each topic. `"terms"` shows each topic's top
+terms by class-based TF-IDF score, within-topic probability (beta), or
+count. `"representatives"` lists each topic's representative texts,
+those closest to its center. `"fit"` combines both in one row per topic:
+the representative texts, then the terms by count, TF-IDF and beta.
+`"map"` places the units in two dimensions by classical multidimensional
+scaling of their cosine distances, colored by topic and labeled at each
+topic's mean position; large corpora are thinned to `max_points` by an
+even, non-random sample within each topic.
+
+The data behind each view are available as tables:
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md),
+[terms()](https://sonsoles.me/sbert/reference/terms.sbert_topic_model.md),
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
+and `as.data.frame(x, what = "documents")`. To compare models with
+different numbers of topics, plot a
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+result.
 
 ## Usage
 
@@ -26,78 +50,82 @@ plot(
 
 - x:
 
-  An `sbert_topic_model` returned by
+  A fitted model from
   [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - type:
 
-  One of `"sizes"` (document count per topic), `"terms"` (top terms per
-  topic), `"representatives"` (a ranked text list of the
-  centroid-nearest documents per topic), `"fit"` (a per-topic report
-  with the representative documents followed by all three term views –
-  count, TF-IDF, beta – one row per topic), or `"map"` (a
-  two-dimensional classical-MDS projection of the document embeddings,
-  colored by topic). The `"map"` view requires a model fitted with
-  `keep_embeddings = TRUE`.
+  `"sizes"` (default), `"terms"`, `"representatives"`, `"fit"`, or
+  `"map"`.
 
 - by:
 
-  For `type = "terms"`, one or more of `"score"` (class-based TF-IDF,
-  the default and most distinctive terms), `"beta"` (the generative
-  within-topic word probability), and `"frequency"` (the raw
-  within-topic count). A single value draws one panel per topic; several
-  values draw one row per topic with a column for each metric.
+  For `type = "terms"`, one or more of `"score"` (default; class-based
+  TF-IDF), `"beta"` (within-topic word probability) and `"frequency"`
+  (within-topic count). Several values draw one row per topic with a
+  column per measure.
 
 - topics:
 
-  For `type` `"terms"`, `"representatives"`, or `"fit"`, an optional
-  vector of topic numbers to restrict the plot to. Defaults to all
-  topics.
+  Topic numbers to draw for `"terms"`, `"representatives"` and `"fit"`,
+  or `NULL` (default) for all.
 
 - per_topic:
 
-  For `type` `"terms"`, `"representatives"`, or `"fit"`, draw a separate
-  figure for each topic instead of arranging all topics into one gridded
-  figure. Most useful with a device or `knitr` chunk that keeps every
-  figure (each topic then becomes its own image).
+  For `"terms"`, `"representatives"` and `"fit"`, draw one figure per
+  topic instead of one grid (default `FALSE`).
 
 - n_terms:
 
-  Number of top terms shown per panel when `type` is `"terms"` or
-  `"fit"`.
+  Terms per panel for `"terms"` and `"fit"` (default 8).
 
 - n_representatives:
 
-  Number of representative documents shown per panel when `type` is
-  `"representatives"` or `"fit"`. When more are requested than the model
-  stored at fit time, they are recomputed from the retained embeddings;
-  if the model was fitted with `keep_embeddings = FALSE`, the stored set
-  is used and a warning is issued.
+  Texts per topic for `"representatives"` and `"fit"` (default 5). More
+  than the model stored are recomputed from its stored embeddings, if
+  any.
 
 - colors:
 
-  Optional vector of topic colors; defaults to
-  [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md).
+  Topic colors, at least one per topic (default
+  [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md)).
 
 - max_points:
 
-  Maximum documents drawn when `type = "map"`. Larger corpora are
-  thinned to a deterministic stratified subsample so the classical-MDS
-  projection stays tractable.
+  Maximum number of units drawn by `"map"` (default 1500).
 
 - main:
 
-  Optional figure title for `type = "fit"` drawn as one figure (it is
-  not used with `per_topic = TRUE`). The default names the layout (term
-  columns and representative documents).
+  Title for `"fit"` drawn as one figure, or `NULL` (default) for a title
+  naming the layout.
 
 - ...:
 
-  Unused; present for S3 compatibility.
+  Unused.
 
 ## Value
 
-Invisibly, `x`.
+`x`, invisibly. The plot is drawn on the current device.
+
+## Conditions
+
+`sbert_no_embeddings` when `type = "map"` and the model stores no
+embeddings; `sbert_bad_input` when `type = "map"` and the model has
+fewer than three units; `sbert_plot_too_small` when the device is too
+small for the `"fit"` grid. Warning `sbert_few_representatives` when
+more representatives are requested than stored and the model has no
+embeddings to recompute them.
+
+## See also
+
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md),
+[terms()](https://sonsoles.me/sbert/reference/terms.sbert_topic_model.md),
+[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
+for the tables behind the views;
+[`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md)
+for the colors;
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+to compare numbers of topics.
 
 ## Examples
 
@@ -112,14 +140,13 @@ embeddings <- rbind(
   c(0, 1, 0), c(0.1, 0.9, 0),
   c(0, 0, 1), c(0.05, 0, 0.95)
 )
-topic_model <- topics(text, 3, embeddings = embeddings, keep_embeddings = TRUE)
+topic_model <- topics(text, 3, embeddings = embeddings)
 plot(topic_model, type = "sizes")
 
 plot(topic_model, type = "terms")
 
-plot(topic_model, type = "terms", by = "frequency")
-
-plot(topic_model, type = "terms", by = c("frequency", "score", "beta"), topics = 1)
+plot(topic_model, type = "terms", by = c("frequency", "score", "beta"),
+     topics = 1)
 
 plot(topic_model, type = "representatives")
 

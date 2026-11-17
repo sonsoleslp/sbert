@@ -1,12 +1,19 @@
-# Plot a Topic-Count Comparison
+# Plot a topic-count comparison
 
-`type = "metrics"` (the default) draws coherence, topic diversity, and
-between-topic variance against the candidate topic counts, marking the
-count with the highest coherence. A comparison over several segment
-levels draws one line per level in each panel, told apart by color,
-point shape, and line type, with a legend. There is no single correct
-topic count; the useful signal is the count after which coherence stops
-improving, not a global maximum.
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) draws the
+measures of a topic-count comparison, or the fit report of one of its
+candidates. With `type = "metrics"` (default) it draws three panels
+against the number of topics: mean coherence, topic diversity, and the
+share of the variance between topics, with a dotted line at the most
+coherent candidate. A comparison of several segment levels draws one
+line per level, told apart by color, point shape, and line type. The
+useful signal is usually the count after which coherence stops
+improving, not the highest value.
+
+`type = "fit"` draws the fit report of
+[plot()](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
+for the kept model with `n_topics` topics, one figure per segment level,
+so that one number of topics can be read across segmentations.
 
 ## Usage
 
@@ -37,22 +44,24 @@ plot(
 
 - main:
 
-  Overall title for `type = "metrics"`.
+  Overall title for `type = "metrics"` (default
+  `"Topic-count comparison"`).
 
 - n_topics:
 
-  For `type = "fit"`, the candidate count whose models are drawn.
-  Required when the comparison holds several candidates.
+  For `type = "fit"`, the number of topics of the models to draw;
+  required when the comparison holds several candidates. Default `NULL`.
 
 - segment:
 
-  For `type = "fit"`, the segment levels to draw; defaults to every
-  level in the comparison.
+  For `type = "fit"`, the segment levels to draw; `NULL` (default) for
+  every level.
 
 - n_terms, n_representatives:
 
-  For `type = "fit"`, passed to
-  [`plot.sbert_topic_model()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md).
+  For `type = "fit"`, terms and representatives per topic (defaults 8
+  and 5), passed to
+  [plot()](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md).
 
 - ...:
 
@@ -60,26 +69,24 @@ plot(
 
 ## Value
 
-`x`, invisibly.
+`x`, invisibly. Called for the plot.
 
-## Details
+## Conditions
 
-`type = "fit"` draws the per-topic fit report of
-[`plot.sbert_topic_model()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
-for the retained model at `n_topics`, one figure per segment level, so
-the same topic count can be read across segmentations side by side.
+An error of class `sbert_bad_input` when `type = "fit"` and `n_topics`
+is missing for a comparison of several candidates.
+
+## See also
+
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md);
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_sweep.md).
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+comparison <- compare_topics(corpus, n_topics = c(4, 6, 8),
+                             column = "translation",
+                             embeddings = feedback_embeddings)
 plot(comparison)
 ```

@@ -1,7 +1,11 @@
-# Print a Prepared Topic Corpus
+# Print a prepared topic corpus
 
-Shows what the corpus holds and can be reused for: document and unit
-counts, the segmentation level, and whether embeddings are attached.
+[`print()`](https://rdrr.io/r/base/print.html) shows what a corpus
+prepared by
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
+holds: the number of documents and, for a segmented corpus, of segments
+and their level; the embedding dimension; the embedding model; and the
+minimum token length and whether tokens are stemmed.
 
 ## Usage
 
@@ -14,7 +18,8 @@ print(x, ...)
 
 - x:
 
-  An `sbert_topic_corpus` object.
+  A corpus prepared by
+  [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md).
 
 - ...:
 
@@ -22,20 +27,23 @@ print(x, ...)
 
 ## Value
 
-The corpus object, invisibly.
+`x`, invisibly.
+
+## See also
+
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md);
+[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_corpus.md)
+for the units.
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-print(topic_corpus(text, embeddings = embeddings))
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+print(topic_corpus(corpus, column = "translation",
+                   embeddings = feedback_embeddings))
 #> <sbert_topic_corpus>
-#>   documents: 4 
-#>   embedding dimension: 2 
+#>   documents: 600 
+#>   embedding dimension: 384 
 #>   model: precomputed embeddings 
 #>   tokenization: min_token_length = 2  
 ```

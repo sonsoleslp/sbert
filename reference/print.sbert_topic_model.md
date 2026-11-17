@@ -1,12 +1,10 @@
-# Print a Semantic Topic Model
+# Print a topic model
 
-Shows the fit at a glance: the number of documents and topics, the
-embedding source, the clustering algorithm, the size of every topic, and
-the share of the embedding variance that lies between topics. Use
-[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
-for coherence per topic and
-[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
-for the labeled size table.
+[`print()`](https://rdrr.io/r/base/print.html) shows a fitted topic
+model at a glance: the number of documents (and of segments, for a
+segmented fit), the number of topics, the embedding model, the
+clustering algorithm, the size of every topic, and the share of the
+embedding variance that lies between topics.
 
 ## Usage
 
@@ -19,7 +17,8 @@ print(x, ...)
 
 - x:
 
-  An `sbert_topic_model` object.
+  A topic model fitted by
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - ...:
 
@@ -27,25 +26,28 @@ print(x, ...)
 
 ## Value
 
-The topic model object, invisibly.
+`x`, invisibly.
+
+## See also
+
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
+for coherence and topic diversity;
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
+for the labeled size table;
+[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_model.md)
+for the tables.
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-print(topics(text, n_topics = 2, embeddings = embeddings, n_terms = 3))
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+print(topics(corpus, n_topics = 6, column = "translation",
+             embeddings = feedback_embeddings))
 #> <sbert_topic_model>
-#>   documents: 6 
-#>   topics: 2
+#>   documents: 600 
+#>   topics: 6
 #>   model: precomputed embeddings
 #>   algorithm: deterministic k-means (Lloyd)
-#>   topic sizes: 3, 3
-#>   between/total SS: 99.5%
+#>   topic sizes: 223, 133, 131, 49, 37, 27
+#>   between/total SS: 22.6%
 ```

@@ -1,17 +1,21 @@
-# Reduce a Fitted Topic Model to Fewer Topics
+# Merge the topics of a model into fewer topics
 
-Cuts the topic hierarchy (see
-[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md))
-at the requested count and rebuilds the model: documents keep their
-cluster memberships (merged, never re-clustered), centroids are
-recomputed from the member documents, and terms, labels, sizes, and
-representatives are derived afresh for the merged topics. The result is
-a full `sbert_topic_model` — every downstream verb
-([`summary()`](https://rdrr.io/r/base/summary.html),
-[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md),
-[`predict()`](https://rdrr.io/r/stats/predict.html),
-[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md),
-plots) works unchanged.
+`reduce_topics()` merges the closest topics of a fitted model into
+`n_topics` topics, giving a coarser model in which every document keeps
+its place: documents that shared a topic still share one. A model with
+more topics than the data support has near-duplicate topics that divide
+one theme between them; merging them differs from fitting a new model
+with fewer topics, in which documents may be regrouped.
+
+It cuts the hierarchy of
+[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
+into `n_topics` groups and merges the topics within each group. The new
+topic centers are the normalized means of their members' embeddings, and
+the terms, labels, sizes, representatives, and sums of squares are
+computed again for the merged topics. The result is a topic model like
+any other, so every verb applies to it. Names given with
+[`name_topics()`](https://sonsoles.me/sbert/reference/name_topics.md)
+are dropped, because the merged topics need new ones.
 
 ## Usage
 
@@ -23,54 +27,60 @@ reduce_topics(object, n_topics, embeddings = NULL, method = "average")
 
 - object:
 
-  An `sbert_topic_model` returned by
+  A topic model fitted by
   [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - n_topics:
 
-  Target number of topics, at least 2 and below the current count.
+  Number of topics after merging: at least 2 and below the current
+  number.
 
 - embeddings:
 
-  The document embedding matrix used to fit `object`. Only needed when
-  the model was fitted with `keep_embeddings = FALSE`; models fitted
-  with `keep_embeddings = TRUE` carry their embeddings.
+  The embedding matrix the model was fitted on. Needed only for a model
+  fitted with `keep_embeddings = FALSE`. Default `NULL`.
 
 - method:
 
   Agglomeration method passed to
-  [`stats::hclust()`](https://rdrr.io/r/stats/hclust.html). Default
-  `"average"`.
+  [`stats::hclust()`](https://rdrr.io/r/stats/hclust.html) (default
+  `"average"`).
 
 ## Value
 
-An `sbert_topic_model` with `n_topics` topics and the same structure as
-a [`topics()`](https://sonsoles.me/sbert/reference/topics.md) fit. Names
-given with
-[`name_topics()`](https://sonsoles.me/sbert/reference/name_topics.md)
-are dropped, because the merged topics need new ones.
+A topic model of class `sbert_topic_model` with `n_topics` topics,
+structured as a
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) fit.
+
+## Conditions
+
+Errors of class `sbert_bad_input` when `n_topics` is not below the
+current number of topics, and `sbert_no_embeddings` when the model holds
+no embeddings and none are given.
+
+## See also
+
+[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
+to see which topics would merge;
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+to compare fits with different numbers of topics.
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-topic_model <- topics(
-  text, 3,
-  embeddings = embeddings, n_terms = 3, keep_embeddings = TRUE
-)
-reduce_topics(topic_model, 2)
-#> <sbert_topic_model>
-#>   documents: 6 
-#>   topics: 2
-#>   model: precomputed embeddings
-#>   algorithm: hierarchical merge of deterministic k-means topics
-#>   topic sizes: 3, 3
-#>   between/total SS: 99.5%
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
+reduced <- reduce_topics(topic_model, n_topics = 4)
+topic_sizes(reduced, weights = "n")
+#>   topic                                                       label n_documents
+#> 1     1   Where is the cow and the cake? Choose all the pictures...         356
+#> 2     2         What does “all the ones between the leaf and the...         168
+#> 3     3 Are you sure you have fewer pictures in the red box than...          49
+#> 4     4    It is not a person, does not have a hat, and is sitting.          27
+#>   proportion n_weighted weighted_share
+#> 1 0.59333333        429     0.57972973
+#> 2 0.28000000        195     0.26351351
+#> 3 0.08166667         76     0.10270270
+#> 4 0.04500000         40     0.05405405
 ```

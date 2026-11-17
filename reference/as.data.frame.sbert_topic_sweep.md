@@ -1,7 +1,9 @@
-# Coerce a Topic-Count Comparison to a Data Frame
+# Convert a topic-count comparison to a data frame
 
-Drops the retained models and the sweep class, leaving the plain table
-of candidates and their measures.
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) returns
+the table of a comparison of candidate numbers of topics as a plain data
+frame, without the fitted models, for reporting or for joining with
+other results.
 
 ## Usage
 
@@ -14,7 +16,8 @@ as.data.frame(x, ...)
 
 - x:
 
-  An `sbert_topic_sweep` object.
+  A comparison returned by
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
 
 - ...:
 
@@ -23,24 +26,24 @@ as.data.frame(x, ...)
 ## Value
 
 A base data frame with one row per candidate and columns `n_topics`,
-`coherence`, `topic_diversity`, and `explained`, preceded by `segment`
-when several levels were compared. The coherence measure stays in the
-`measure` attribute; the fitted models are dropped.
+`coherence`, `topic_diversity`, `explained`, and `converged`, preceded
+by `segment` when several levels were compared. The attributes `measure`
+and `coherence_weight` are kept.
+
+## See also
+
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md);
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_sweep.md).
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+comparison <- compare_topics(corpus, n_topics = c(4, 6),
+                             column = "translation",
+                             embeddings = feedback_embeddings)
 as.data.frame(comparison)
-#>   n_topics  coherence topic_diversity explained
-#> 1        2 -0.4562038               1 0.9954323
-#> 2        3  0.1817530               1 0.9972006
+#>   n_topics  coherence topic_diversity explained converged
+#> 1        4 -0.2070855       0.9250000 0.1229819      TRUE
+#> 2        6 -0.1044246       0.9166667 0.2255144      TRUE
 ```

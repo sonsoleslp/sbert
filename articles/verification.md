@@ -1,0 +1,363 @@
+# Verification: Python parity and determinism
+
+A reimplementation of a published method is trustworthy only to the
+extent that it has been checked against the original. `sbert` computes
+Sentence-BERT embeddings (Reimers & Gurevych, 2019) without Python: a
+Hugging Face tokenizer, an ONNX export of the network, and pooling and
+normalization in base R. Each of these steps can drift from the
+reference Python implementation, SentenceTransformers, in ways that are
+invisible in a single result: a tokenizer that splits accented text
+differently, a pooling step that counts padding tokens, a normalization
+applied twice. Topic models built on the embeddings add a second
+requirement. An analysis reported in a paper must give the same topics
+when it is run again, by the authors or by a reviewer, which rules out
+any hidden dependence on random seeds, processor count or the order in
+which parallel work finishes.
+
+This guide states what `sbert` claims on both counts and how each claim
+is checked: whether a fit is reproducible, how the package’s tests lock
+the modeled output, how embeddings are compared with
+SentenceTransformers, how a fit that did not converge is reported, and
+how errors and warnings can be caught by class.
+
+``` r
+
+library(sbert)
+#> sbert 0.5.14: Sentence-BERT embeddings and topic models in R.
+#>   14 pinned models (see models()); default: all-MiniLM-L6-v2.
+#>   A model is downloaded only on request, once, and verified by SHA-256.
+```
+
+## Data
+
+The checks that need no model run on the bundled feedback messages.
+
+- **`corpus`:** the first 600 distinct English feedback messages
+  (`translation`), with their source-language text (`feedback`) and
+  number of occurrences (`n`).
+- **`feedback_embeddings`:** their `all-MiniLM-L6-v2` embeddings, a 600
+  × 384 matrix with one row per message, computed once with the package
+  and bundled so that the topic model can be fitted without a model.
+
+``` r
+
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+dim(feedback_embeddings)
+#> [1] 600 384
+```
+
+## Is a topic model reproducible?
+
+The topic model is deterministic by construction. The k-means starting
+centers are chosen by a farthest-point rule from the data, not drawn at
+random, and no other step of the fit uses random numbers. The claim is
+checked by fitting the same model twice.
+
+``` r
+
+first_fit <- topics(corpus, n_topics = 6, column = "translation",
+                    embeddings = feedback_embeddings)
+second_fit <- topics(corpus, n_topics = 6, column = "translation",
+                     embeddings = feedback_embeddings)
+identical(first_fit, second_fit)
+#> [1] TRUE
+identical(as.data.frame(first_fit), as.data.frame(second_fit))
+#> [1] TRUE
+```
+
+The two fits are identical as whole objects, including the document
+table, the terms, the representatives and the topic centers, not merely
+equal within a tolerance. No
+[`set.seed()`](https://rdrr.io/r/base/Random.html) was needed. The same
+holds for the number of cores: the [guide to parallel topic
+modeling](https://sonsoles.me/sbert/articles/parallel.md) shows
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+with one and with two cores giving identical results.
+
+What this check establishes is reproducibility on one machine with one
+build of R. Floating-point sums can differ in their last bits between
+linear algebra libraries (the reference BLAS, OpenBLAS, Apple’s
+Accelerate), so the distances and centers of a fit computed on another
+platform may differ at the level of 1e-15. The tests described next
+allow for this: they hold the topic assignments to exact equality and
+the numbers to a small tolerance.
+
+## How do the package tests lock the output?
+
+The determinism check above is one of two in the package’s test file
+`tests/testthat/test-reproducibility.R`. The other compares a fresh fit
+with a golden fixture, a fitted model saved once in
+`tests/testthat/fixtures/topic_model_golden.rds`.
+
+- **Rerun test.** Two fits of six topics to the bundled feedback
+  embeddings must be
+  [`identical()`](https://rdrr.io/r/base/identical.html): documents,
+  topics, terms, representatives and centers. It runs everywhere,
+  including on CRAN.
+- **Golden test.** A fit of six topics to the same embeddings must match
+  the fixture: the topic of every document exactly, and the distances,
+  topic table, terms, representatives and centers to a tolerance of
+  1e-10. The tolerance allows for the platform differences above, which
+  the test file records as about 2e-15 in relative terms, and is still
+  far too small for any change to the method to pass. It is skipped on
+  CRAN, whose machines differ from the one that wrote the fixture.
+
+The rerun test proves that a fit does not depend on chance; the golden
+test proves that it does not depend on the version of the package. A
+change to the code that alters any topic assignment fails the golden
+test, and if the change is intended, the fixture must be regenerated on
+purpose and the change noted in the package news.
+
+## Do the embeddings match SentenceTransformers?
+
+Parity with the reference implementation is checked for the default
+model, `all-MiniLM-L6-v2`, in `tests/testthat/test-integration.R`. The
+test needs the model’s files, so it runs only when the environment
+variable `SBERT_TEST_MODEL_DIR` names a directory that holds
+`model.onnx` and `tokenizer.json`, and when ONNX Runtime is installed;
+otherwise it is skipped. It encodes four sentences chosen to exercise
+the tokenizer:
+
+- `"This is an example sentence"` and `"Each sentence is converted."`,
+  the standard SentenceTransformers examples;
+- `""`, an empty string, which must still give a valid vector;
+- `"Café déjà vu — 東京"`, accented Latin, an em dash and Japanese
+  characters.
+
+The test checks, in order:
+
+1.  the token ids of all four sentences equal reference ids stored in
+    the test, exactly;
+2.  the embeddings form a 4 × 384 matrix with no missing or infinite
+    values;
+3.  every row has unit length, to a tolerance of 1e-6;
+4.  the first six values of each embedding match reference values stored
+    in the test, with a largest absolute difference below 1e-6;
+5.  if `SBERT_PYTHON_REFERENCE` names a CSV file of the full Python
+    embeddings (no header, one row per sentence, 384 columns), the whole
+    matrix matches it with a largest absolute difference below 1e-6.
+
+The Python reference can be produced with a script along these lines
+(not run here), which pins the same revision as the package (see
+`models(detail = TRUE)`):
+
+``` python
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer(
+    "sentence-transformers/all-MiniLM-L6-v2",
+    revision="1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+)
+sentences = ["This is an example sentence", "Each sentence is converted.",
+             "", "Café déjà vu — 東京"]
+embeddings = model.encode(sentences, normalize_embeddings=True)
+np.savetxt("reference.csv", embeddings, delimiter=",")
+```
+
+The same comparison can be made by hand in R once the model is
+installed. It needs the model, so it is not run here.
+
+``` r
+
+model <- load_model("all-MiniLM-L6-v2")
+sentences <- c("This is an example sentence", "Each sentence is converted.",
+               "", "Café déjà vu — 東京")
+r_embeddings <- encode(sentences, model)
+python_embeddings <- as.matrix(read.csv("reference.csv", header = FALSE))
+max(abs(r_embeddings - python_embeddings))
+```
+
+A largest difference below 1e-6, the tolerance the test uses, means that
+the R and Python embeddings agree to the precision of the
+single-precision arithmetic in which the network runs. To run the
+package’s own test against a local copy of the model, from the package
+source:
+
+``` r
+
+Sys.setenv(SBERT_TEST_MODEL_DIR = "path/to/all-MiniLM-L6-v2",
+           SBERT_PYTHON_REFERENCE = "path/to/reference.csv")
+testthat::test_file("tests/testthat/test-integration.R")
+```
+
+Parity is claimed for the pinned models of the registry, whose settings
+(pooling, prefix, maximum length) are fixed by the package. A model
+loaded with
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
+carries whatever configuration its repository declares, and the package
+makes no parity claim for it; the comparison above, with the custom
+model’s id, is how to establish one (see [models, the cache, and custom
+models](https://sonsoles.me/sbert/articles/models-and-cache.md)).
+
+## Did the clustering converge?
+
+k-means is iterative. It stops when no document changes topic, or when
+it reaches `iter_max` iterations (default 100). A fit stopped by the
+limit is a valid partition but not a converged one, and reporting it as
+a result would be an error the reader cannot see. `sbert` therefore
+never stops silently: a fit that reaches `iter_max` raises a warning of
+class `sbert_no_converge` and records the fact in the model. Two
+iterations are too few for the feedback messages:
+
+``` r
+
+short_fit <- topics(corpus, n_topics = 6, column = "translation",
+                    embeddings = feedback_embeddings, iter_max = 2)
+#> Warning: k-means did not converge in 2 iterations; the topics are returned as they stood.
+#> Raise `iter_max` to continue the fit.
+summary(short_fit)
+#> Semantic topic model summary
+#>   documents:            600
+#>   topics:               6
+#>   model:                precomputed embeddings
+#>   between/total SS:     17.0%
+#>   mean npmi  coherence:  -0.1476
+#>   topic diversity:      0.883 (top 10 terms)
+#>   k-means:              did not converge (raise iter_max)
+#> 
+#>  topic                                                     label n_documents proportion
+#>      1 Where is the cow and the cake? Choose all the pictures...         322    0.53667
+#>      2       What does “all the ones between the leaf and the...         141    0.23500
+#>      3                All the ones between the deer and the cat.          57    0.09500
+#>      4  There should be two fewer in the blue one than in the...          33    0.05500
+#>      5  It is not a person, does not have a hat, and is sitting.          24    0.04000
+#>      6                     What does it mean to be on the grass?          23    0.03833
+#>  coherence
+#>    -0.3377
+#>    -0.5833
+#>    -0.2617
+#>     0.2728
+#>     0.1849
+#>    -0.1606
+```
+
+The warning names the limit that was reached, and the fit is still
+returned so that it can be inspected. The summary repeats the problem in
+its overview (“did not converge (raise iter_max)”), so it is not lost
+when the warning scrolls away or the model is saved and reloaded. With
+the default limit the same model converges, and its summary carries no
+such line. The difference is not cosmetic: stopped after two iterations,
+the topics hold 17.0% of the embedding variance between them, against
+22.6% for the converged fit below, and the largest topic has 322
+messages instead of 223.
+
+``` r
+
+summary(first_fit)
+#> Semantic topic model summary
+#>   documents:            600
+#>   topics:               6
+#>   model:                precomputed embeddings
+#>   between/total SS:     22.6%
+#>   mean npmi  coherence:  -0.1044
+#>   topic diversity:      0.917 (top 10 terms)
+#> 
+#>  topic                                                       label n_documents proportion
+#>      1   Where is the cow and the cake? Choose all the pictures...         223    0.37167
+#>      2            All the ones between the cat and the strawberry.         133    0.22167
+#>      3         What does “all the ones between the leaf and the...         131    0.21833
+#>      4 Are you sure you have fewer pictures in the red box than...          49    0.08167
+#>      5      In the top middle box, it means something is in the...          37    0.06167
+#>      6    It is not a person, does not have a hat, and is sitting.          27    0.04500
+#>  coherence
+#>    -0.2368
+#>    -0.4150
+#>    -0.2564
+#>     0.3011
+#>    -0.2043
+#>     0.1849
+```
+
+In
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md),
+where candidates may be fitted in parallel worker processes that cannot
+pass warnings back, the same information is the `converged` column of
+the comparison table, one value per candidate.
+
+## Catching errors and warnings by class
+
+Every error that `sbert` raises on purpose has a class that names the
+problem, and every such class inherits from `sbert_error`; warnings
+inherit from `sbert_warning`. A script can therefore react to a specific
+problem without matching the text of a message, which may change between
+versions. The classes include `sbert_bad_input`, `sbert_no_embeddings`,
+`sbert_dimension_mismatch`, `sbert_model_not_installed`,
+`sbert_runtime_missing`, `sbert_unknown_model`, `sbert_cache_invalid`,
+`sbert_download_failed`, `sbert_model_error`, `sbert_no_terms`,
+`sbert_clustering_failed` and `sbert_missing_package` for errors, and
+`sbert_no_converge`, `sbert_few_representatives` and
+`sbert_cache_rebuilt` for warnings. The help page of each function lists
+the conditions it raises.
+
+A model fitted with `keep_embeddings = FALSE` is smaller, but verbs that
+need the embeddings must then be given them again.
+[`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
+without them raises `sbert_no_embeddings`, which a handler for that
+class can catch:
+
+``` r
+
+lean_model <- topics(corpus, n_topics = 6, column = "translation",
+                     embeddings = feedback_embeddings, keep_embeddings = FALSE)
+tryCatch(topic_membership(lean_model),
+         sbert_no_embeddings = function(condition) conditionMessage(condition))
+#> [1] "The model stores no embeddings. Refit with keep_embeddings = TRUE or supply embeddings."
+tryCatch(topic_membership(lean_model),
+         sbert_error = function(condition) class(condition))
+#> [1] "sbert_no_embeddings" "sbert_error"         "error"              
+#> [4] "condition"
+```
+
+The first handler catches the specific class and returns the message;
+the second catches the parent class `sbert_error` and shows the full
+class vector, from the specific class to R’s generic `error` and
+`condition`. Supplying the embeddings resolves the problem:
+
+``` r
+
+head(topic_membership(lean_model, embeddings = feedback_embeddings), 3)
+#>   document_id topic probability rank
+#> 1           1     3      0.8222    1
+#> 2           1     5      0.0924    2
+#> 3           1     4      0.0766    3
+```
+
+Warnings are caught the same way. A pipeline that must not continue with
+an unconverged model can turn `sbert_no_converge` into a stop, here by
+returning the class of the warning instead of the model:
+
+``` r
+
+tryCatch(
+  topics(corpus, n_topics = 6, column = "translation",
+         embeddings = feedback_embeddings, iter_max = 2),
+  sbert_no_converge = function(condition) class(condition)
+)
+#> [1] "sbert_no_converge" "sbert_warning"     "warning"           "condition"
+```
+
+[`tryCatch()`](https://rdrr.io/r/base/conditions.html) stops the fit at
+the warning, so no model is returned. To log the warning and keep the
+model, [`withCallingHandlers()`](https://rdrr.io/r/base/conditions.html)
+with the same class is the tool.
+
+## What is verified, and where
+
+- Same input, same topics on one machine: the rerun check above and the
+  rerun test, at zero tolerance.
+- Same topics across package versions: the golden test, exact for
+  assignments and to 1e-10 for every number.
+- Same topics with any number of cores: see [parallel topic
+  modeling](https://sonsoles.me/sbert/articles/parallel.md).
+- Same embeddings as SentenceTransformers for `all-MiniLM-L6-v2`: the
+  integration test, to 1e-6, when the model is supplied.
+- A fit that did not converge: a `sbert_no_converge` warning, and a line
+  in [`summary()`](https://rdrr.io/r/base/summary.html).
+- Programmatic handling: the classed errors and warnings above.
+
+## References
+
+Reimers, N. and Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP 2019*,
+3982–3992. <https://doi.org/10.18653/v1/D19-1410>

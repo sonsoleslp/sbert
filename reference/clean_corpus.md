@@ -1,11 +1,29 @@
-# Clean a Text Corpus Before Encoding
+# Clean a corpus before encoding
 
-One place for the text-level cleaning that should happen *before*
-embedding, so the same clean text feeds the encoder, the topic terms,
-and the representative examples. Junk characters are always repaired;
-the structured removals are opt-in. Because cleaning happens up front,
-encode the result and pass those embeddings on — nothing downstream
-needs to re-clean.
+`clean_corpus()` removes material without topical meaning from a corpus
+before encoding: markup, links, citation numbers, list markers, and
+broken characters. Text exported from web pages, databases, and
+documents carries such material; left in place, it shifts the
+embeddings, appears among the topic terms, and can form topics of its
+own. Cleaning the text once, before encoding, means that the encoder,
+the topic terms, and the representative texts all see the same clean
+text.
+
+It always repairs broken characters and removes markup, links, e-mail
+addresses, DOIs, and bracketed citation numbers. It removes list markers
+and section numbering by default, and on request numbers, Roman
+numerals, and the matches of patterns of one's own (`remove`). Words,
+author citations, dates, decimals, and numbers within sentences are
+kept. Documents left empty, or with a share of letters below
+`min_content` (see
+[`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)),
+are dropped. For a data frame, the dropped rows are removed whole, so
+other columns stay aligned with the text. It returns the cleaned texts
+that are kept or, for a data frame, the kept rows with `column` cleaned.
+
+The `numbers`, `roman_numerals`, and `section_numbers` arguments of
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md), by
+contrast, filter only the topic terms and leave the text unchanged.
 
 ## Usage
 
@@ -30,74 +48,57 @@ clean_corpus(
 
 - column:
 
-  When `text` is a data frame, the name of the text column to clean.
-  Every other column rides along and is filtered in step.
+  Name of the text column when `text` is a data frame; `NULL` (default)
+  for a character vector.
 
 - list_markers:
 
-  Remove enumeration and list markers (`1.`, `(i)`, `(a)`); default
-  `TRUE`. See
+  Remove list and enumeration markers (default `TRUE`); see
   [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md).
 
 - section_numbers:
 
-  Remove multi-level indices (`1.2.3`) and enumeration markers; default
-  `TRUE`.
+  Remove section numbering such as `1.2.3` and `II.2` (default `TRUE`).
 
 - numbers:
 
-  Remove stand-alone numeric tokens (years, counts) while keeping
-  alphanumerics such as `covid19`; default `FALSE`.
+  Remove stand-alone numbers such as years and counts, keeping words
+  with digits such as `covid19` (default `FALSE`).
 
 - roman_numerals:
 
-  Remove stand-alone Roman-numeral tokens (`ii`, `iv`, up to 100);
-  default `FALSE`. A few numerals that are also words (`iv`, `vi`) go
-  too.
+  Remove stand-alone Roman numerals of two or more letters, such as `ii`
+  and `xiv` (default `FALSE`).
 
 - remove:
 
-  Optional character vector of custom Perl-compatible regular
-  expressions. Each match is replaced with a space, before the other
-  steps. The extension point for domain-specific noise the generic
-  cleaners leave — for example `remove = "OJ No L?\\s*\\d+"` for
-  European Union Official Journal references, or a journal-citation
-  pattern. Matching is case-insensitive.
+  Optional character vector of Perl-compatible regular expressions,
+  matched case-insensitively; each match is replaced by a space. Default
+  `NULL`.
 
 - min_content:
 
-  Minimum alphabetic-content ratio, in `[0, 1]`, for a document to be
-  kept (see
-  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)).
-  Documents below the floor — citation lists, reference footnotes,
-  number tables — are dropped. `0` (default) keeps every non-empty
-  document.
+  Minimum share of letters for a document to be kept, between 0 and 1
+  (default 0, keep every non-empty document).
 
 ## Value
 
-If `text` is a character vector, the cleaned vector with dropped
-documents removed. If a data frame, the surviving rows with the `column`
-cleaned in place.
+For a character vector, the cleaned texts that are kept. For a data
+frame, the rows that are kept, with `column` cleaned.
 
-## Details
+## Conditions
 
-The operations, in order: repair junk and strip non-content markup
-(decode HTML entities and tags; remove URLs, DOIs, emails, and bracketed
-numeric citations such as `[12]`; normalize curly quotes, dashes, and
-bullets; drop control, zero-width, BOM, and replacement characters;
-normalize whitespace); strip list and section numbering; optionally
-remove numeric and Roman-numeral tokens; then drop documents that fall
-below `min_content` (see
-[`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md))
-or are left empty. Content-bearing text — real words, author citations,
-dates, decimals, inline numbers — is left intact. When `text` is a data
-frame the surviving rows are returned whole, so metadata stays aligned.
+An error of class `sbert_bad_input` when `column` is given for a
+character vector.
 
 ## See also
 
-[`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md),
+[`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
+and
 [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md),
-[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md).
+which it uses;
+[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) to collapse
+repeated texts after cleaning.
 
 ## Examples
 
@@ -108,7 +109,7 @@ clean_corpus(c(
 ), min_content = 0.5)
 #> [1] "The directive entered into force in 2020."
 
-# strip a domain-specific reference form the generic cleaner leaves
+# Remove a reference form of one's own corpus
 clean_corpus("as set out in OJ No L 313 it applies.",
              remove = "OJ No L?\\s*\\d+")
 #> [1] "as set out in it applies."

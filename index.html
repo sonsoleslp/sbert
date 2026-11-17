@@ -27,7 +27,7 @@
 
     <a class="navbar-brand me-2" href="index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,13 +36,28 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/sbert.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="articles/math_vignette.html">Topic Modeling Short Feedback Messages</a></li>
-    <li><a class="dropdown-item" href="articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
+<li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Vignettes</h6></li>
+    <li><a class="dropdown-item" href="articles/embeddings.html">Sentence embeddings without Python</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="articles/choosing-topics.html">Choosing the number of topics and the granularity</a></li>
+    <li><a class="dropdown-item" href="articles/segmenting.html">Segmenting long documents</a></li>
+    <li><a class="dropdown-item" href="articles/preparing-corpus.html">Preparing and cleaning a corpus</a></li>
+    <li><a class="dropdown-item" href="articles/describing-topics.html">Describing and naming topics</a></li>
+    <li><a class="dropdown-item" href="articles/assigning-topics.html">Assigning new documents and topic mixtures</a></li>
+    <li><a class="dropdown-item" href="articles/models-and-cache.html">Models, the cache, and custom models</a></li>
+    <li><a class="dropdown-item" href="articles/parallel.html">Parallel and high-throughput topic modeling</a></li>
+    <li><a class="dropdown-item" href="articles/verification.html">Verification: Python parity and determinism</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Case studies</h6></li>
+    <li><a class="dropdown-item" href="articles/case-covid.html">Case study: COVID-19 research abstracts</a></li>
+    <li><a class="dropdown-item" href="articles/case-multilingual-feedback.html">Case study: multilingual feedback messages</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -64,219 +79,116 @@
 <img src="logo.png" class="logo" alt=""><h1 id="sbert-">sbert <a class="anchor" aria-label="anchor" href="#sbert-"></a>
 </h1>
 </div>
-<p><code>sbert</code> computes genuine Sentence-BERT embeddings in R without Python. Fourteen models are supported, each pinned to an immutable revision and verified by SHA-256 (<code><a href="reference/models.html">models()</a></code> lists them): the classic <code>sentence-transformers</code> family (<code>all-MiniLM-L6-v2</code> — the default — <code>all-MiniLM-L12-v2</code>, <code>paraphrase-MiniLM-L3-v2</code>, <code>multi-qa-MiniLM-L6-cos-v1</code>, <code>all-mpnet-base-v2</code>, and the multilingual MiniLM/mpnet pair) plus modern embedders: <code>bge-small-en-v1.5</code> and <code>bge-base-en-v1.5</code> (CLS pooling), <code>multilingual-e5-small</code> (100+ languages), <code>nomic-embed-text-v1.5</code> and <code>jina-embeddings-v2-small-en</code> (8,192-token context), and <code>mxbai-embed-large-v1</code> (1,024 dimensions). Hugging Face-compatible tokenization is provided by <a href="https://cran.r-project.org/package=tok" class="external-link"><code>tok</code></a>, and native model inference by <a href="https://cran.r-project.org/package=onnxr" class="external-link"><code>onnxr</code></a>. Embeddings are numerically identical to Python <code>SentenceTransformers</code> output (verified to ~1e-7).</p>
-<p>The package never downloads a model or native runtime during installation, loading, examples, tests, or vignette building. Both downloads are explicit:</p>
+<!-- badges: start -->
+
+<div class="section level2">
+<h2 id="vignettes-and-guides">Vignettes and guides<a class="anchor" aria-label="anchor" href="#vignettes-and-guides"></a>
+</h2>
+<p><strong>Vignettes</strong></p>
+<ul>
+<li><a href="https://sonsoles.me/sbert/articles/sbert.html">Semantic topic modeling with Sentence-BERT</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/embeddings.html">Sentence embeddings without Python</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="https://sonsoles.me/sbert/articles/choosing-topics.html">Choosing the number of topics and the granularity</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/segmenting.html">Segmenting long documents</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/preparing-corpus.html">Preparing and cleaning a corpus</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/describing-topics.html">Describing and naming topics</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/assigning-topics.html">Assigning new documents and topic mixtures</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/models-and-cache.html">Models, the cache, and custom models</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/parallel.html">Parallel and high-throughput topic modeling</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/verification.html">Verification: Python parity and determinism</a></li>
+</ul>
+<p><strong>Case studies</strong></p>
+<ul>
+<li><a href="https://sonsoles.me/sbert/articles/case-covid.html">COVID-19 research abstracts</a></li>
+<li><a href="https://sonsoles.me/sbert/articles/case-multilingual-feedback.html">Multilingual feedback messages</a></li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
+<p><code>sbert</code> fits topic models of texts from their sentence embeddings. A sentence embedding places a text in a space where texts with similar meaning lie close together, whatever words they use (Reimers &amp; Gurevych, 2019), so topics found in that space group texts by what they mean rather than by the words they share. Each topic is described by its most typical texts and by its distinctive terms, scored with class-based TF-IDF (Grootendorst, 2022). Topics can be fitted to whole documents or to their sentences, clauses or phrases, compared across numbers of topics by coherence and diversity, and used to assign new texts and give each document a mixture of topics.</p>
+<p>The embeddings come from pretrained models, each fixed to one version (see <code><a href="reference/models.html">models()</a></code>). A model is downloaded only when it is first needed, and the bundled <code>feedback_embeddings</code> let every topic-model function run without any download.</p>
+</div>
+<div class="section level2">
+<h2 id="the-method">The method<a class="anchor" aria-label="anchor" href="#the-method"></a>
+</h2>
+<p>Each text <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math> is encoded as an embedding and scaled to unit length, so that the dot product of two embeddings is their cosine similarity. The normalized embeddings are partitioned into <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math> topics by k-means (Lloyd, 1982), started from deterministic farthest-point centers, so the same input always gives the same topics. A topic is described in two ways. Its representative texts are those nearest its center, and the most central one labels the topic. Its terms are scored by class-based TF-IDF (Grootendorst, 2022), which treats all texts of a topic as one document:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">f</mi></mrow><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow></msub><mo>⋅</mo><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>+</mo><mfrac><mi>A</mi><msub><mi>f</mi><mi>x</mi></msub></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">
+w_{x,c} = \mathrm{tf}_{x,c} \cdot \log\left(1 + \frac{A}{f_x}\right),
+</annotation></semantics></math></p>
+<p>where <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">f</mi></mrow><mrow><mi>x</mi><mo>,</mo><mi>c</mi></mrow></msub><annotation encoding="application/x-tex">\mathrm{tf}_{x,c}</annotation></semantics></math> is the frequency of term <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math> in topic <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>, normalized by the topic’s length, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>f</mi><mi>x</mi></msub><annotation encoding="application/x-tex">f_x</annotation></semantics></math> is the frequency of <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math> across all topics, and <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math> is the average number of words per topic. A term scores high when it is frequent in one topic and rare in the others. Terms depend only on the assignments and the text, so they can be re-weighted without refitting.</p>
+</div>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"sbert"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/sbert/">sbert</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">sentences</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="st">"A student is reading a research paper."</span>,</span>
-<span>  <span class="st">"A learner studies an academic article."</span>,</span>
-<span>  <span class="st">"The bicycle is parked beside the building."</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">sentences</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/topic_similarity.html">topic_similarity</a></span><span class="op">(</span><span class="va">embeddings</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/encode.html">encode()</a></code> uses the default <code>all-MiniLM-L6-v2</code> and asks once before its first download; pick any other pinned model by name (<code>encode(sentences, model = "bge-small-en-v1.5")</code> — see <code><a href="reference/models.html">models()</a></code> for the menu). Loaded models are reused for the whole session. Explicit <code><a href="reference/model_download.html">model_download()</a></code> / <code><a href="reference/load_model.html">load_model()</a></code> remain available for scripted installs and backend/thread control.</p>
-<p>Semantic topic modeling uses the same native embeddings, deterministic k-means, representative documents, and class-based TF-IDF terms:</p>
+<span><span class="co"># development version</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"sonsoleslp/sbert"</span><span class="op">)</span></span></code></pre></div>
+<p>Nothing is downloaded when the package is installed or loaded. Encoding needs the ONNX Runtime and a model, each downloaded once and on request:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span></span>
-<span>  <span class="va">sentences</span>,</span>
-<span>  n_topics <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  n_terms <span class="op">=</span> <span class="fl">8</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span></code></pre></div>
-<p>You can run the whole thing with no download by passing a precomputed embedding matrix. Here two clearly separated groups — cooking and astronomy — fall out, each labeled by its most central sentence:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sentences</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Simmer the soup with onions and carrots"</span>,</span>
-<span>  <span class="st">"This soup recipe needs a pinch of salt"</span>,</span>
-<span>  <span class="st">"Chop the carrots and dice the onions"</span>,</span>
-<span>  <span class="st">"Roast the chicken with a simple recipe"</span>,</span>
-<span>  <span class="st">"The telescope revealed a distant galaxy"</span>,</span>
-<span>  <span class="st">"Astronomers aimed the telescope at the sky"</span>,</span>
-<span>  <span class="st">"A bright comet crossed the night sky"</span>,</span>
-<span>  <span class="st">"Stars filled the dark night sky"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Two-dimensional stand-in embeddings, so this needs no model download.</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.98</span>, <span class="fl">0.02</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.95</span>, <span class="fl">0.05</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.93</span>, <span class="fl">0.07</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.90</span>, <span class="fl">0.10</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.98</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.08</span>, <span class="fl">0.95</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.10</span>, <span class="fl">0.92</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.03</span>, <span class="fl">0.97</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span><span class="va">sentences</span>, n_topics <span class="op">=</span> <span class="fl">2</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   topic                                      label n_documents proportion</span></span>
-<span><span class="co">#&gt; 1     1       Chop the carrots and dice the onions           4        0.5</span></span>
-<span><span class="co">#&gt; 2     2 Astronomers aimed the telescope at the sky           4        0.5</span></span></code></pre></div>
-<p><code>plot(type = "fit")</code> lays the whole model out at a glance — one row per topic, its representative documents first, then its three keyword views (raw count, class-based TF-IDF, and generative probability):</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-topics-fit-1.png" alt="Topic fit plot: two rows, one per topic, each showing its representative documents followed by count, TF-IDF, and beta term bars." width="100%"></p>
-<p>Pass a data frame instead and name the text column: every other column rides along with each document, and rows whose text is missing, blank, or a bibliographic placeholder are dropped once rather than by you.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span><span class="va">articles</span>, column <span class="op">=</span> <span class="st">"abstract"</span>, n_topics <span class="op">=</span> <span class="fl">40</span><span class="op">)</span></span></code></pre></div>
-<p>There is no correct topic count, so choose it from a table rather than by habit. <code><a href="reference/compare_topics.html">compare_topics()</a></code> keeps every model it fits, and <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code> takes the one you want without refitting:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span>, <span class="fl">40</span><span class="op">)</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
-<span><span class="va">sweep</span>                                    <span class="co"># coherence, diversity, explained</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></code></pre></div>
-<p>Long documents do not have to be truncated to the encoder’s context window. <code>segment = "sentence"</code> (or <code>"clause"</code>, <code>"phrase"</code>) splits every document with <code><a href="reference/segment.html">segment()</a></code> first and fits the topics on the segments, so a 5,000-word report is modeled in full and can span several topics. The segment options ride along under their <code><a href="reference/segment.html">segment()</a></code> names, and every downstream verb knows which document each segment came from:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span></span>
-<span>  <span class="va">reports</span>,</span>
-<span>  n_topics <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  segment <span class="op">=</span> <span class="st">"sentence"</span>,</span>
-<span>  max_tokens <span class="op">=</span> <span class="fl">200</span>,          <span class="co"># cap by the model's own tokenizer</span></span>
-<span>  min_content <span class="op">=</span> <span class="fl">0.5</span>          <span class="co"># drop numeral-only and citation fragments</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span>, by <span class="op">=</span> <span class="st">"document"</span><span class="op">)</span>   <span class="co"># documents per topic, not segments</span></span>
-<span><span class="fu"><a href="reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                    <span class="co"># each document's topic mixture, no re-encoding</span></span>
-<span><span class="fu"><a href="reference/representatives.html">representatives</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                <span class="co"># segments, with document_id and segment</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">new_reports</span><span class="op">)</span>           <span class="co"># new text is segmented the same way</span></span></code></pre></div>
-<p>Not sure which unit suits the corpus? Compare them the same way you compare counts: several levels in one call give one table with a <code>segment</code> column and one plot with a line per level, and <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code> takes both choices.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compare_topics.html">compare_topics</a></span><span class="op">(</span></span>
-<span>  <span class="va">reports</span>,</span>
-<span>  n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span><span class="op">)</span>,</span>
-<span>  segment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"document"</span>, <span class="st">"sentence"</span>, <span class="st">"clause"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">comparison</span><span class="op">)</span></span>
-<span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">comparison</span>, n_topics <span class="op">=</span> <span class="fl">8</span>, segment <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span></code></pre></div>
-<p>Topic terms depend only on the fitted assignments and the text, so every term setting can be retuned without repeating the clustering or the encoding:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>                       <span class="co"># distinctive terms (c-TF-IDF)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">12</span>, sort_by <span class="op">=</span> <span class="st">"beta"</span><span class="op">)</span>     <span class="co"># the words a topic uses most</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span>, n <span class="op">=</span> <span class="fl">12</span>, weighting <span class="op">=</span> <span class="st">"bm25"</span>, stem <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Cleaning happens at two levels, kept deliberately separate. <strong>Token filters</strong> tidy the <em>labels</em> without touching the text or its embedding: <code>numbers</code>, <code>roman_numerals</code>, and <code>section_numbers</code> (each <code>"keep"</code> or <code>"remove"</code>) drop bare years, chapter numerals, and indices such as <code>1.2.3</code> from the topic terms only, so a number still shapes the embedding while staying out of a cluttered label.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fl">30</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span>,</span>
-<span>       numbers <span class="op">=</span> <span class="st">"remove"</span>, roman_numerals <span class="op">=</span> <span class="st">"remove"</span>, section_numbers <span class="op">=</span> <span class="st">"remove"</span><span class="op">)</span></span></code></pre></div>
-<p><strong><code><a href="reference/clean_corpus.html">clean_corpus()</a></code></strong> cleans the <em>source text</em> before encoding — repairing junk characters, stripping list markers and reference numbering, and dropping whole low-content units (citation lists, reference footnotes) by their alphabetic density. Because Sentence-BERT is robust to a little noise, this is about fixing genuinely broken text and removing non-content rows, not scrubbing every token. Clean once, then encode the result:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">docs</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/clean_corpus.html">clean_corpus</a></span><span class="op">(</span><span class="va">raw_text</span>, min_content <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>   <span class="co"># or a data frame + column =</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">docs</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span><span class="va">docs</span>, n_topics <span class="op">=</span> <span class="fl">30</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span></code></pre></div>
-<p>Fitted topic models support a full inferential layer — assignment of new documents, soft membership, generative word probabilities, and mixed-topic document distributions:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">new_sentences</span><span class="op">)</span>   <span class="co"># nearest-centroid topics</span></span>
-<span><span class="fu"><a href="reference/topic_membership.html">topic_membership</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>         <span class="co"># fuzzy topic probabilities</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                    <span class="co"># ranked terms + p(term | topic)</span></span>
-<span><span class="fu"><a href="reference/topic_gamma.html">topic_gamma</a></span><span class="op">(</span><span class="va">topic_model</span>, <span class="va">sentences</span><span class="op">)</span>   <span class="co"># per-document topic mixture</span></span></code></pre></div>
-<p>Beyond the curated registry, <code><a href="reference/load_custom.html">load_custom()</a></code> loads any public Hugging Face repository with an ONNX encoder export, auto-detecting its configuration and pinning it locally on first use (“trust on first use”):</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gte</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_custom.html">load_custom</a></span><span class="op">(</span><span class="st">"thenlper/gte-small"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">sentences</span>, <span class="va">gte</span><span class="op">)</span></span></code></pre></div>
-<p>Multilingual corpora use the same API with a multilingual model:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/model_download.html">model_download</a></span><span class="op">(</span><span class="st">"paraphrase-multilingual-MiniLM-L12-v2"</span><span class="op">)</span></span>
-<span><span class="va">multilingual</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"paraphrase-multilingual-MiniLM-L12-v2"</span><span class="op">)</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">$</span><span class="va">feedback</span>, <span class="fl">100</span><span class="op">)</span>, <span class="va">multilingual</span><span class="op">)</span></span></code></pre></div>
-<p><code>n_topics</code> is deliberately explicit: the package does not silently guess a topic count. You may also pass a precomputed embedding matrix through the <code>embeddings</code> argument for reproducible offline analysis.</p>
-<p>Every topic solution can be evaluated and visualized without any further model call:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/coherence.html">coherence</a></span><span class="op">(</span><span class="va">topic_model</span>, measure <span class="op">=</span> <span class="st">"npmi"</span><span class="op">)</span>  <span class="co"># per-topic UMass / NPMI coherence</span></span>
-<span><span class="fu"><a href="reference/topic_diversity.html">topic_diversity</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>              <span class="co"># distinct-vocabulary proportion</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                      <span class="co"># scientific report + quality table</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"sizes"</span><span class="op">)</span>         <span class="co"># documents per topic</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"terms"</span><span class="op">)</span>         <span class="co"># top class-based TF-IDF terms</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"map"</span><span class="op">)</span>           <span class="co"># classical-MDS document map</span></span></code></pre></div>
-<p>Term weighting supports the class-based TF-IDF, BM25 (<code>weighting = "bm25"</code>), and square-root (<code>reduce_frequent_words = TRUE</code>) schemes of Mendonca and Figueira (2025).</p>
-<p>For very large corpora there is an instant-speed tier: <code>potion-base-8M</code> is a static (Model2Vec) model whose encoding is a token lookup and mean in pure base R — around 10,000 sentences per second, no ONNX involved, with the same pinning, verification, and verbs as every other model:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/model_download.html">model_download</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span>   <span class="co"># 31 MB</span></span>
-<span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"potion-base-8M"</span><span class="op">)</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/encode.html">encode</a></span><span class="op">(</span><span class="va">text</span>, model <span class="op">=</span> <span class="va">fast</span><span class="op">)</span></span></code></pre></div>
-<p>Topic models can be guided: name your topics and seed them with words or descriptions, and the seeds become the first centroids — initialization only by default, frozen with <code>fixed_seeds = TRUE</code> (zero-shot assignment):</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/topics.html">topics</a></span><span class="op">(</span></span>
-<span>  <span class="va">text</span>,</span>
-<span>  n_topics <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  seeds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    motivation <span class="op">=</span> <span class="st">"student motivation and engagement"</span>,</span>
-<span>    assessment <span class="op">=</span> <span class="st">"grading feedback and assessment"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Around the topic model, a few utilities cover the everyday analysis moves:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/keywords.html">keywords</a></span><span class="op">(</span><span class="va">text</span>, n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>                                 <span class="co"># embedding-ranked keywords (MMR)</span></span>
-<span><span class="fu"><a href="reference/stop_words.html">stop_words</a></span><span class="op">(</span>add <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"students"</span>, <span class="st">"learning"</span><span class="op">)</span><span class="op">)</span>           <span class="co"># exclude corpus vocabulary</span></span>
-<span><span class="fu"><a href="reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">text</span>, n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span><span class="op">)</span>, embeddings <span class="op">=</span> <span class="va">embeddings</span><span class="op">)</span></span>
-<span><span class="va">tree</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/topic_hierarchy.html">topic_hierarchy</a></span><span class="op">(</span><span class="va">topic_model</span><span class="op">)</span>                  <span class="co"># which topics are neighbors?</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">tree</span><span class="op">)</span>                                            <span class="co"># labeled dendrogram</span></span>
-<span><span class="va">smaller</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/reduce_topics.html">reduce_topics</a></span><span class="op">(</span><span class="va">topic_model</span>, n_topics <span class="op">=</span> <span class="fl">12</span><span class="op">)</span>  <span class="co"># merge down, keep all verbs</span></span></code></pre></div>
-<p>Documents can be split into sentences, clauses, or phrases before embedding, entirely offline and deterministically:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span></span>
-<span>  <span class="st">"We had two goals: speed and clarity; both were met. See Fig. 3."</span>,</span>
-<span>  level <span class="op">=</span> <span class="st">"clause"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt;   document_id document_name segment               text</span></span>
-<span><span class="co">#&gt; 1           1                     1  We had two goals:</span></span>
-<span><span class="co">#&gt; 2           1                     2 speed and clarity;</span></span>
-<span><span class="co">#&gt; 3           1                     3     both were met.</span></span>
-<span><span class="co">#&gt; 4           1                     4        See Fig. 3.</span></span></code></pre></div>
-<p><code><a href="reference/segment.html">segment()</a></code> returns one row per segment with the source document index, guarding abbreviations (<code><a href="reference/abbreviations.html">abbreviations()</a></code>), decimals, and parentheticals so they never end a sentence. The clause level (the default) also splits at subordinating hinges while keeping comma enumerations whole. <code>max_tokens</code> caps segment length so nothing overruns an encoder’s context window — an over-long segment is re-split at the finest punctuation first, and only word-chopped as a last resort; pass <code>model =</code> to count that model’s exact tokens.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span><span class="va">long_documents</span>, level <span class="op">=</span> <span class="st">"sentence"</span>, max_tokens <span class="op">=</span> <span class="fl">256</span>, model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span></code></pre></div>
-<p>Segments can carry their document’s context into the embedding: <code><a href="reference/blend.html">blend()</a></code> keeps <code>alpha</code> of each segment’s context-orthogonal residual and inherits the rest from the parent document vector, so a sentence that is ambiguous in isolation embeds near its document’s subject while keeping what it alone says. The result drops into <code><a href="reference/topics.html">topics()</a></code> and <code><a href="reference/representatives.html">representatives()</a></code> unchanged:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sentences</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/segment.html">segment</a></span><span class="op">(</span><span class="va">abstracts</span>, level <span class="op">=</span> <span class="st">"sentence"</span><span class="op">)</span></span>
-<span><span class="va">embeddings</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/blend.html">blend</a></span><span class="op">(</span><span class="va">sentences</span>, <span class="va">abstracts</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
-<p>The bundled <code>feedback_translations</code> dataset (8,757 multilingual AI-generated mathematics feedback messages, with English translations) provides a realistic corpus for trying the full workflow offline:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">feedback_translations</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                                       feedback</span></span>
-<span><span class="co">#&gt; 1                                Víš, co znamená o jeden více?</span></span>
-<span><span class="co">#&gt; 2                   V červeném má být o dva více než v modrém.</span></span>
-<span><span class="co">#&gt; 3                     Když to není člověk, tak co to může být?</span></span>
-<span><span class="co">#&gt; 4                                Co znamená všechny za prvním?</span></span>
-<span><span class="co">#&gt; 5 V šedém rámečku je pět obrázků. Kde je o jeden obrázek méně?</span></span>
-<span><span class="co">#&gt; 6                              Podle čeho se obrázky střídají?</span></span>
-<span><span class="co">#&gt;                                                                 translation</span></span>
-<span><span class="co">#&gt; 1                                        Do you know what “one more” means?</span></span>
-<span><span class="co">#&gt; 2                     There should be two more in the red than in the blue.</span></span>
-<span><span class="co">#&gt; 3                                   If it’s not a person, what could it be?</span></span>
-<span><span class="co">#&gt; 4                            What does “everyone after the first one” mean?</span></span>
-<span><span class="co">#&gt; 5 There are five pictures in the gray box. Where is there one picture less?</span></span>
-<span><span class="co">#&gt; 6                                            How do the pictures alternate?</span></span></code></pre></div>
-<p>A second dataset, <code>covid</code>, holds 4,170 COVID-19 research abstracts (2020-2024) with publication years — a longer, more technical corpus for topic modeling and temporal analysis, showcased in the “Topic Modeling COVID-19 Research Abstracts” article.</p>
-<p>Model downloads range from 31 MB (<code>potion-base-8M</code>) to 1.3 GB (<code>mxbai-embed-large-v1</code>) and are stored under the platform-specific path returned by <code><a href="reference/cache_dir.html">cache_dir()</a></code>. Every artifact is verified by byte size and SHA-256 before it is used.</p>
-<div class="section level2">
-<h2 id="tutorial">Tutorial<a class="anchor" aria-label="anchor" href="#tutorial"></a>
-</h2>
-<p>A full worked tutorial ships with the package and runs offline on the bundled <code>feedback_translations</code> data — choosing the topic count, building a six-topic model, reading and naming each topic from its representative messages, weighting topic sizes by how often messages repeat, and comparing the words each topic uses:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"math_vignette"</span>, package <span class="op">=</span> <span class="st">"sbert"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/sbert/">sbert</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/install_runtime.html">install_runtime</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/model_download.html">model_download</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Texts are tokenized with each model’s own Hugging Face tokenizer through <a href="https://cran.r-project.org/package=tok" class="external-link"><code>tok</code></a> and encoded by an ONNX graph through <a href="https://cran.r-project.org/package=onnxr" class="external-link"><code>onnxr</code></a>; pooling and normalization are done in R, with no Python. Each of the 14 models is pinned to a fixed revision and its files are verified by SHA-256.</p>
 </div>
 <div class="section level2">
-<h2 id="supported-scope">Supported scope<a class="anchor" aria-label="anchor" href="#supported-scope"></a>
+<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<ul>
-<li>Models: fourteen pinned models (see <code><a href="reference/models.html">models()</a></code>), classic and modern, English and multilingual, 256 to 1,024 dimensions, 128 to 8,192 tokens, 31 MB to 1.3 GB</li>
-<li>Pooling: attention-mask-aware mean pooling or CLS pooling, per model</li>
-<li>Prefixes: model-pinned input prefixes applied automatically (E5, Nomic)</li>
-<li>Custom models: <code><a href="reference/load_custom.html">load_custom()</a></code> for any HF ONNX encoder repository, with trust-on-first-use local pinning</li>
-<li>Tokenization: each model’s official <code>tokenizer.json</code>, truncated to the model’s published maximum sequence length</li>
-<li>Static models: <code>potion-base-8M</code>, a pure-R Model2Vec token-lookup embedder with no ONNX Runtime dependency</li>
-<li>Normalization: row-wise L2 normalization by default</li>
-<li>Segmentation: deterministic sentence, clause, and phrase splitting with an abbreviation gazetteer and decimal/parenthetical guards</li>
-<li>Corpus cleaning: <code><a href="reference/clean_corpus.html">clean_corpus()</a></code> repairs junk characters, strips list and reference numbering, and drops low-content units by alphabetic density</li>
-<li>Topic discovery: deterministic k-means with farthest-point initialization</li>
-<li>Topic descriptions: representative documents and BERTopic-style c-TF-IDF</li>
-<li>Topic inference: <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> for new documents, fuzzy soft membership, generative <code>beta</code>, and segment-based document-topic <code>gamma</code>
-</li>
-<li>Topic evaluation: intrinsic UMass and NPMI coherence, and topic diversity</li>
-<li>Topic visualization: deterministic base-graphics views — topic sizes, term bars, representative documents, a per-topic fit report, and an MDS document map</li>
-<li>Backends: those exposed by <code>onnxr</code>, with CPU as the portable default</li>
-</ul>
-<p>Training and fine-tuning are intentionally out of scope. Models outside the pinned registry load through <code><a href="reference/load_custom.html">load_custom()</a></code>, which pins them locally but makes no numerical-parity claim.</p>
+<p>The package bundles <code>feedback_translations</code>, AI-generated feedback messages from a mathematics learning application, and <code>feedback_embeddings</code>, the embeddings of its first 600 distinct English messages, so the example below runs without a model. <code><a href="reference/dedupe.html">dedupe()</a></code> keeps one copy of each repeated message and counts its occurrences in <code>n</code>; <code><a href="reference/compare_topics.html">compare_topics()</a></code> fits one model per candidate number of topics.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/sbert/">sbert</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">corpus</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="reference/dedupe.html">dedupe</a></span><span class="op">(</span><span class="va">feedback_translations</span>, column <span class="op">=</span> <span class="st">"translation"</span><span class="op">)</span>, <span class="fl">600</span><span class="op">)</span></span>
+<span><span class="va">sweep</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compare_topics.html">compare_topics</a></span><span class="op">(</span><span class="va">corpus</span>, column <span class="op">=</span> <span class="st">"translation"</span>,</span>
+<span>                        n_topics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span><span class="op">)</span>,</span>
+<span>                        embeddings <span class="op">=</span> <span class="va">feedback_embeddings</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">sweep</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Topic-count comparison: highest mean npmi coherence per level</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   segment n_candidates min_topics max_topics best_n_topics coherence topic_diversity</span></span>
+<span><span class="co">#&gt;  document            3          4          8             6    -0.104           0.917</span></span>
+<span><span class="co">#&gt;  explained all_converged</span></span>
+<span><span class="co">#&gt;      0.226          TRUE</span></span></code></pre></div>
+<p>Six topics have the highest coherence. <code><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted()</a></code> takes that model without refitting, and <code><a href="reference/topic_sizes.html">topic_sizes()</a></code> counts each topic’s distinct messages and, with <code>weights = "n"</code>, every time a message was shown:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">topic_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/fitted.values.html" class="external-link">fitted</a></span><span class="op">(</span><span class="va">sweep</span>, n_topics <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/topic_sizes.html">topic_sizes</a></span><span class="op">(</span><span class="va">topic_model</span>, weights <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   topic                                                       label n_documents</span></span>
+<span><span class="co">#&gt; 1     1   Where is the cow and the cake? Choose all the pictures...         223</span></span>
+<span><span class="co">#&gt; 2     2            All the ones between the cat and the strawberry.         133</span></span>
+<span><span class="co">#&gt; 3     3         What does “all the ones between the leaf and the...         131</span></span>
+<span><span class="co">#&gt; 4     4 Are you sure you have fewer pictures in the red box than...          49</span></span>
+<span><span class="co">#&gt; 5     5      In the top middle box, it means something is in the...          37</span></span>
+<span><span class="co">#&gt; 6     6    It is not a person, does not have a hat, and is sitting.          27</span></span>
+<span><span class="co">#&gt;   proportion n_weighted weighted_share</span></span>
+<span><span class="co">#&gt; 1     0.3717        267         0.3608</span></span>
+<span><span class="co">#&gt; 2     0.2217        162         0.2189</span></span>
+<span><span class="co">#&gt; 3     0.2183        138         0.1865</span></span>
+<span><span class="co">#&gt; 4     0.0817         76         0.1027</span></span>
+<span><span class="co">#&gt; 5     0.0617         57         0.0770</span></span>
+<span><span class="co">#&gt; 6     0.0450         40         0.0541</span></span></code></pre></div>
+<p>With a downloaded model the same model is fitted from the text alone, <code>topics(corpus, n_topics = 6, column = "translation")</code>. The fit report shows each topic’s most typical messages and its distinctive terms:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">topic_model</span>, type <span class="op">=</span> <span class="st">"fit"</span>, n_terms <span class="op">=</span> <span class="fl">4</span>, n_representatives <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="reference/figures/README-topics-fit-1.png" alt="Topic fit plot: one row per topic, with its representative messages and its distinctive terms." width="100%"><p class="caption">
+plot of chunk topics-fit
+</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="authors-and-citation">Authors and citation<a class="anchor" aria-label="anchor" href="#authors-and-citation"></a>
+</h2>
+<p><code>sbert</code> is written by <a href="https://saqr.me" class="external-link">Mohammed Saqr</a> and <a href="https://sonsoles.me" class="external-link">Sonsoles López-Pernas</a>. Sonsoles López-Pernas maintains the package. Questions and bug reports can be submitted through the <a href="https://github.com/sonsoleslp/sbert/issues" class="external-link">repository issue tracker</a>. The package citation is available through <code>citation("sbert")</code>.</p>
+<p>Grootendorst, M. (2022). BERTopic: Neural topic modeling with a class-based TF-IDF procedure. arXiv:2203.05794.</p>
+<p>Lloyd, S. P. (1982). Least squares quantization in PCM. <em>IEEE Transactions on Information Theory</em>, <em>28</em>(2), 129–137. <a href="https://doi.org/10.1109/TIT.1982.1056489" class="external-link uri">https://doi.org/10.1109/TIT.1982.1056489</a></p>
+<p>Reimers, N., &amp; Gurevych, I. (2019). Sentence-BERT: Sentence embeddings using Siamese BERT-networks. <em>Proceedings of EMNLP-IJCNLP 2019</em>, 3982–3992. <a href="https://doi.org/10.18653/v1/D19-1410" class="external-link uri">https://doi.org/10.18653/v1/D19-1410</a></p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -308,19 +220,26 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Mohammed Saqr <br><small class="roles"> Author, copyright holder </small> <a href="https://orcid.org/0000-0001-5881-3109" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
-<li>Sonsoles López-Pernas <br><small class="roles"> Author, maintainer, copyright holder </small> <a href="https://orcid.org/0000-0002-9621-1392" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>
+<a href="https://saqr.me" class="external-link">Mohammed Saqr</a> <br><small class="roles"> Author, copyright holder </small> <a href="https://orcid.org/0000-0001-5881-3109" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>
+<a href="https://sonsoles.me" class="external-link">Sonsoles López-Pernas</a> <br><small class="roles"> Author, maintainer, copyright holder </small> <a href="https://orcid.org/0000-0002-9621-1392" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://CRAN.R-project.org/package=sbert" class="external-link"><img src="https://www.r-pkg.org/badges/version/sbert" alt="CRAN status"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Mohammed Saqr, Sonsoles López-Pernas.</p>
+  <p>Developed by <a href="https://saqr.me" class="external-link">Mohammed Saqr</a>, <a href="https://sonsoles.me" class="external-link">Sonsoles López-Pernas</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

@@ -1,8 +1,10 @@
-# Plot a Topic Hierarchy Dendrogram
+# Plot a topic hierarchy as a dendrogram
 
-Draws the merge tree as a dendrogram labeled with topic labels, with
-cosine distance on the height axis. Early merges at small heights are
-near-duplicate topics.
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) draws the
+hierarchy of the topics as a dendrogram with the topic labels as leaves
+and the cosine distance between topic centers on the vertical axis.
+Topics joined low in the tree are near-duplicates; topics joined only
+near the top are distinct from the rest.
 
 ## Usage
 
@@ -15,36 +17,37 @@ plot(x, main = "Topic hierarchy", cex = 0.8, ...)
 
 - x:
 
-  An `sbert_topic_hierarchy` object.
+  A hierarchy built by
+  [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md).
 
 - main:
 
-  Plot title.
+  Plot title (default `"Topic hierarchy"`).
 
 - cex:
 
-  Character expansion factor for labels.
+  Size of the leaf labels (default 0.8).
 
 - ...:
 
-  Passed to
-  [`plot.dendrogram()`](https://rdrr.io/r/stats/dendrogram.html).
+  Passed to the [`plot()`](https://rdrr.io/r/graphics/plot.default.html)
+  method of [`stats::hclust()`](https://rdrr.io/r/stats/hclust.html).
 
 ## Value
 
-The hierarchy object, invisibly.
+`x`, invisibly. Called for the plot.
+
+## See also
+
+[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md);
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_hierarchy.md);
+[`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md).
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
-plot(tree)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings, label = "terms")
+plot(topic_hierarchy(topic_model))
 ```

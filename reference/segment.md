@@ -1,12 +1,34 @@
-# Segment Text into Sentences, Clauses, or Phrases
+# Split documents into sentences, clauses, or phrases
 
-Splits each document into units at a selectable granularity using
-deterministic sentence-boundary rules: a word-boundary-anchored,
-case-insensitive abbreviation gazetteer (see
+`segment()` splits documents into sentences, clauses, or phrases by
+deterministic rules, with no model involved, so the result is
+reproducible and needs no download. A long document usually discusses
+several things, and one embedding of the whole document averages them;
+shorter units can each be embedded and assigned to a topic on their own,
+so that a document can be described as a mixture of topics, and each
+unit stays within the input length of the model.
+
+The `"sentence"` level splits at `.`, `?` and `!`, protecting the
+periods of abbreviations (see
 [`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)),
-a decimal-number guard, and a parenthetical guard, plus shallow clause
-chunking at discourse connectives. No model call is involved, so
-segmentation works offline and is fully reproducible.
+decimal numbers and parenthetical remarks. The `"clause"` level, the
+default, also splits at `;`, `:`, spaced dashes, and subordinating words
+such as "which", "where" or "in terms of", while comma-separated lists
+stay whole. The `"phrase"` level also splits at commas. Quotes, dashes
+and whitespace are normalized first; letter case is kept. Optional steps
+merge very short segments into their neighbors, cap segment length at a
+number of words or model tokens, and drop segments with little
+alphabetic content, such as citation fragments. The result is a data
+frame with one row per segment.
+
+The topic verbs segment documents themselves through their `segment`
+argument (see
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md));
+call `segment()` directly to inspect the units, or to reuse one
+segmentation and its embeddings in
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+and [`blend()`](https://sonsoles.me/sbert/reference/blend.md).
 
 ## Usage
 
@@ -27,8 +49,8 @@ segment(
 
 - text:
 
-  A character vector of documents. Names, when present, are carried into
-  the `document_name` column.
+  Character vector of documents. Names are carried into the
+  `document_name` column.
 
 - level:
 
@@ -36,106 +58,112 @@ segment(
 
 - merge_below:
 
-  Re-join segments shorter than this many words into their neighbor. `0`
-  (default) disables merging and returns the pure segmentation.
+  Join segments shorter than this many words to a neighbor; `0`
+  (default) keeps every segment as split.
 
 - abbreviations:
 
-  Character vector of abbreviations (each ending in a period) whose
-  periods never end a sentence. Defaults to the built-in gazetteer from
-  [`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md);
-  matching is case-insensitive.
+  Abbreviations, each ending in a period, whose period never ends a
+  sentence (default
+  [`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md));
+  matched ignoring case.
 
 - cores:
 
-  Number of forked worker processes used to split documents. Default `1`
-  (serial). Values above one use
-  [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html) on
-  Unix-alikes and fall back to serial on Windows or for small inputs;
-  the segmentation is identical regardless of the count.
+  Number of forked processes used to split documents (default 1).
+  Ignored on Windows and for small inputs; the result does not depend on
+  it.
 
 - max_tokens:
 
-  Optional cap on segment length, so no segment overruns an encoder's
-  context window and is silently truncated. `NULL` (default) leaves
-  segments uncapped. When set, any segment over the budget is re-split
-  at the finest logical boundaries — clause hinges, `";"`, `":"`,
-  `" - "`, and commas (though a comma that would sever a name from its
-  initials, as in `"Tomlinson, C. A."`, does not split) — and the pieces
-  are packed back up to the budget, so a split lands on punctuation
-  wherever possible. A run with no such boundary is chopped further, but
-  even then the break is placed just before a function word (a
-  coordinator, preposition, article, or relative pronoun) near the
-  budget edge rather than mid-phrase, falling back to the raw edge only
-  when the run has no function word either. With `model = NULL` the
-  budget counts whitespace-delimited words, a deterministic offline
-  proxy; set it below the model's true token limit (for example around
-  200 for a 256-token model), since a tokenizer emits somewhat more
-  tokens than words.
+  Maximum length of a segment, or `NULL` (default) for no limit. A
+  longer segment is split again at clause words, `;`, `:`, dashes or
+  commas, or, failing those, before a function word near the limit.
+  Length is counted in words, or in the tokens of `model` when one is
+  given; a tokenizer yields more tokens than words, so a word limit
+  should sit below the model's token limit.
 
 - model:
 
-  Optional loaded
-  [sbert_model](https://sonsoles.me/sbert/reference/load_model.md). When
-  supplied with `max_tokens`, the budget counts that model's exact
-  sub-word tokens instead of words, so `max_tokens` can be the model's
-  real limit. Token-counted segmentation runs serially (the tokenizer is
-  not forked), so `cores` is ignored in that case.
+  `NULL` (default), or a model from
+  [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
+  whose tokenizer counts the length for `max_tokens`. Requires
+  `max_tokens`; splitting then runs in one process.
 
 - min_content:
 
-  Minimum alphabetic-content ratio, in `[0, 1]`, for a segment to be
-  kept (see
-  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)).
-  Segments below the floor — citation fragments, page and reference
-  bits, number lists — are dropped. Prose scores near 1 and reference
-  noise far below, so a value around `0.5` removes the noise while
-  keeping real clauses. `0` (default) keeps every segment.
+  Minimum share of alphabetic content, between 0 and 1, for a segment to
+  be kept (see
+  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md));
+  `0` (default) keeps every segment.
 
 ## Value
 
 A base data frame with one row per segment and columns `document_id`
-(integer position in `text`), `document_name` (name of the input
-element, or `""`), `segment` (integer position within the document), and
-`text` (the segment). Blank documents contribute no rows.
+(position of the document in `text`), `document_name` (its name, or
+`""`), `segment` (position within the document), and `text`. Blank
+documents contribute no rows.
 
-## Details
+## Conditions
 
-Each finer level adds separators:
+`sbert_bad_input` when `model` is given without `max_tokens`.
 
-- `"sentence"`:
+## See also
 
-  splits at `.`, `?`, and `!` only.
-
-- `"clause"`:
-
-  additionally splits at `;`, `:`, spaced dashes, and subordinating
-  hinges (for example "which", "where", "in terms of"). Comma-separated
-  enumerations stay whole. This is the default.
-
-- `"phrase"`:
-
-  additionally splits at commas, for maximal granularity.
-
-Before segmentation, each document is normalized: curly quotes become
-straight quotes, en and em dashes become spaced hyphens, and runs of
-whitespace collapse to single spaces. Letter case is preserved.
+[`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)
+for the protected abbreviations;
+[`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)
+for `min_content`;
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
+[`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md),
+which segment through their `segment` argument;
+[`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
+and [`blend()`](https://sonsoles.me/sbert/reference/blend.md), which
+take this data frame.
 
 ## Examples
 
 ``` r
-segment(
-  "We propose a simulator which runs alongside the processor."
+feedback <- c(
+  first = paste("The task was clear. I liked the colors, the sounds",
+                "and the pictures, which were funny."),
+  second = "Too hard; I did not understand the question."
 )
-#>   document_id document_name segment                                text
-#> 1           1                     1              We propose a simulator
-#> 2           1                     2 which runs alongside the processor.
+segment(feedback)
+#>   document_id document_name segment
+#> 1           1         first       1
+#> 2           1         first       2
+#> 3           1         first       3
+#> 4           2        second       1
+#> 5           2        second       2
+#>                                               text
+#> 1                              The task was clear.
+#> 2 I liked the colors, the sounds and the pictures,
+#> 3                                which were funny.
+#> 4                                        Too hard;
+#> 5               I did not understand the question.
+segment(feedback, level = "sentence")
+#>   document_id document_name segment
+#> 1           1         first       1
+#> 2           1         first       2
+#> 3           2        second       1
+#>                                                                 text
+#> 1                                                The task was clear.
+#> 2 I liked the colors, the sounds and the pictures, which were funny.
+#> 3                       Too hard; I did not understand the question.
+segment(feedback, level = "phrase")
+#>   document_id document_name segment                               text
+#> 1           1         first       1                The task was clear.
+#> 2           1         first       2                I liked the colors,
+#> 3           1         first       3       the sounds and the pictures,
+#> 4           1         first       4                  which were funny.
+#> 5           2        second       1                          Too hard;
+#> 6           2        second       2 I did not understand the question.
 
-segment(
-  c(intro = "See Fig. 3 for details. The next part follows."),
-  level = "sentence"
-)
-#>   document_id document_name segment                    text
-#> 1           1         intro       1 See Fig. 3 for details.
-#> 2           1         intro       2  The next part follows.
+# Abbreviation and decimal periods do not end a sentence.
+segment("See Fig. 3 for details. The mean was 2.5 points.",
+        level = "sentence")
+#>   document_id document_name segment                     text
+#> 1           1                     1  See Fig. 3 for details.
+#> 2           1                     2 The mean was 2.5 points.
 ```

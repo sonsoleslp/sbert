@@ -1,12 +1,16 @@
-# Alphabetic Content Ratio of Text
+# Compute the share of letters in text
 
-The fraction of a string's non-space characters that are letters. A
-domain-agnostic measure of how much of a unit is prose rather than
-numbers, punctuation, or symbols: real sentences score near 1, while
-citation fragments, reference lists, number tables, and identifiers
-(`"OJ No L 297, 24.11.1979, p. 1."`, `"doi:10.1007/..."`) score low.
-Used by the `min_content` filters of
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md) and
+`content_ratio()` computes the share of letters among the non-space
+characters of each element of `text`. The share separates prose from
+other units without relying on a language: sentences score close to one,
+while reference lists, citations, tables of numbers, and identifiers,
+which consist mostly of digits and punctuation and form spurious topics
+of their own when they are clustered, score low.
+
+It returns one value between 0 and 1 per element and is the measure
+behind the `min_content` filters of
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md),
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md), and
 [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 ## Usage
@@ -23,7 +27,14 @@ content_ratio(text)
 
 ## Value
 
-A numeric vector in `[0, 1]`; empty or space-only elements score `0`.
+A numeric vector of the same length as `text`, with values between 0 and
+1; an empty or all-space element scores 0.
+
+## See also
+
+[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
+and [`segment()`](https://sonsoles.me/sbert/reference/segment.md), which
+filter on it.
 
 ## Examples
 

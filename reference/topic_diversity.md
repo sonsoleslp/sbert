@@ -1,9 +1,14 @@
-# Measure Topic Diversity
+# Measure the diversity of topic terms
 
-Reports the proportion of distinct terms among the pooled top terms of
-every topic. A value near one indicates topics described by largely
-different vocabulary; a low value indicates redundant topics that repeat
-the same words (Dieng et al. 2020).
+`topic_diversity()` measures the diversity of topic terms (Dieng et al.
+2020): it pools the top `n_terms` terms of every topic and returns the
+proportion of them that are distinct. A value near one means that the
+topics are described by different words; a low value means that several
+topics repeat the same words and may be redundant.
+
+It returns a single number between 0 and 1 and complements
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md), which
+scores each topic on its own.
 
 ## Usage
 
@@ -15,17 +20,21 @@ topic_diversity(object, n_terms = 10L)
 
 - object:
 
-  An `sbert_topic_model` returned by
+  A topic model fitted by
   [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - n_terms:
 
-  Number of top terms per topic to pool. Capped at the number of terms
-  available for each topic.
+  Top terms per topic to pool (default 10), capped at the terms a topic
+  has.
 
 ## Value
 
-A single proportion in `(0, 1]`.
+A single number between 0 and 1.
+
+## Conditions
+
+An error of class `sbert_no_terms` when the model has no terms.
 
 ## References
 
@@ -34,15 +43,21 @@ embedding spaces. *Transactions of the Association for Computational
 Linguistics*, 8, 439–453.
 [doi:10.1162/tacl_a_00325](https://doi.org/10.1162/tacl_a_00325)
 
+## See also
+
+[`coherence()`](https://sonsoles.me/sbert/reference/coherence.md);
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md);
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md),
+which reports both measures per candidate.
+
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-topic_model <- topics(text, 2, embeddings = embeddings, n_terms = 3)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+topic_model <- topics(corpus, n_topics = 6, column = "translation",
+                      embeddings = feedback_embeddings)
 topic_diversity(topic_model)
-#> [1] 1
+#> [1] 0.9166667
+topic_diversity(topic_model, n_terms = 5)
+#> [1] 0.9666667
 ```

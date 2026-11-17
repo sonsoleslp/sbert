@@ -1,9 +1,25 @@
-# Load a Pinned Sentence-BERT Model
+# Load an installed pinned model
 
-Loads already-downloaded model artifacts. The function never downloads
-model files or native libraries. See
-[`models()`](https://sonsoles.me/sbert/reference/models.md) for the
-available pinned models.
+`load_model()` reads an installed pinned model from the cache, verifies
+its files against the pinned sizes and hashes, and returns the model
+ready for inference: the tokenizer and the ONNX session (or, for the
+static `potion-base-8M`, its embedding table). An embedding model is
+defined by its network weights, its tokenizer, and the rules applied
+around them (pooling, input prefix, maximum input length); the package
+pins each supported model to an immutable Hugging Face revision with
+known file sizes and SHA-256 hashes, so that the same name always means
+the same model and the same text always receives the same embedding.
+
+It never downloads anything; the files must first be installed with
+[`model_download()`](https://sonsoles.me/sbert/reference/model_download.md),
+and transformer models also need ONNX Runtime from
+[`install_runtime()`](https://sonsoles.me/sbert/reference/install_runtime.md).
+The result is an object of class `sbert_model`.
+
+Most verbs accept a model name and load it themselves, keeping it for
+the rest of the session, so an explicit `load_model()` is needed mainly
+to set `backend` or `threads`. For a model outside the pinned list, use
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md).
 
 ## Usage
 
@@ -21,47 +37,32 @@ load_model(
 
 - model:
 
-  Name of a pinned model listed by
-  [`models()`](https://sonsoles.me/sbert/reference/models.md).
+  Name of a pinned model, as listed by
+  [`models()`](https://sonsoles.me/sbert/reference/models.md) (default
+  `"all-MiniLM-L6-v2"`).
 
 - cache_dir:
 
-  Cache root returned by
-  [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md).
+  Cache root (default
+  [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md)).
 
 - backend:
 
-  ONNX execution backend accepted by
+  ONNX execution backend: `"cpu"` (default), `"coreml"`, `"cuda"`,
+  `"xnnpack"` or `"openvino"`, as accepted by
   [`onnxr::onnx_model()`](http://corymccartan.com/onnxr/reference/onnx_model.md).
 
 - threads:
 
-  Positive number of inference threads, or `"auto"` to use the machine's
-  performance-core count. Inference is the dominant cost of
-  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) — about
-  88% of a batch — and it is the only part of the package that threads.
-  The default `1` is deliberate: it keeps runs reproducible across
-  machines and keeps the package within the two-core limit that check
-  environments impose.
-
-  Raising it is free of numerical consequence — output was
-  [`identical()`](https://rdrr.io/r/base/identical.html) at 1, 2, 4, 6
-  and 8 threads across all 45 measured runs — but expect a modest gain,
-  bounded by *performance* cores rather than logical ones. Over three
-  repetitions at 200, 600 and 1,500 documents on an Apple M4 (4
-  performance + 6 efficiency), median speedups against a single thread
-  were 1.22x at two threads, 1.29x at four, 1.22x at six and 1.18x at
-  eight. Four threads was fastest at the two larger sizes (1.34x at
-  1,500 documents); beyond that the efficiency cores add contention
-  rather than throughput. Threaded timings are also noisy — run-to-run
-  spread reached 26% at the smallest size against under 3%
-  single-threaded — so benchmark with repetition before tuning. Set
-  `threads = "auto"` for the knee of that curve, or an integer to pin
-  it.
+  Number of inference threads, or `"auto"` for the machine's
+  performance-core count (default 1). Results do not depend on the
+  thread count; the gain in speed is modest and bounded by the number of
+  performance cores. The default of one keeps runs within the two-core
+  limit of check environments.
 
 - verify:
 
-  Whether to verify file sizes and SHA-256 hashes before loading.
+  Check file sizes and SHA-256 hashes before loading (default `TRUE`).
 
 ## Value
 
@@ -71,13 +72,38 @@ holding the model's identity (`id`, `short_name`, `revision`), its
 encoding settings (`dimension`, `max_length`, `pooling`, `prefix`), the
 `backend` and `threads` it runs with, and the loaded tokenizer and
 model. Pass it to the `model` argument of
-[`encode()`](https://sonsoles.me/sbert/reference/encode.md) and the
-topic verbs.
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) and of the
+topic verbs; its print method shows the identity.
+
+## Conditions
+
+`sbert_unknown_model` when `model` names no pinned model;
+`sbert_model_not_installed` when its files are missing;
+`sbert_cache_invalid` when they fail size or hash verification;
+`sbert_runtime_missing` when ONNX Runtime is not installed (transformer
+models only); `sbert_missing_package` when the static model is loaded
+without jsonlite; `sbert_model_error` when the tokenizer or model cannot
+be loaded.
+
+## See also
+
+[`models()`](https://sonsoles.me/sbert/reference/models.md) for the
+pinned models;
+[`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
+and
+[`install_runtime()`](https://sonsoles.me/sbert/reference/install_runtime.md)
+to install them;
+[`model_status()`](https://sonsoles.me/sbert/reference/model_status.md)
+to check an installation;
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
+for other Hugging Face models;
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) to use the
+model.
 
 ## Examples
 
 ``` r
-# Pinned models that can be loaded.
+# The pinned models that load_model() accepts.
 models()
 #>                                    model dimensions max_tokens      languages
 #> 1                       all-MiniLM-L6-v2        384        256        English
@@ -113,6 +139,7 @@ models()
 # \donttest{
 if (interactive()) {
   model <- load_model()
+  model
 }
 # }
 ```

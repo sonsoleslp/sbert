@@ -1,459 +1,216 @@
 # sbert
 
-`sbert` computes genuine Sentence-BERT embeddings in R without Python.
-Fourteen models are supported, each pinned to an immutable revision and
-verified by SHA-256
-([`models()`](https://sonsoles.me/sbert/reference/models.md) lists
-them): the classic `sentence-transformers` family (`all-MiniLM-L6-v2` —
-the default — `all-MiniLM-L12-v2`, `paraphrase-MiniLM-L3-v2`,
-`multi-qa-MiniLM-L6-cos-v1`, `all-mpnet-base-v2`, and the multilingual
-MiniLM/mpnet pair) plus modern embedders: `bge-small-en-v1.5` and
-`bge-base-en-v1.5` (CLS pooling), `multilingual-e5-small` (100+
-languages), `nomic-embed-text-v1.5` and `jina-embeddings-v2-small-en`
-(8,192-token context), and `mxbai-embed-large-v1` (1,024 dimensions).
-Hugging Face-compatible tokenization is provided by
-[`tok`](https://cran.r-project.org/package=tok), and native model
-inference by [`onnxr`](https://cran.r-project.org/package=onnxr).
-Embeddings are numerically identical to Python `SentenceTransformers`
-output (verified to ~1e-7).
+## Vignettes and guides
 
-The package never downloads a model or native runtime during
-installation, loading, examples, tests, or vignette building. Both
-downloads are explicit:
+**Vignettes**
+
+- [Semantic topic modeling with
+  Sentence-BERT](https://sonsoles.me/sbert/articles/sbert.html)
+- [Sentence embeddings without
+  Python](https://sonsoles.me/sbert/articles/embeddings.html)
+
+**Guides**
+
+- [Choosing the number of topics and the
+  granularity](https://sonsoles.me/sbert/articles/choosing-topics.html)
+- [Segmenting long
+  documents](https://sonsoles.me/sbert/articles/segmenting.html)
+- [Preparing and cleaning a
+  corpus](https://sonsoles.me/sbert/articles/preparing-corpus.html)
+- [Describing and naming
+  topics](https://sonsoles.me/sbert/articles/describing-topics.html)
+- [Assigning new documents and topic
+  mixtures](https://sonsoles.me/sbert/articles/assigning-topics.html)
+- [Models, the cache, and custom
+  models](https://sonsoles.me/sbert/articles/models-and-cache.html)
+- [Parallel and high-throughput topic
+  modeling](https://sonsoles.me/sbert/articles/parallel.html)
+- [Verification: Python parity and
+  determinism](https://sonsoles.me/sbert/articles/verification.html)
+
+**Case studies**
+
+- [COVID-19 research
+  abstracts](https://sonsoles.me/sbert/articles/case-covid.html)
+- [Multilingual feedback
+  messages](https://sonsoles.me/sbert/articles/case-multilingual-feedback.html)
+
+## Overview
+
+`sbert` fits topic models of texts from their sentence embeddings. A
+sentence embedding places a text in a space where texts with similar
+meaning lie close together, whatever words they use (Reimers & Gurevych,
+2019), so topics found in that space group texts by what they mean
+rather than by the words they share. Each topic is described by its most
+typical texts and by its distinctive terms, scored with class-based
+TF-IDF (Grootendorst, 2022). Topics can be fitted to whole documents or
+to their sentences, clauses or phrases, compared across numbers of
+topics by coherence and diversity, and used to assign new texts and give
+each document a mixture of topics.
+
+The embeddings come from pretrained models, each fixed to one version
+(see [`models()`](https://sonsoles.me/sbert/reference/models.md)). A
+model is downloaded only when it is first needed, and the bundled
+`feedback_embeddings` let every topic-model function run without any
+download.
+
+## The method
+
+Each text $`d`$ is encoded as an embedding and scaled to unit length, so
+that the dot product of two embeddings is their cosine similarity. The
+normalized embeddings are partitioned into $`K`$ topics by k-means
+(Lloyd, 1982), started from deterministic farthest-point centers, so the
+same input always gives the same topics. A topic is described in two
+ways. Its representative texts are those nearest its center, and the
+most central one labels the topic. Its terms are scored by class-based
+TF-IDF (Grootendorst, 2022), which treats all texts of a topic as one
+document:
+
+``` math
+w_{x,c} = \mathrm{tf}_{x,c} \cdot \log\left(1 + \frac{A}{f_x}\right),
+```
+
+where $`\mathrm{tf}_{x,c}`$ is the frequency of term $`x`$ in topic
+$`c`$, normalized by the topic’s length, $`f_x`$ is the frequency of
+$`x`$ across all topics, and $`A`$ is the average number of words per
+topic. A term scores high when it is frequent in one topic and rare in
+the others. Terms depend only on the assignments and the text, so they
+can be re-weighted without refitting.
+
+## Installation
 
 ``` r
 
 install.packages("sbert")
 
+# development version
+install.packages("remotes")
+remotes::install_github("sonsoleslp/sbert")
+```
+
+Nothing is downloaded when the package is installed or loaded. Encoding
+needs the ONNX Runtime and a model, each downloaded once and on request:
+
+``` r
+
 library(sbert)
 install_runtime()
-
-sentences <- c(
-  "A student is reading a research paper.",
-  "A learner studies an academic article.",
-  "The bicycle is parked beside the building."
-)
-embeddings <- encode(sentences)
-topic_similarity(embeddings)
+model_download()
 ```
 
-[`encode()`](https://sonsoles.me/sbert/reference/encode.md) uses the
-default `all-MiniLM-L6-v2` and asks once before its first download; pick
-any other pinned model by name
-(`encode(sentences, model = "bge-small-en-v1.5")` — see
-[`models()`](https://sonsoles.me/sbert/reference/models.md) for the
-menu). Loaded models are reused for the whole session. Explicit
-[`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
-/ [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
-remain available for scripted installs and backend/thread control.
+Texts are tokenized with each model’s own Hugging Face tokenizer through
+[`tok`](https://cran.r-project.org/package=tok) and encoded by an ONNX
+graph through [`onnxr`](https://cran.r-project.org/package=onnxr);
+pooling and normalization are done in R, with no Python. Each of the 14
+models is pinned to a fixed revision and its files are verified by
+SHA-256.
 
-Semantic topic modeling uses the same native embeddings, deterministic
-k-means, representative documents, and class-based TF-IDF terms:
+## Example
 
-``` r
-
-topic_model <- topics(
-  sentences,
-  n_topics = 2,
-  n_terms = 8
-)
-
-topic_sizes(topic_model)
-```
-
-You can run the whole thing with no download by passing a precomputed
-embedding matrix. Here two clearly separated groups — cooking and
-astronomy — fall out, each labeled by its most central sentence:
-
-``` r
-
-sentences <- c(
-  "Simmer the soup with onions and carrots",
-  "This soup recipe needs a pinch of salt",
-  "Chop the carrots and dice the onions",
-  "Roast the chicken with a simple recipe",
-  "The telescope revealed a distant galaxy",
-  "Astronomers aimed the telescope at the sky",
-  "A bright comet crossed the night sky",
-  "Stars filled the dark night sky"
-)
-# Two-dimensional stand-in embeddings, so this needs no model download.
-embeddings <- rbind(
-  c(0.98, 0.02), c(0.95, 0.05), c(0.93, 0.07), c(0.90, 0.10),
-  c(0.05, 0.98), c(0.08, 0.95), c(0.10, 0.92), c(0.03, 0.97)
-)
-topic_model <- topics(sentences, n_topics = 2, embeddings = embeddings)
-topic_sizes(topic_model)
-#>   topic                                      label n_documents proportion
-#> 1     1       Chop the carrots and dice the onions           4        0.5
-#> 2     2 Astronomers aimed the telescope at the sky           4        0.5
-```
-
-`plot(type = "fit")` lays the whole model out at a glance — one row per
-topic, its representative documents first, then its three keyword views
-(raw count, class-based TF-IDF, and generative probability):
-
-``` r
-
-plot(topic_model, type = "fit")
-```
-
-![Topic fit plot: two rows, one per topic, each showing its
-representative documents followed by count, TF-IDF, and beta term
-bars.](reference/figures/README-topics-fit-1.png)
-
-Pass a data frame instead and name the text column: every other column
-rides along with each document, and rows whose text is missing, blank,
-or a bibliographic placeholder are dropped once rather than by you.
-
-``` r
-
-topic_model <- topics(articles, column = "abstract", n_topics = 40)
-```
-
-There is no correct topic count, so choose it from a table rather than
-by habit.
+The package bundles `feedback_translations`, AI-generated feedback
+messages from a mathematics learning application, and
+`feedback_embeddings`, the embeddings of its first 600 distinct English
+messages, so the example below runs without a model.
+[`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) keeps one
+copy of each repeated message and counts its occurrences in `n`;
 [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
-keeps every model it fits, and
-[`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes the one
-you want without refitting:
+fits one model per candidate number of topics.
 
 ``` r
 
-sweep <- compare_topics(text, n_topics = c(10, 20, 30, 40), embeddings = embeddings)
-sweep                                    # coherence, diversity, explained
-plot(sweep)
+library(sbert)
 
-topic_model <- fitted(sweep, n_topics = 30)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+sweep <- compare_topics(corpus, column = "translation",
+                        n_topics = c(4, 6, 8),
+                        embeddings = feedback_embeddings)
+summary(sweep)
+#> Topic-count comparison: highest mean npmi coherence per level
+#> 
+#>   segment n_candidates min_topics max_topics best_n_topics coherence topic_diversity
+#>  document            3          4          8             6    -0.104           0.917
+#>  explained all_converged
+#>      0.226          TRUE
 ```
 
-Long documents do not have to be truncated to the encoder’s context
-window. `segment = "sentence"` (or `"clause"`, `"phrase"`) splits every
-document with
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md) first and
-fits the topics on the segments, so a 5,000-word report is modeled in
-full and can span several topics. The segment options ride along under
-their [`segment()`](https://sonsoles.me/sbert/reference/segment.md)
-names, and every downstream verb knows which document each segment came
-from:
+Six topics have the highest coherence.
+[`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes that
+model without refitting, and
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
+counts each topic’s distinct messages and, with `weights = "n"`, every
+time a message was shown:
 
 ``` r
 
-topic_model <- topics(
-  reports,
-  n_topics = 10,
-  segment = "sentence",
-  max_tokens = 200,          # cap by the model's own tokenizer
-  min_content = 0.5          # drop numeral-only and citation fragments
-)
-
-topic_sizes(topic_model, by = "document")   # documents per topic, not segments
-topic_gamma(topic_model)                    # each document's topic mixture, no re-encoding
-representatives(topic_model)                # segments, with document_id and segment
-predict(topic_model, new_reports)           # new text is segmented the same way
+topic_model <- fitted(sweep, n_topics = 6)
+topic_sizes(topic_model, weights = "n")
+#>   topic                                                       label n_documents
+#> 1     1   Where is the cow and the cake? Choose all the pictures...         223
+#> 2     2            All the ones between the cat and the strawberry.         133
+#> 3     3         What does “all the ones between the leaf and the...         131
+#> 4     4 Are you sure you have fewer pictures in the red box than...          49
+#> 5     5      In the top middle box, it means something is in the...          37
+#> 6     6    It is not a person, does not have a hat, and is sitting.          27
+#>   proportion n_weighted weighted_share
+#> 1     0.3717        267         0.3608
+#> 2     0.2217        162         0.2189
+#> 3     0.2183        138         0.1865
+#> 4     0.0817         76         0.1027
+#> 5     0.0617         57         0.0770
+#> 6     0.0450         40         0.0541
 ```
 
-Not sure which unit suits the corpus? Compare them the same way you
-compare counts: several levels in one call give one table with a
-`segment` column and one plot with a line per level, and
-[`fitted()`](https://rdrr.io/r/stats/fitted.values.html) takes both
-choices.
+With a downloaded model the same model is fitted from the text alone,
+`topics(corpus, n_topics = 6, column = "translation")`. The fit report
+shows each topic’s most typical messages and its distinctive terms:
 
 ``` r
 
-comparison <- compare_topics(
-  reports,
-  n_topics = c(6, 8, 10, 12),
-  segment = c("document", "sentence", "clause")
-)
-plot(comparison)
-topic_model <- fitted(comparison, n_topics = 8, segment = "sentence")
+plot(topic_model, type = "fit", n_terms = 4, n_representatives = 2)
 ```
 
-Topic terms depend only on the fitted assignments and the text, so every
-term setting can be retuned without repeating the clustering or the
-encoding:
+![Topic fit plot: one row per topic, with its representative messages
+and its distinctive terms.](reference/figures/README-topics-fit-1.png)
 
-``` r
+plot of chunk topics-fit
 
-terms(topic_model, n = 12)                       # distinctive terms (c-TF-IDF)
-terms(topic_model, n = 12, sort_by = "beta")     # the words a topic uses most
-terms(topic_model, n = 12, weighting = "bm25", stem = TRUE)
-```
+## Authors and citation
 
-Cleaning happens at two levels, kept deliberately separate. **Token
-filters** tidy the *labels* without touching the text or its embedding:
-`numbers`, `roman_numerals`, and `section_numbers` (each `"keep"` or
-`"remove"`) drop bare years, chapter numerals, and indices such as
-`1.2.3` from the topic terms only, so a number still shapes the
-embedding while staying out of a cluttered label.
+`sbert` is written by [Mohammed Saqr](https://saqr.me) and [Sonsoles
+López-Pernas](https://sonsoles.me). Sonsoles López-Pernas maintains the
+package. Questions and bug reports can be submitted through the
+[repository issue tracker](https://github.com/sonsoleslp/sbert/issues).
+The package citation is available through `citation("sbert")`.
 
-``` r
+Grootendorst, M. (2022). BERTopic: Neural topic modeling with a
+class-based TF-IDF procedure. arXiv:2203.05794.
 
-topics(text, n_topics = 30, embeddings = embeddings,
-       numbers = "remove", roman_numerals = "remove", section_numbers = "remove")
-```
+Lloyd, S. P. (1982). Least squares quantization in PCM. *IEEE
+Transactions on Information Theory*, *28*(2), 129–137.
+<https://doi.org/10.1109/TIT.1982.1056489>
 
-**[`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)**
-cleans the *source text* before encoding — repairing junk characters,
-stripping list markers and reference numbering, and dropping whole
-low-content units (citation lists, reference footnotes) by their
-alphabetic density. Because Sentence-BERT is robust to a little noise,
-this is about fixing genuinely broken text and removing non-content
-rows, not scrubbing every token. Clean once, then encode the result:
-
-``` r
-
-docs <- clean_corpus(raw_text, min_content = 0.5)   # or a data frame + column =
-embeddings <- encode(docs)
-topics(docs, n_topics = 30, embeddings = embeddings)
-```
-
-Fitted topic models support a full inferential layer — assignment of new
-documents, soft membership, generative word probabilities, and
-mixed-topic document distributions:
-
-``` r
-
-predict(topic_model, new_sentences)   # nearest-centroid topics
-topic_membership(topic_model)         # fuzzy topic probabilities
-terms(topic_model)                    # ranked terms + p(term | topic)
-topic_gamma(topic_model, sentences)   # per-document topic mixture
-```
-
-Beyond the curated registry,
-[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
-loads any public Hugging Face repository with an ONNX encoder export,
-auto-detecting its configuration and pinning it locally on first use
-(“trust on first use”):
-
-``` r
-
-gte <- load_custom("thenlper/gte-small")
-encode(sentences, gte)
-```
-
-Multilingual corpora use the same API with a multilingual model:
-
-``` r
-
-model_download("paraphrase-multilingual-MiniLM-L12-v2")
-multilingual <- load_model("paraphrase-multilingual-MiniLM-L12-v2")
-embeddings <- encode(head(feedback_translations$feedback, 100), multilingual)
-```
-
-`n_topics` is deliberately explicit: the package does not silently guess
-a topic count. You may also pass a precomputed embedding matrix through
-the `embeddings` argument for reproducible offline analysis.
-
-Every topic solution can be evaluated and visualized without any further
-model call:
-
-``` r
-
-coherence(topic_model, measure = "npmi")  # per-topic UMass / NPMI coherence
-topic_diversity(topic_model)              # distinct-vocabulary proportion
-summary(topic_model)                      # scientific report + quality table
-
-plot(topic_model, type = "sizes")         # documents per topic
-plot(topic_model, type = "terms")         # top class-based TF-IDF terms
-plot(topic_model, type = "map")           # classical-MDS document map
-```
-
-Term weighting supports the class-based TF-IDF, BM25
-(`weighting = "bm25"`), and square-root (`reduce_frequent_words = TRUE`)
-schemes of Mendonca and Figueira (2025).
-
-For very large corpora there is an instant-speed tier: `potion-base-8M`
-is a static (Model2Vec) model whose encoding is a token lookup and mean
-in pure base R — around 10,000 sentences per second, no ONNX involved,
-with the same pinning, verification, and verbs as every other model:
-
-``` r
-
-model_download("potion-base-8M")   # 31 MB
-fast <- load_model("potion-base-8M")
-embeddings <- encode(text, model = fast)
-```
-
-Topic models can be guided: name your topics and seed them with words or
-descriptions, and the seeds become the first centroids — initialization
-only by default, frozen with `fixed_seeds = TRUE` (zero-shot
-assignment):
-
-``` r
-
-topics(
-  text,
-  n_topics = 10,
-  seeds = c(
-    motivation = "student motivation and engagement",
-    assessment = "grading feedback and assessment"
-  )
-)
-```
-
-Around the topic model, a few utilities cover the everyday analysis
-moves:
-
-``` r
-
-keywords(text, n = 5)                                 # embedding-ranked keywords (MMR)
-stop_words(add = c("students", "learning"))           # exclude corpus vocabulary
-compare_topics(text, n_topics = c(10, 20, 30), embeddings = embeddings)
-tree <- topic_hierarchy(topic_model)                  # which topics are neighbors?
-plot(tree)                                            # labeled dendrogram
-smaller <- reduce_topics(topic_model, n_topics = 12)  # merge down, keep all verbs
-```
-
-Documents can be split into sentences, clauses, or phrases before
-embedding, entirely offline and deterministically:
-
-``` r
-
-segment(
-  "We had two goals: speed and clarity; both were met. See Fig. 3.",
-  level = "clause"
-)
-#>   document_id document_name segment               text
-#> 1           1                     1  We had two goals:
-#> 2           1                     2 speed and clarity;
-#> 3           1                     3     both were met.
-#> 4           1                     4        See Fig. 3.
-```
-
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md) returns
-one row per segment with the source document index, guarding
-abbreviations
-([`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)),
-decimals, and parentheticals so they never end a sentence. The clause
-level (the default) also splits at subordinating hinges while keeping
-comma enumerations whole. `max_tokens` caps segment length so nothing
-overruns an encoder’s context window — an over-long segment is re-split
-at the finest punctuation first, and only word-chopped as a last resort;
-pass `model =` to count that model’s exact tokens.
-
-``` r
-
-segment(long_documents, level = "sentence", max_tokens = 256, model = model)
-```
-
-Segments can carry their document’s context into the embedding:
-[`blend()`](https://sonsoles.me/sbert/reference/blend.md) keeps `alpha`
-of each segment’s context-orthogonal residual and inherits the rest from
-the parent document vector, so a sentence that is ambiguous in isolation
-embeds near its document’s subject while keeping what it alone says. The
-result drops into
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
-[`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
-unchanged:
-
-``` r
-
-sentences <- segment(abstracts, level = "sentence")
-embeddings <- blend(sentences, abstracts, alpha = 0.5)
-```
-
-The bundled `feedback_translations` dataset (8,757 multilingual
-AI-generated mathematics feedback messages, with English translations)
-provides a realistic corpus for trying the full workflow offline:
-
-``` r
-
-head(feedback_translations)
-#>                                                       feedback
-#> 1                                Víš, co znamená o jeden více?
-#> 2                   V červeném má být o dva více než v modrém.
-#> 3                     Když to není člověk, tak co to může být?
-#> 4                                Co znamená všechny za prvním?
-#> 5 V šedém rámečku je pět obrázků. Kde je o jeden obrázek méně?
-#> 6                              Podle čeho se obrázky střídají?
-#>                                                                 translation
-#> 1                                        Do you know what “one more” means?
-#> 2                     There should be two more in the red than in the blue.
-#> 3                                   If it’s not a person, what could it be?
-#> 4                            What does “everyone after the first one” mean?
-#> 5 There are five pictures in the gray box. Where is there one picture less?
-#> 6                                            How do the pictures alternate?
-```
-
-A second dataset, `covid`, holds 4,170 COVID-19 research abstracts
-(2020-2024) with publication years — a longer, more technical corpus for
-topic modeling and temporal analysis, showcased in the “Topic Modeling
-COVID-19 Research Abstracts” article.
-
-Model downloads range from 31 MB (`potion-base-8M`) to 1.3 GB
-(`mxbai-embed-large-v1`) and are stored under the platform-specific path
-returned by
-[`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md). Every
-artifact is verified by byte size and SHA-256 before it is used.
-
-## Tutorial
-
-A full worked tutorial ships with the package and runs offline on the
-bundled `feedback_translations` data — choosing the topic count,
-building a six-topic model, reading and naming each topic from its
-representative messages, weighting topic sizes by how often messages
-repeat, and comparing the words each topic uses:
-
-``` r
-
-vignette("math_vignette", package = "sbert")
-```
-
-## Supported scope
-
-- Models: fourteen pinned models (see
-  [`models()`](https://sonsoles.me/sbert/reference/models.md)), classic
-  and modern, English and multilingual, 256 to 1,024 dimensions, 128 to
-  8,192 tokens, 31 MB to 1.3 GB
-- Pooling: attention-mask-aware mean pooling or CLS pooling, per model
-- Prefixes: model-pinned input prefixes applied automatically (E5,
-  Nomic)
-- Custom models:
-  [`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
-  for any HF ONNX encoder repository, with trust-on-first-use local
-  pinning
-- Tokenization: each model’s official `tokenizer.json`, truncated to the
-  model’s published maximum sequence length
-- Static models: `potion-base-8M`, a pure-R Model2Vec token-lookup
-  embedder with no ONNX Runtime dependency
-- Normalization: row-wise L2 normalization by default
-- Segmentation: deterministic sentence, clause, and phrase splitting
-  with an abbreviation gazetteer and decimal/parenthetical guards
-- Corpus cleaning:
-  [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
-  repairs junk characters, strips list and reference numbering, and
-  drops low-content units by alphabetic density
-- Topic discovery: deterministic k-means with farthest-point
-  initialization
-- Topic descriptions: representative documents and BERTopic-style
-  c-TF-IDF
-- Topic inference: [`predict()`](https://rdrr.io/r/stats/predict.html)
-  for new documents, fuzzy soft membership, generative `beta`, and
-  segment-based document-topic `gamma`
-- Topic evaluation: intrinsic UMass and NPMI coherence, and topic
-  diversity
-- Topic visualization: deterministic base-graphics views — topic sizes,
-  term bars, representative documents, a per-topic fit report, and an
-  MDS document map
-- Backends: those exposed by `onnxr`, with CPU as the portable default
-
-Training and fine-tuning are intentionally out of scope. Models outside
-the pinned registry load through
-[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md),
-which pins them locally but makes no numerical-parity claim.
+Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks. *Proceedings of EMNLP-IJCNLP 2019*,
+3982–3992. <https://doi.org/10.18653/v1/D19-1410>
 
 # Package index
 
+## Overview
+
+- [`sbert`](https://sonsoles.me/sbert/reference/sbert-package.md)
+  [`sbert-package`](https://sonsoles.me/sbert/reference/sbert-package.md)
+  : sbert: Topic modeling with Sentence-BERT embeddings
+
 ## Encoding text
 
-Turn text into Sentence-BERT embeddings.
+Turn text into Sentence-BERT embeddings and compare them.
 
 - [`encode()`](https://sonsoles.me/sbert/reference/encode.md) : Encode
-  Text with Sentence-BERT
-- [`pool()`](https://sonsoles.me/sbert/reference/pool.md) : Pool Token
-  Embeddings into Sentence Embeddings
+  texts as sentence embeddings
+- [`pool()`](https://sonsoles.me/sbert/reference/pool.md) : Pool token
+  embeddings into sentence embeddings
+- [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
+  : Compute cosine similarity between embeddings
 
 ## Models and runtime
 
@@ -461,148 +218,190 @@ Install the ONNX Runtime, download revision-pinned models, load custom
 Hugging Face exports, and manage the on-disk cache.
 
 - [`models()`](https://sonsoles.me/sbert/reference/models.md) : List the
-  Available Pinned Sentence-BERT Models
+  pinned models
 - [`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
-  : Download a Pinned Sentence-BERT Model
+  : Download a pinned model
 - [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md) :
-  Load a Pinned Sentence-BERT Model
+  Load an installed pinned model
 - [`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
-  : Load an Arbitrary Hugging Face Embedding Model
+  : Load a Hugging Face embedding model outside the pinned list
 - [`model_status()`](https://sonsoles.me/sbert/reference/model_status.md)
-  : Inspect an Installed Model
+  : Check the installed files of a model
 - [`model_remove()`](https://sonsoles.me/sbert/reference/model_remove.md)
-  : Remove an Installed Model from the Cache
+  : Remove a pinned model from the cache
 - [`install_runtime()`](https://sonsoles.me/sbert/reference/install_runtime.md)
   : Install ONNX Runtime
 - [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md) :
-  Locate the sbert Model Cache
+  Locate the model cache
 - [`cache_size()`](https://sonsoles.me/sbert/reference/cache_size.md) :
-  Measure the sbert Cache
+  Measure the disk space of the model cache
 
 ## Preparing a corpus
 
-Deduplicate, segment, and context-blend documents before modeling.
+Deduplicate, clean, segment, and context-blend documents before
+modeling.
 
-- [`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) :
-  Deduplicate a Text Corpus with Frequencies
+- [`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) : Collapse
+  repeated texts and count them
 - [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
-  : Clean a Text Corpus Before Encoding
+  : Clean a corpus before encoding
 - [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
-  : Strip Enumeration and List Markers from Text
+  : Remove list and enumeration markers from text
 - [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)
-  : Alphabetic Content Ratio of Text
-- [`segment()`](https://sonsoles.me/sbert/reference/segment.md) :
-  Segment Text into Sentences, Clauses, or Phrases
+  : Compute the share of letters in text
+- [`segment()`](https://sonsoles.me/sbert/reference/segment.md) : Split
+  documents into sentences, clauses, or phrases
 - [`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)
-  : Obtain the Built-in Abbreviation Gazetteer
+  : List the abbreviations protected from sentence splitting
 - [`blend()`](https://sonsoles.me/sbert/reference/blend.md) : Blend
-  Segment Embeddings with Their Document Context
+  segment embeddings with their document context
 - [`stop_words()`](https://sonsoles.me/sbert/reference/stop_words.md) :
-  Obtain and Adjust the Topic Stop-Word List
+  Get and adjust the stop-word list
 
-## Topic modeling
+## Fitting topic models
 
-Fit topic models, sweep the topic count, and merge topics down.
+Prepare a corpus once, fit topics, compare topic counts, and merge
+topics.
 
 - [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
-  : Prepare a Corpus Once to Fit Many Topic Models
-- [`topics()`](https://sonsoles.me/sbert/reference/topics.md) : Discover
-  Semantic Topics in Documents
+  : Prepare a corpus once for several topic models
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md) : Fit
+  semantic topics to documents
 - [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
-  : Compare Topic Counts Before Committing to One
+  : Compare numbers of topics and segmentation levels
 - [`fitted(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
-  : Extract One Fitted Model from a Topic-Count Comparison
+  : Extract a fitted model from a topic-count comparison
 - [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
-  : Reduce a Fitted Topic Model to Fewer Topics
+  : Merge the topics of a model into fewer topics
 
 ## Describing topics
 
-Distinctive terms, representative documents, sizes, and keywords.
+Distinctive terms, representative texts, names, sizes, and keywords.
 
 - [`terms(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/terms.sbert_topic_model.md)
-  : Topic Terms, Retuned Without Refitting
+  : Compute the terms of each topic
 - [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
-  : Representative Text Units for Every Topic
+  : Select representative texts for each topic
 - [`name_topics()`](https://sonsoles.me/sbert/reference/name_topics.md)
-  : Name the Topics of a Fitted Model
+  : Name the topics of a fitted model
 - [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
-  : Topic Sizes on the Distinct and Weighted Scales
+  : Compute the size of each topic
 - [`keywords()`](https://sonsoles.me/sbert/reference/keywords.md) :
-  Extract Keywords from Documents by Embedding Similarity
+  Extract the keywords of documents
 
-## Topic inference
+## Assigning topics
 
-Assign new documents and recover soft, generative, and mixed
-memberships.
+Assign new documents and recover soft memberships and topic mixtures.
 
 - [`predict(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/predict.sbert_topic_model.md)
-  : Assign New Documents to Fitted Topics
+  : Assign new documents to fitted topics
 - [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
-  : Soft Topic Membership Probabilities
+  : Compute graded topic membership
 - [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-  : Document-Topic Distributions from Segment Assignments
+  : Compute document-topic mixtures from segments
 
 ## Evaluating topics
 
-Intrinsic coherence and topic diversity.
+Coherence, diversity, and the hierarchy of topic centers.
 
 - [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) :
-  Score Topic Coherence
+  Score the coherence of topics
 - [`topic_diversity()`](https://sonsoles.me/sbert/reference/topic_diversity.md)
-  : Measure Topic Diversity
-
-## Visualizing and summarizing
-
-Deterministic base-graphics plots, hierarchies, and reports.
-
-- [`summary(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
-  : Summarize a Semantic Topic Model
-- [`plot(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
-  : Plot a Semantic Topic Model
-- [`plot(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
-  : Plot a Topic-Count Comparison
-- [`plot(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_hierarchy.md)
-  : Plot a Topic Hierarchy Dendrogram
+  : Measure the diversity of topic terms
 - [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
-  : Build the Topic Hierarchy of a Fitted Model
-- [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
-  : Compute Cosine Similarity
+  : Build the hierarchy of the topics of a model
+- [`summary(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
+  : Summarize a topic model
+- [`summary(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_sweep.md)
+  : Summarize a topic-count comparison
+- [`summary(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_hierarchy.md)
+  : Summarize a topic hierarchy
+
+## Plots
+
+Deterministic base-graphics displays of models, comparisons, and
+hierarchies.
+
+- [`plot(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
+  : Plot a fitted topic model
+- [`plot(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
+  : Plot a topic-count comparison
+- [`plot(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_hierarchy.md)
+  : Plot a topic hierarchy as a dendrogram
 - [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md)
-  : Qualitative Color Palette for Topics
+  : Get colors that distinguish topics in plots
 
-## Printing and conversion
+## Results
 
-Print methods and tidy accessors for result objects.
+Tidy tables of result objects, and their print methods.
 
-- [`print(`*`<sbert_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_model.md)
-  : Print a Loaded Model
-- [`print(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_corpus.md)
-  : Print a Prepared Topic Corpus
-- [`print(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_model.md)
-  : Print a Semantic Topic Model
-- [`print(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_hierarchy.md)
-  : Print a Topic Hierarchy
-- [`print(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_sweep.md)
-  : Print a Topic-Count Comparison
+- [`as.data.frame(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_model.md)
+  : Convert a topic model to a data frame
 - [`as.data.frame(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md)
-  : Coerce a Topic-Count Comparison to a Data Frame
+  : Convert a topic-count comparison to a data frame
+- [`as.data.frame(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_hierarchy.md)
+  : Convert a topic hierarchy to a data frame
+- [`as.data.frame(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_corpus.md)
+  : Convert a prepared topic corpus to a data frame
+- [`print(`*`<sbert_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_model.md)
+  : Print a loaded model
+- [`print(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_corpus.md)
+  : Print a prepared topic corpus
+- [`print(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_model.md)
+  : Print a topic model
+- [`print(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_hierarchy.md)
+  : Print a topic hierarchy
+- [`print(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_sweep.md)
+  : Print a topic-count comparison
+- [`print(`*`<summary.sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.summary.sbert_topic_model.md)
+  : Print a topic model summary
+- [`print(`*`<summary.sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.summary.sbert_topic_sweep.md)
+  : Print a topic-count comparison summary
+- [`print(`*`<summary.sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.summary.sbert_topic_hierarchy.md)
+  : Print a topic hierarchy summary
 
 ## Data
 
-Bundled corpora for offline examples and topic modeling.
+Bundled corpora and precomputed embeddings for offline examples.
 
 - [`feedback_translations`](https://sonsoles.me/sbert/reference/feedback_translations.md)
-  : AI-generated Mathematics Feedback with English Translations
+  : AI-generated mathematics feedback with English translations
+- [`feedback_embeddings`](https://sonsoles.me/sbert/reference/feedback_embeddings.md)
+  : Precomputed embeddings of 600 feedback messages
 - [`covid`](https://sonsoles.me/sbert/reference/covid.md) : COVID-19
-  Research Abstracts
+  research abstracts
 
 # Articles
 
-### All vignettes
+### Vignettes
 
-- [Topic Modeling COVID-19 Research
-  Abstracts](https://sonsoles.me/sbert/articles/covid_topics.md):
-- [Topic Modeling Short Feedback
-  Messages](https://sonsoles.me/sbert/articles/math_vignette.md):
-- [Parallel and High-Throughput Topic
-  Modeling](https://sonsoles.me/sbert/articles/parallel.md):
+- [Semantic topic modeling with
+  Sentence-BERT](https://sonsoles.me/sbert/articles/sbert.md):
+- [Sentence embeddings without
+  Python](https://sonsoles.me/sbert/articles/embeddings.md):
+
+### Guides
+
+- [Choosing the number of topics and the
+  granularity](https://sonsoles.me/sbert/articles/choosing-topics.md):
+- [Segmenting long
+  documents](https://sonsoles.me/sbert/articles/segmenting.md):
+- [Preparing and cleaning a
+  corpus](https://sonsoles.me/sbert/articles/preparing-corpus.md):
+- [Describing and naming
+  topics](https://sonsoles.me/sbert/articles/describing-topics.md):
+- [Assigning new documents and topic
+  mixtures](https://sonsoles.me/sbert/articles/assigning-topics.md):
+- [Models, the cache, and custom
+  models](https://sonsoles.me/sbert/articles/models-and-cache.md):
+- [Parallel and high-throughput topic
+  modeling](https://sonsoles.me/sbert/articles/parallel.md):
+- [Verification: Python parity and
+  determinism](https://sonsoles.me/sbert/articles/verification.md):
+
+### Case studies
+
+- [Case study: COVID-19 research
+  abstracts](https://sonsoles.me/sbert/articles/case-covid.md):
+- [Case study: multilingual feedback
+  messages](https://sonsoles.me/sbert/articles/case-multilingual-feedback.md):

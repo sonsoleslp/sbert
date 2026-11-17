@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sbert</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -15,12 +15,27 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/sbert.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/covid_topics.html">Topic Modeling COVID-19 Research Abstracts</a></li>
-    <li><a class="dropdown-item" href="../articles/math_vignette.html">Topic Modeling Short Feedback Messages</a></li>
-    <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and High-Throughput Topic Modeling</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Vignettes</h6></li>
+    <li><a class="dropdown-item" href="../articles/embeddings.html">Sentence embeddings without Python</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/choosing-topics.html">Choosing the number of topics and the granularity</a></li>
+    <li><a class="dropdown-item" href="../articles/segmenting.html">Segmenting long documents</a></li>
+    <li><a class="dropdown-item" href="../articles/preparing-corpus.html">Preparing and cleaning a corpus</a></li>
+    <li><a class="dropdown-item" href="../articles/describing-topics.html">Describing and naming topics</a></li>
+    <li><a class="dropdown-item" href="../articles/assigning-topics.html">Assigning new documents and topic mixtures</a></li>
+    <li><a class="dropdown-item" href="../articles/models-and-cache.html">Models, the cache, and custom models</a></li>
+    <li><a class="dropdown-item" href="../articles/parallel.html">Parallel and high-throughput topic modeling</a></li>
+    <li><a class="dropdown-item" href="../articles/verification.html">Verification: Python parity and determinism</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Case studies</h6></li>
+    <li><a class="dropdown-item" href="../articles/case-covid.html">Case study: COVID-19 research abstracts</a></li>
+    <li><a class="dropdown-item" href="../articles/case-multilingual-feedback.html">Case study: multilingual feedback messages</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -37,9 +52,25 @@
     </div>
 
     <div class="section level2">
+      <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="sbert-package.html">sbert</a></code> <code><a href="sbert-package.html">sbert-package</a></code>
+
+        </dt>
+        <dd>sbert: Topic modeling with Sentence-BERT embeddings</dd>
+      </dl></div><div class="section level2">
       <h2 id="encoding-text">Encoding text<a class="anchor" aria-label="anchor" href="#encoding-text"></a></h2>
 
-      <div class="section-desc"><p>Turn text into Sentence-BERT embeddings.</p></div>
+      <div class="section-desc"><p>Turn text into Sentence-BERT embeddings and compare them.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -51,14 +82,21 @@
           <code><a href="encode.html">encode()</a></code>
 
         </dt>
-        <dd>Encode Text with Sentence-BERT</dd>
+        <dd>Encode texts as sentence embeddings</dd>
 
         <dt>
 
           <code><a href="pool.html">pool()</a></code>
 
         </dt>
-        <dd>Pool Token Embeddings into Sentence Embeddings</dd>
+        <dd>Pool token embeddings into sentence embeddings</dd>
+
+        <dt>
+
+          <code><a href="topic_similarity.html">topic_similarity()</a></code>
+
+        </dt>
+        <dd>Compute cosine similarity between embeddings</dd>
       </dl></div><div class="section level2">
       <h2 id="models-and-runtime">Models and runtime<a class="anchor" aria-label="anchor" href="#models-and-runtime"></a></h2>
 
@@ -74,42 +112,42 @@
           <code><a href="models.html">models()</a></code>
 
         </dt>
-        <dd>List the Available Pinned Sentence-BERT Models</dd>
+        <dd>List the pinned models</dd>
 
         <dt>
 
           <code><a href="model_download.html">model_download()</a></code>
 
         </dt>
-        <dd>Download a Pinned Sentence-BERT Model</dd>
+        <dd>Download a pinned model</dd>
 
         <dt>
 
           <code><a href="load_model.html">load_model()</a></code>
 
         </dt>
-        <dd>Load a Pinned Sentence-BERT Model</dd>
+        <dd>Load an installed pinned model</dd>
 
         <dt>
 
           <code><a href="load_custom.html">load_custom()</a></code>
 
         </dt>
-        <dd>Load an Arbitrary Hugging Face Embedding Model</dd>
+        <dd>Load a Hugging Face embedding model outside the pinned list</dd>
 
         <dt>
 
           <code><a href="model_status.html">model_status()</a></code>
 
         </dt>
-        <dd>Inspect an Installed Model</dd>
+        <dd>Check the installed files of a model</dd>
 
         <dt>
 
           <code><a href="model_remove.html">model_remove()</a></code>
 
         </dt>
-        <dd>Remove an Installed Model from the Cache</dd>
+        <dd>Remove a pinned model from the cache</dd>
 
         <dt>
 
@@ -123,18 +161,18 @@
           <code><a href="cache_dir.html">cache_dir()</a></code>
 
         </dt>
-        <dd>Locate the sbert Model Cache</dd>
+        <dd>Locate the model cache</dd>
 
         <dt>
 
           <code><a href="cache_size.html">cache_size()</a></code>
 
         </dt>
-        <dd>Measure the sbert Cache</dd>
+        <dd>Measure the disk space of the model cache</dd>
       </dl></div><div class="section level2">
       <h2 id="preparing-a-corpus">Preparing a corpus<a class="anchor" aria-label="anchor" href="#preparing-a-corpus"></a></h2>
 
-      <div class="section-desc"><p>Deduplicate, segment, and context-blend documents before modeling.</p></div>
+      <div class="section-desc"><p>Deduplicate, clean, segment, and context-blend documents before modeling.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -146,60 +184,60 @@
           <code><a href="dedupe.html">dedupe()</a></code>
 
         </dt>
-        <dd>Deduplicate a Text Corpus with Frequencies</dd>
+        <dd>Collapse repeated texts and count them</dd>
 
         <dt>
 
           <code><a href="clean_corpus.html">clean_corpus()</a></code>
 
         </dt>
-        <dd>Clean a Text Corpus Before Encoding</dd>
+        <dd>Clean a corpus before encoding</dd>
 
         <dt>
 
           <code><a href="strip_list_markers.html">strip_list_markers()</a></code>
 
         </dt>
-        <dd>Strip Enumeration and List Markers from Text</dd>
+        <dd>Remove list and enumeration markers from text</dd>
 
         <dt>
 
           <code><a href="content_ratio.html">content_ratio()</a></code>
 
         </dt>
-        <dd>Alphabetic Content Ratio of Text</dd>
+        <dd>Compute the share of letters in text</dd>
 
         <dt>
 
           <code><a href="segment.html">segment()</a></code>
 
         </dt>
-        <dd>Segment Text into Sentences, Clauses, or Phrases</dd>
+        <dd>Split documents into sentences, clauses, or phrases</dd>
 
         <dt>
 
           <code><a href="abbreviations.html">abbreviations()</a></code>
 
         </dt>
-        <dd>Obtain the Built-in Abbreviation Gazetteer</dd>
+        <dd>List the abbreviations protected from sentence splitting</dd>
 
         <dt>
 
           <code><a href="blend.html">blend()</a></code>
 
         </dt>
-        <dd>Blend Segment Embeddings with Their Document Context</dd>
+        <dd>Blend segment embeddings with their document context</dd>
 
         <dt>
 
           <code><a href="stop_words.html">stop_words()</a></code>
 
         </dt>
-        <dd>Obtain and Adjust the Topic Stop-Word List</dd>
+        <dd>Get and adjust the stop-word list</dd>
       </dl></div><div class="section level2">
-      <h2 id="topic-modeling">Topic modeling<a class="anchor" aria-label="anchor" href="#topic-modeling"></a></h2>
+      <h2 id="fitting-topic-models">Fitting topic models<a class="anchor" aria-label="anchor" href="#fitting-topic-models"></a></h2>
 
-      <div class="section-desc"><p>Fit topic models, sweep the topic count, and merge topics down.</p></div>
+      <div class="section-desc"><p>Prepare a corpus once, fit topics, compare topic counts, and merge topics.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -211,39 +249,39 @@
           <code><a href="topic_corpus.html">topic_corpus()</a></code>
 
         </dt>
-        <dd>Prepare a Corpus Once to Fit Many Topic Models</dd>
+        <dd>Prepare a corpus once for several topic models</dd>
 
         <dt>
 
           <code><a href="topics.html">topics()</a></code>
 
         </dt>
-        <dd>Discover Semantic Topics in Documents</dd>
+        <dd>Fit semantic topics to documents</dd>
 
         <dt>
 
           <code><a href="compare_topics.html">compare_topics()</a></code>
 
         </dt>
-        <dd>Compare Topic Counts Before Committing to One</dd>
+        <dd>Compare numbers of topics and segmentation levels</dd>
 
         <dt>
 
           <code><a href="fitted.sbert_topic_sweep.html">fitted(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
 
         </dt>
-        <dd>Extract One Fitted Model from a Topic-Count Comparison</dd>
+        <dd>Extract a fitted model from a topic-count comparison</dd>
 
         <dt>
 
           <code><a href="reduce_topics.html">reduce_topics()</a></code>
 
         </dt>
-        <dd>Reduce a Fitted Topic Model to Fewer Topics</dd>
+        <dd>Merge the topics of a model into fewer topics</dd>
       </dl></div><div class="section level2">
       <h2 id="describing-topics">Describing topics<a class="anchor" aria-label="anchor" href="#describing-topics"></a></h2>
 
-      <div class="section-desc"><p>Distinctive terms, representative documents, sizes, and keywords.</p></div>
+      <div class="section-desc"><p>Distinctive terms, representative texts, names, sizes, and keywords.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -255,39 +293,39 @@
           <code><a href="terms.sbert_topic_model.html">terms(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
 
         </dt>
-        <dd>Topic Terms, Retuned Without Refitting</dd>
+        <dd>Compute the terms of each topic</dd>
 
         <dt>
 
           <code><a href="representatives.html">representatives()</a></code>
 
         </dt>
-        <dd>Representative Text Units for Every Topic</dd>
+        <dd>Select representative texts for each topic</dd>
 
         <dt>
 
           <code><a href="name_topics.html">name_topics()</a></code>
 
         </dt>
-        <dd>Name the Topics of a Fitted Model</dd>
+        <dd>Name the topics of a fitted model</dd>
 
         <dt>
 
           <code><a href="topic_sizes.html">topic_sizes()</a></code>
 
         </dt>
-        <dd>Topic Sizes on the Distinct and Weighted Scales</dd>
+        <dd>Compute the size of each topic</dd>
 
         <dt>
 
           <code><a href="keywords.html">keywords()</a></code>
 
         </dt>
-        <dd>Extract Keywords from Documents by Embedding Similarity</dd>
+        <dd>Extract the keywords of documents</dd>
       </dl></div><div class="section level2">
-      <h2 id="topic-inference">Topic inference<a class="anchor" aria-label="anchor" href="#topic-inference"></a></h2>
+      <h2 id="assigning-topics">Assigning topics<a class="anchor" aria-label="anchor" href="#assigning-topics"></a></h2>
 
-      <div class="section-desc"><p>Assign new documents and recover soft, generative, and mixed memberships.</p></div>
+      <div class="section-desc"><p>Assign new documents and recover soft memberships and topic mixtures.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -299,25 +337,25 @@
           <code><a href="predict.sbert_topic_model.html">predict(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
 
         </dt>
-        <dd>Assign New Documents to Fitted Topics</dd>
+        <dd>Assign new documents to fitted topics</dd>
 
         <dt>
 
           <code><a href="topic_membership.html">topic_membership()</a></code>
 
         </dt>
-        <dd>Soft Topic Membership Probabilities</dd>
+        <dd>Compute graded topic membership</dd>
 
         <dt>
 
           <code><a href="topic_gamma.html">topic_gamma()</a></code>
 
         </dt>
-        <dd>Document-Topic Distributions from Segment Assignments</dd>
+        <dd>Compute document-topic mixtures from segments</dd>
       </dl></div><div class="section level2">
       <h2 id="evaluating-topics">Evaluating topics<a class="anchor" aria-label="anchor" href="#evaluating-topics"></a></h2>
 
-      <div class="section-desc"><p>Intrinsic coherence and topic diversity.</p></div>
+      <div class="section-desc"><p>Coherence, diversity, and the hierarchy of topic centers.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -329,76 +367,46 @@
           <code><a href="coherence.html">coherence()</a></code>
 
         </dt>
-        <dd>Score Topic Coherence</dd>
+        <dd>Score the coherence of topics</dd>
 
         <dt>
 
           <code><a href="topic_diversity.html">topic_diversity()</a></code>
 
         </dt>
-        <dd>Measure Topic Diversity</dd>
-      </dl></div><div class="section level2">
-      <h2 id="visualizing-and-summarizing">Visualizing and summarizing<a class="anchor" aria-label="anchor" href="#visualizing-and-summarizing"></a></h2>
-
-      <div class="section-desc"><p>Deterministic base-graphics plots, hierarchies, and reports.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="summary.sbert_topic_model.html">summary(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Summarize a Semantic Topic Model</dd>
-
-        <dt>
-
-          <code><a href="plot.sbert_topic_model.html">plot(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Plot a Semantic Topic Model</dd>
-
-        <dt>
-
-          <code><a href="plot.sbert_topic_sweep.html">plot(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Plot a Topic-Count Comparison</dd>
-
-        <dt>
-
-          <code><a href="plot.sbert_topic_hierarchy.html">plot(<i>&lt;sbert_topic_hierarchy&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Plot a Topic Hierarchy Dendrogram</dd>
+        <dd>Measure the diversity of topic terms</dd>
 
         <dt>
 
           <code><a href="topic_hierarchy.html">topic_hierarchy()</a></code>
 
         </dt>
-        <dd>Build the Topic Hierarchy of a Fitted Model</dd>
+        <dd>Build the hierarchy of the topics of a model</dd>
 
         <dt>
 
-          <code><a href="topic_similarity.html">topic_similarity()</a></code>
+          <code><a href="summary.sbert_topic_model.html">summary(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
 
         </dt>
-        <dd>Compute Cosine Similarity</dd>
+        <dd>Summarize a topic model</dd>
 
         <dt>
 
-          <code><a href="topic_palette.html">topic_palette()</a></code>
+          <code><a href="summary.sbert_topic_sweep.html">summary(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
 
         </dt>
-        <dd>Qualitative Color Palette for Topics</dd>
+        <dd>Summarize a topic-count comparison</dd>
+
+        <dt>
+
+          <code><a href="summary.sbert_topic_hierarchy.html">summary(<i>&lt;sbert_topic_hierarchy&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarize a topic hierarchy</dd>
       </dl></div><div class="section level2">
-      <h2 id="printing-and-conversion">Printing and conversion<a class="anchor" aria-label="anchor" href="#printing-and-conversion"></a></h2>
+      <h2 id="plots">Plots<a class="anchor" aria-label="anchor" href="#plots"></a></h2>
 
-      <div class="section-desc"><p>Print methods and tidy accessors for result objects.</p></div>
+      <div class="section-desc"><p>Deterministic base-graphics displays of models, comparisons, and hierarchies.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -407,49 +415,128 @@
 
       <dl><dt>
 
-          <code><a href="print.sbert_model.html">print(<i>&lt;sbert_model&gt;</i>)</a></code>
+          <code><a href="plot.sbert_topic_model.html">plot(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
 
         </dt>
-        <dd>Print a Loaded Model</dd>
+        <dd>Plot a fitted topic model</dd>
 
         <dt>
 
-          <code><a href="print.sbert_topic_corpus.html">print(<i>&lt;sbert_topic_corpus&gt;</i>)</a></code>
+          <code><a href="plot.sbert_topic_sweep.html">plot(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
 
         </dt>
-        <dd>Print a Prepared Topic Corpus</dd>
+        <dd>Plot a topic-count comparison</dd>
 
         <dt>
 
-          <code><a href="print.sbert_topic_model.html">print(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
+          <code><a href="plot.sbert_topic_hierarchy.html">plot(<i>&lt;sbert_topic_hierarchy&gt;</i>)</a></code>
 
         </dt>
-        <dd>Print a Semantic Topic Model</dd>
+        <dd>Plot a topic hierarchy as a dendrogram</dd>
 
         <dt>
 
-          <code><a href="print.sbert_topic_hierarchy.html">print(<i>&lt;sbert_topic_hierarchy&gt;</i>)</a></code>
+          <code><a href="topic_palette.html">topic_palette()</a></code>
 
         </dt>
-        <dd>Print a Topic Hierarchy</dd>
+        <dd>Get colors that distinguish topics in plots</dd>
+      </dl></div><div class="section level2">
+      <h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Tidy tables of result objects, and their print methods.</p></div>
 
-          <code><a href="print.sbert_topic_sweep.html">print(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="as.data.frame.sbert_topic_model.html">as.data.frame(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
 
         </dt>
-        <dd>Print a Topic-Count Comparison</dd>
+        <dd>Convert a topic model to a data frame</dd>
 
         <dt>
 
           <code><a href="as.data.frame.sbert_topic_sweep.html">as.data.frame(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
 
         </dt>
-        <dd>Coerce a Topic-Count Comparison to a Data Frame</dd>
+        <dd>Convert a topic-count comparison to a data frame</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.sbert_topic_hierarchy.html">as.data.frame(<i>&lt;sbert_topic_hierarchy&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Convert a topic hierarchy to a data frame</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.sbert_topic_corpus.html">as.data.frame(<i>&lt;sbert_topic_corpus&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Convert a prepared topic corpus to a data frame</dd>
+
+        <dt>
+
+          <code><a href="print.sbert_model.html">print(<i>&lt;sbert_model&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a loaded model</dd>
+
+        <dt>
+
+          <code><a href="print.sbert_topic_corpus.html">print(<i>&lt;sbert_topic_corpus&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a prepared topic corpus</dd>
+
+        <dt>
+
+          <code><a href="print.sbert_topic_model.html">print(<i>&lt;sbert_topic_model&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a topic model</dd>
+
+        <dt>
+
+          <code><a href="print.sbert_topic_hierarchy.html">print(<i>&lt;sbert_topic_hierarchy&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a topic hierarchy</dd>
+
+        <dt>
+
+          <code><a href="print.sbert_topic_sweep.html">print(<i>&lt;sbert_topic_sweep&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a topic-count comparison</dd>
+
+        <dt>
+
+          <code><a href="print.summary.sbert_topic_model.html">print(<i>&lt;summary.sbert_topic_model&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a topic model summary</dd>
+
+        <dt>
+
+          <code><a href="print.summary.sbert_topic_sweep.html">print(<i>&lt;summary.sbert_topic_sweep&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a topic-count comparison summary</dd>
+
+        <dt>
+
+          <code><a href="print.summary.sbert_topic_hierarchy.html">print(<i>&lt;summary.sbert_topic_hierarchy&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a topic hierarchy summary</dd>
       </dl></div><div class="section level2">
       <h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a></h2>
 
-      <div class="section-desc"><p>Bundled corpora for offline examples and topic modeling.</p></div>
+      <div class="section-desc"><p>Bundled corpora and precomputed embeddings for offline examples.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -461,21 +548,28 @@
           <code><a href="feedback_translations.html">feedback_translations</a></code>
 
         </dt>
-        <dd>AI-generated Mathematics Feedback with English Translations</dd>
+        <dd>AI-generated mathematics feedback with English translations</dd>
+
+        <dt>
+
+          <code><a href="feedback_embeddings.html">feedback_embeddings</a></code>
+
+        </dt>
+        <dd>Precomputed embeddings of 600 feedback messages</dd>
 
         <dt>
 
           <code><a href="covid.html">covid</a></code>
 
         </dt>
-        <dd>COVID-19 Research Abstracts</dd>
+        <dd>COVID-19 research abstracts</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Mohammed Saqr, Sonsoles López-Pernas.</p>
+  <p>Developed by <a href="https://saqr.me" class="external-link">Mohammed Saqr</a>, <a href="https://sonsoles.me" class="external-link">Sonsoles López-Pernas</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

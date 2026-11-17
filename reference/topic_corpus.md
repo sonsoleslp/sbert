@@ -1,16 +1,25 @@
-# Prepare a Corpus Once to Fit Many Topic Models
+# Prepare a corpus once for several topic models
 
-Runs the corpus-level work that does not depend on the number of topics
-— segmenting (when `segment` asks for it), embedding every unit, and
-tokenizing it for term scoring — a single time, so that fitting many
-models (a
+`topic_corpus()` prepares a corpus once for several topic models: it
+segments the texts, embeds them, and tokenizes them for term scoring,
+and returns a prepared corpus that
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
 [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
-sweep, a manual loop over topic counts, or repeated
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) calls)
-reuses it instead of repeating it. Pass the returned object to
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) or
+accept in place of the texts. Fitting topic models usually means fitting
+several (different numbers of topics, term settings, or seeds on the
+same texts), and these three steps do not depend on any of those
+choices; embedding is by far the most expensive step.
+
+Models fitted to the corpus are identical to models fitted to the raw
+texts. The corpus fixes the embeddings (from `model` or `embeddings`),
+the segmentation, and the tokenization settings; the settings of each
+model, such as `n_topics`, `n_terms`, `weighting`, and `seeds`, are
+still chosen per call. The result is an object of class
+`sbert_topic_corpus`.
+
 [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
-in place of the raw `text`.
+builds a corpus itself, so a corpus is needed only when models are
+fitted one at a time.
 
 ## Usage
 
@@ -39,185 +48,148 @@ topic_corpus(
 
 - text:
 
-  Character vector containing one document per element, or a data frame
-  together with `column`.
+  Documents: a character vector with one document per element, or a data
+  frame together with `column`.
 
 - column:
 
-  When `text` is a data frame, the name of the column holding the
-  documents to model. Every other column is carried along with each
-  document in the fitted document table, and rows whose text is missing,
-  blank, or a bibliographic placeholder (`"[No abstract available]"`)
-  are dropped. Precomputed `embeddings` may keep one row per supplied
-  row; the dropped rows are removed from them too. Leave `NULL` for a
-  character vector.
+  Name of the text column when `text` is a data frame. The other columns
+  are carried into the document table. Rows whose text is missing,
+  blank, or the placeholder `"[No abstract available]"` are dropped, and
+  so are their rows of `embeddings`. `NULL` (default) for a character
+  vector.
 
 - model:
 
-  A loaded
-  [sbert_model](https://sonsoles.me/sbert/reference/load_model.md), a
+  The encoder: a model from
+  [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md), a
   pinned model name from
   [`models()`](https://sonsoles.me/sbert/reference/models.md), or `NULL`
-  for the default model. Ignored when `embeddings` are supplied.
+  (default) for the default model. Not used when `embeddings` are given.
 
 - embeddings:
 
-  Optional numeric matrix with one row per document; when supplied, no
-  model is loaded or used.
+  Optional numeric matrix of precomputed embeddings, one row per modeled
+  unit (per document, or per segment with `segment`). When it is given,
+  no model is loaded. Default `NULL`.
 
 - batch_size:
 
-  Batch size passed to
-  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) when
-  `model` is used.
+  Texts encoded per model call (default 32).
 
 - stop_words:
 
-  Character vector excluded from topic terms. Use
-  [`character()`](https://rdrr.io/r/base/character.html) to disable
-  stop-word filtering.
+  Words excluded from the topic terms; default
+  [`stop_words()`](https://sonsoles.me/sbert/reference/stop_words.md).
+  [`character()`](https://rdrr.io/r/base/character.html) turns the
+  filter off.
 
 - min_token_length:
 
-  Minimum Unicode character length for a topic token.
+  Minimum length of a term, in characters (default 2).
 
 - stem:
 
-  Whether to collapse inflected forms (for example `animals` and
-  `animal`) onto a shared Porter stem before scoring, displaying the
-  most frequent surface form of each stem. Requires the `SnowballC`
-  package.
+  Whether to merge inflected forms of a term under one Porter stem,
+  shown as its most frequent form (default `FALSE`; needs the SnowballC
+  package).
 
 - cores:
 
-  Number of forked worker processes used to tokenize documents for term
-  scoring. Default `1` (serial). Values above one use
-  [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html) on
-  Unix-alikes and fall back to serial on Windows or for small corpora;
-  the tokenization — and therefore every result — is identical
-  regardless of the count. Ignored when a prepared `topic_corpus()` is
-  supplied (its tokens are already computed).
+  Number of forked worker processes for tokenization (default 1;
+  Unix-alikes only). Results do not depend on it.
 
-- numbers:
+- numbers, roman_numerals, section_numbers:
 
-  How to treat purely numeric tokens (years, counts) in topic terms.
-  `"keep"` (default) keeps them; `"remove"` drops tokens made only of
-  digits, while retaining alphanumerics such as `covid19`.
-
-- roman_numerals:
-
-  How to treat Roman-numeral tokens (chapter, section, and list markers
-  such as `ii`, `iv`, `xii`). `"keep"` (default) keeps them; `"remove"`
-  drops canonical Roman numerals up to 100. The bound is deliberate:
-  larger Roman numerals collide with common abbreviations that are also
-  valid numerals (`ml`, `mm`, `cc`, `ci`, `cv`), which are always kept.
-  A few small numerals that are also words (`iv`, `vi`, `xl`) are
-  removed when this is on.
-
-- section_numbers:
-
-  How to treat section, reference, and list numbering. `"keep"`
-  (default) keeps it; `"remove"` strips, before tokenizing, both
-  multi-level indices (`1.2.3`, `4.5.6.7` — three or more dot-separated
-  groups) and enumeration or list markers (`1.`, `2.`, `figure 12.` — a
-  standalone one- or two-digit number followed by a period). Decimals
-  (`3.14`), four-digit years (`2020.`), hyphenated numbers
-  (`covid-19.`), and larger counts are left untouched, so genuine values
-  survive even when `numbers = "keep"`. These filter only the topic
-  terms; the document text and its embedding are untouched. To clean the
-  source text itself — list markers, reference noise, junk characters —
-  before encoding, see
+  Whether to `"keep"` (default) or `"remove"` digit-only tokens,
+  Roman-numeral tokens, and section or list numbering (`1.2.3`, `1.`)
+  from the topic terms. They change the terms only, not the text that is
+  embedded; to clean the text, use
   [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md).
 
 - segment:
 
-  The unit the model is fitted on. `"document"` (default) embeds each
-  document whole. `"sentence"`, `"clause"`, or `"phrase"` first splits
-  every document with
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) at that
-  level and fits the topics on the segments, so long documents are
-  modeled in full instead of being truncated to the encoder's context
-  window, and a document can span several topics. The fitted document
-  table then has one row per segment with its parent `document_id` and
-  `segment` position;
-  [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
-  counts by segment or by document,
-  [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-  recovers each document's topic mixture from the stored segments, and
-  [predict()](https://sonsoles.me/sbert/reference/predict.sbert_topic_model.md)
-  segments new text the same way. A precomputed `embeddings` matrix must
-  then have one row per segment, aligned with
-  `segment(text, level = segment, ...)`.
+  Unit of analysis: `"document"` (default), or `"sentence"`, `"clause"`,
+  or `"phrase"`, which split each document with
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) and fit
+  the topics to the segments, so that a document can take part in
+  several topics.
 
-- max_tokens:
+- max_tokens, merge_below, min_content:
 
-  Optional cap on segment length, passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). When a
-  `model` is used, the budget counts that model's exact tokens; with
-  precomputed `embeddings` it counts words. Only with a segmented fit.
-
-- merge_below:
-
-  Re-join segments shorter than this many words into their neighbor,
-  passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). Only
-  with a segmented fit.
-
-- min_content:
-
-  Minimum alphabetic-content ratio for a segment to be kept, passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). Only
-  with a segmented fit.
+  Segmentation options passed to
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md), for
+  segmented fits only: the maximum segment length (in the model's
+  tokens, or in words with precomputed `embeddings`; default `NULL`, no
+  limit), the number of words below which a segment is joined to its
+  neighbor (default 0), and the minimum share of letters for a segment
+  to be kept (default 0; see
+  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)).
 
 ## Value
 
-An object of class `sbert_topic_corpus`: a list with the prepared `text`
-(one element per modeled unit), carried `metadata`, `units` (the
-`document_id`, `document_name`, and `segment` of every unit when the
-corpus is segmented, otherwise `NULL`), unit `embeddings`, cached
-`token_lists`, `model` information, and the fixed segmentation and
-tokenization `settings`.
+An object of class `sbert_topic_corpus`. Its units (one row per
+document, or per segment) are given by
+[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_corpus.md);
+printing it shows the number of documents and segments, the embedding
+dimension, the model, and the tokenization settings.
 
-## Details
+## Conditions
 
-The results are byte-identical to calling
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) on the raw
-text: the corpus only *caches* the segmentation, embedding, and
-tokenization steps, it does not change them. The corpus fixes the
-embedding source (`model` or `embeddings`), the segmentation (`segment`,
-`max_tokens`, `merge_below`, `min_content`), and the tokenization
-settings (`stop_words`, `min_token_length`, `stem`, `numbers`,
-`roman_numerals`, `section_numbers`).
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md) refuses a
-`model`, `embeddings`, or a different `segment` alongside a corpus, and
-takes the tokenization settings from the corpus, so set them when
-building it. Per-model settings (`n_topics`, `n_terms`,
-`min_term_frequency`, `weighting`, `reduce_frequent_words`, `seeds`,
-...) are still chosen per call.
+Errors of class `sbert_bad_input` when both `model` and `embeddings` are
+given, a document is blank, the embeddings do not have one row per unit,
+the segmentation produces fewer than two segments, or `segment` is
+passed together with an existing corpus; `sbert_missing_package` for
+`stem = TRUE` without SnowballC. When a model is used, the errors of
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md) and
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) apply.
 
 ## See also
 
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md),
-[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md),
+which take the corpus;
+[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_corpus.md)
+for its units;
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) for the
+segmentation.
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls",
-  "Stocks and bonds trade", "Markets price shares"
-)
-embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
-corpus <- topic_corpus(text, embeddings = embeddings)
-topic_sizes(topics(corpus, n_topics = 2))
-#>   topic                  label n_documents proportion
-#> 1     1        Cats chase mice           2        0.5
-#> 2     2 Stocks and bonds trade           2        0.5
-compare_topics(corpus, n_topics = 2:3)
-#> <sbert_topic_sweep> 2 candidates, coherence measure: npmi
-#>  n_topics  coherence topic_diversity explained
-#>         2 -0.1000000       1.0000000 0.9931506
-#>         3  0.3777778       0.9166667 0.9965753
-#> 
-#> Fitted models retained: fitted(x, n_topics = 3)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+prepared <- topic_corpus(corpus, column = "translation",
+                         embeddings = feedback_embeddings)
+prepared
+#> <sbert_topic_corpus>
+#>   documents: 600 
+#>   embedding dimension: 384 
+#>   model: precomputed embeddings 
+#>   tokenization: min_token_length = 2  
+topic_sizes(topics(prepared, n_topics = 4))
+#>   topic                                                     label n_documents
+#> 1     1 Where is the cow and the cake? Choose all the pictures...         405
+#> 2     2       What does “all the ones between the leaf and the...         143
+#> 3     3  It is not a person, does not have a hat, and is sitting.          27
+#> 4     4                     What does it mean to be on the grass?          25
+#>   proportion
+#> 1 0.67500000
+#> 2 0.23833333
+#> 3 0.04500000
+#> 4 0.04166667
+topic_sizes(topics(prepared, n_topics = 6))
+#>   topic                                                       label n_documents
+#> 1     1   Where is the cow and the cake? Choose all the pictures...         223
+#> 2     2            All the ones between the cat and the strawberry.         133
+#> 3     3         What does “all the ones between the leaf and the...         131
+#> 4     4 Are you sure you have fewer pictures in the red box than...          49
+#> 5     5      In the top middle box, it means something is in the...          37
+#> 6     6    It is not a person, does not have a hat, and is sitting.          27
+#>   proportion
+#> 1 0.37166667
+#> 2 0.22166667
+#> 3 0.21833333
+#> 4 0.08166667
+#> 5 0.06166667
+#> 6 0.04500000
 ```

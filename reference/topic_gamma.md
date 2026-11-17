@@ -1,13 +1,31 @@
-# Document-Topic Distributions from Segment Assignments
+# Compute document-topic mixtures from segments
 
-Computes `gamma`, the distribution of every document over the fitted
-topics, by segmenting each document with
-[`segment()`](https://sonsoles.me/sbert/reference/segment.md), assigning
-each segment to its nearest topic centroid, and normalizing the
-per-document segment counts. This yields parameter-free mixed
-membership: a document that discusses two topics in different sentences
-receives weight on both, which the single-embedding hard assignment
-cannot express.
+`topic_gamma()` returns, for each document, its mixture over topics: the
+share of its segments assigned to each topic, the document-topic
+distribution conventionally called gamma. A document that discusses two
+subjects in different sentences belongs partly to two topics, which a
+single embedding of the whole document cannot express; counting the
+topics of its segments gives the mixture without any additional
+parameter.
+
+For a model fitted on segments (`segment =` in
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md)) and
+`text = NULL`, it counts the fitted assignments, with no encoding.
+Otherwise it segments the given documents (with the fitted segmentation,
+or at `level`), or takes a
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) data frame
+as it is, embeds the segments, and assigns each to the topic whose
+unit-length center has the highest cosine similarity, as
+[predict()](https://sonsoles.me/sbert/reference/predict.sbert_topic_model.md)
+does. The result is a data frame with one row per document-topic pair.
+
+The fitted assignments come from Lloyd's k-means in
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md), which uses
+squared Euclidean distance to the raw means of the normalized
+embeddings; for a few segments on topic boundaries this can differ from
+the cosine-similarity rule applied to new text. For graded membership of
+single units, use
+[`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md).
 
 ## Usage
 
@@ -30,106 +48,92 @@ topic_gamma(
 
 - object:
 
-  A fitted [`topics()`](https://sonsoles.me/sbert/reference/topics.md)
-  model.
+  A fitted model from
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md).
 
 - text:
 
-  Either `NULL`, a character vector of documents (segmented here at
-  `level`), or the data frame returned by
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) (used
-  as-is). `NULL` — the default — works for a model fitted with
-  `segment = "sentence"`, `"clause"`, or `"phrase"`: its own segments
-  and their topic assignments are already stored, so the mixture of
-  every fitted document comes back with no encoding at all. Passing your
-  own segmentation keeps every segment option in
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) and lets
-  you reuse one set of segment embeddings across this and other verbs. A
-  data frame must have `document_id` and `text` columns; `gamma` is then
-  computed per `document_id`.
+  `NULL` (default) for the fitted segments of a segmented model; a
+  character vector of documents to segment; or a data frame from
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) (columns
+  `document_id` and `text`), used as it is.
 
 - model:
 
-  A loaded
-  [sbert_model](https://sonsoles.me/sbert/reference/load_model.md), a
-  pinned model name, or `NULL` for the default model, used to embed the
-  segments; ignored when `embeddings` are supplied.
+  A model from
+  [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md), a
+  pinned model name, or `NULL` (default) for the default model, used to
+  embed the segments; ignored when `embeddings` are given.
 
 - embeddings:
 
-  Optional precomputed numeric matrix of segment embeddings, one row per
-  segment. When `text` is raw documents the rows must align with
-  `segment(text, level = level)`; when `text` is a
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
-  frame they must align with its rows — which is automatic, since no
-  re-segmentation happens.
+  Numeric matrix of segment embeddings, one row per segment of `text`
+  (in the order of
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md)), or
+  `NULL` (default) to encode them.
 
 - level:
 
-  Segmentation granularity passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) when
-  `text` is a character vector: `"clause"`, `"sentence"`, or `"phrase"`.
-  `NULL` (the default) uses the fitted segmentation — level,
-  `max_tokens`, `merge_below`, and `min_content` — for a segmented
-  model, so new documents are cut exactly as the fitted ones were, and
-  `"clause"` for a document-level model. Ignored when `text` is already
-  a [`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
-  frame.
+  `"clause"`, `"sentence"`, or `"phrase"` for segmenting a character
+  `text`, or `NULL` (default) for the fitted segmentation of a segmented
+  model and `"clause"` otherwise.
 
 - batch_size:
 
-  Batch size passed to
-  [`encode()`](https://sonsoles.me/sbert/reference/encode.md) when
-  `model` is used.
+  Texts per model call when encoding (default 32).
 
 - cores:
 
-  Number of forked worker processes used to split documents into
-  segments (passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md)).
-  Default `1`. Segmenting a large corpus dominates the non-encoding
-  cost, so `cores > 1` can noticeably speed up sentence- and
-  clause-level gamma; the result is identical for any count. Encoding
-  itself is parallelized separately, via `load_model(threads =)`.
-  Ignored when `text` is already a
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md) data
-  frame.
+  Number of forked processes for segmenting (default 1), passed to
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md); the
+  result does not depend on it.
 
 - dedupe_segments:
 
-  When `TRUE`, encode each distinct segment only once and expand the
-  embeddings back by position, rather than encoding every occurrence.
-  Real corpora are often close to half duplicate segments, so this can
-  roughly halve encoding time (the dominant cost). Only applies when
-  `embeddings` are not supplied. Assignments match encoding every
-  occurrence up to the ~1e-7 floating-point effect of encoding a smaller
-  batched set, which can flip a rare borderline segment; it is therefore
-  opt-in and off by default. With the static `potion-base-8M` model,
-  encoding has no batch effect and the result is identical.
+  Encode each distinct segment once (default `FALSE`). Saves time on
+  corpora with many repeated segments; the values can differ from
+  encoding every occurrence by floating-point rounding.
 
 - sort_by_length:
 
-  Passed to [`encode()`](https://sonsoles.me/sbert/reference/encode.md).
-  Groups segments of similar length into the same batch so the model
-  computes over less padding. Segment lengths vary far more than
-  document lengths — at clause level 60.1% of token work is padding in
-  input order against 1.6% when sorted — so this is the single largest
-  saving available on this verb, measured at 1.9x. Off by default for
-  the same ~1e-7 reason as `dedupe_segments`.
+  Batch segments of similar length together when encoding (default
+  `FALSE`); see
+  [`encode()`](https://sonsoles.me/sbert/reference/encode.md).
 
 - top:
 
   `NULL` (default) for every topic of every document, or a whole number:
-  each document's `top` largest topic shares, largest first. Topics with
-  a zero share are left out, so a document can list fewer.
+  each document's `top` largest non-zero shares.
 
 ## Value
 
 A base data frame with one row per document-topic pair and columns
-`document_id`, `topic`, `gamma`, and `n_segments`. `gamma` sums to 1
-within each document; documents with no segments contribute no rows.
-With `top`, only each document's `top` largest non-zero shares, ordered
-by document and then by share, with a `rank` column after `document_id`.
+`document_id`, `topic`, `gamma` (the share of the document's segments in
+the topic), and `n_segments`. `gamma` sums to one within each document;
+documents without segments have no rows. With `top`, only the largest
+non-zero shares, ordered by document and share, with a `rank` column
+after `document_id`.
+
+## Conditions
+
+`sbert_bad_input` when `text` is `NULL` for a model fitted on whole
+documents, when `model`, `embeddings` or `level` is given without
+`text`, when a data frame lacks `document_id` or `text`, when no segment
+results, or when `embeddings` has the wrong number of rows;
+`sbert_dimension_mismatch` when the embeddings have a different number
+of columns from the fitted model; when encoding, the conditions of
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md).
+
+## See also
+
+[`segment()`](https://sonsoles.me/sbert/reference/segment.md) for the
+segments;
+[`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
+for graded membership;
+[predict()](https://sonsoles.me/sbert/reference/predict.sbert_topic_model.md)
+for single assignments;
+[`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
+for topic totals.
 
 ## Examples
 
@@ -140,6 +144,8 @@ text <- c(
 )
 embeddings <- rbind(c(1, 0), c(0.9, 0.1), c(0, 1), c(0.1, 0.9))
 fitted <- topics(text, 2, embeddings = embeddings)
+
+# A new document with one sentence on each topic.
 mixed <- "Cats chase mice. Stocks and bonds trade."
 segment_embeddings <- rbind(c(1, 0), c(0, 1))
 topic_gamma(fitted, mixed, embeddings = segment_embeddings)
@@ -147,7 +153,7 @@ topic_gamma(fitted, mixed, embeddings = segment_embeddings)
 #> 1           1     1   0.5          2
 #> 2           1     2   0.5          2
 
-# Segment once (with any options), reuse the segments and their embeddings:
+# Segment once, then reuse the segments and their embeddings.
 segments <- segment(mixed, level = "sentence")
 topic_gamma(fitted, segments, embeddings = segment_embeddings)
 #>   document_id topic gamma n_segments

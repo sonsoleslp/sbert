@@ -1,11 +1,30 @@
-# Load an Arbitrary Hugging Face Embedding Model
+# Load a Hugging Face embedding model outside the pinned list
 
-Loads any public Hugging Face repository that ships an ONNX encoder
-export and a `tokenizer.json`, returning the same `sbert_model` object
-as [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
-so that [`encode()`](https://sonsoles.me/sbert/reference/encode.md),
-[`topics()`](https://sonsoles.me/sbert/reference/topics.md), and every
-downstream verb work unchanged.
+`load_custom()` loads a Hugging Face embedding model that is not in the
+pinned list, on a "trust on first use" basis. Many embedding models on
+Hugging Face publish an ONNX export of their encoder and a
+`tokenizer.json`; such a model can be used like a pinned one, but its
+configuration is not vouched for by the package: there is no pinned
+revision, no package-controlled hash, and no check that its embeddings
+match the reference implementation. The caller is responsible for the
+pooling rule, prefix and maximum length.
+
+On first use it resolves the current revision (unless `revision` is
+given), downloads the ONNX graph and tokenizer, and records their sizes,
+hashes and the model's configuration in a local manifest; later loads
+verify the files against that manifest. A later load with the same
+`revision` given uses no network; with `revision = NULL` every call
+first asks Hugging Face for the current revision. Pooling and maximum
+length are read from the repository's Sentence-Transformers
+configuration when it has one and must be given otherwise; the embedding
+dimension is read from the ONNX graph.
+
+The result is an `sbert_model` like the one
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
+returns, so [`encode()`](https://sonsoles.me/sbert/reference/encode.md),
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) and every
+other verb accept it. For the pinned, verified models use
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md).
 
 ## Usage
 
@@ -34,81 +53,91 @@ load_custom(
 
 - revision:
 
-  Optional commit hash to pin. `NULL` resolves the current revision on
-  first download (recorded in the manifest thereafter).
+  Commit hash to pin, or `NULL` (default) to resolve the current
+  revision online on every call. Pin it for offline reuse.
 
 - onnx_path:
 
-  Repository path of the ONNX graph. `NULL` auto-detects
+  Path of the ONNX graph in the repository, or `NULL` (default) to use
   `onnx/model.onnx` or `model.onnx`.
 
 - tokenizer_path:
 
-  Repository path of the tokenizer. Default `"tokenizer.json"`.
+  Path of the tokenizer in the repository (default `"tokenizer.json"`).
 
 - pooling:
 
-  `"mean"` or `"cls"`. `NULL` auto-detects from `1_Pooling/config.json`
-  and fails with a clear message when absent.
+  `"mean"` or `"cls"`, or `NULL` (default) to read it from the
+  repository's `1_Pooling/config.json`.
 
 - prefix:
 
   Text prepended to every input by
   [`encode()`](https://sonsoles.me/sbert/reference/encode.md). `NULL`
-  (default) keeps the recorded value (`""` on first use); pass `""` to
-  clear a recorded prefix.
+  (default) keeps the recorded prefix (`""` on first use); `""` clears
+  it.
 
 - max_length:
 
-  Maximum word pieces per input. `NULL` auto-detects from
-  `sentence_bert_config.json`, falling back to 512.
+  Maximum word pieces per input, or `NULL` (default) to read it from
+  `sentence_bert_config.json`, else 512.
 
 - cache_dir:
 
-  Cache root returned by
-  [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md).
+  Cache root (default
+  [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md)).
 
 - backend:
 
-  ONNX execution backend accepted by
-  [`onnxr::onnx_model()`](http://corymccartan.com/onnxr/reference/onnx_model.md).
+  ONNX execution backend, as accepted by
+  [`onnxr::onnx_model()`](http://corymccartan.com/onnxr/reference/onnx_model.md)
+  (default `"cpu"`).
 
 - threads:
 
-  Positive number of inference threads.
+  Number of inference threads (default 1).
 
 - verify:
 
-  Whether to verify recorded byte sizes and SHA-256 hashes when loading
-  from an existing cache.
+  Check recorded sizes and SHA-256 hashes when loading from the cache
+  (default `TRUE`).
 
 - quiet:
 
-  Whether to suppress download progress.
+  Suppress the download message and progress (default `FALSE`).
 
 ## Value
 
-An object of class `sbert_model`, with the same fields as
+An object of class `sbert_model` with the same fields as
 [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md)
 returns; its `short_name` is `"custom:<id>"`.
 
-## Details
+## Conditions
 
-This is the escape hatch below the curated registry. On first use the
-current revision is resolved (unless `revision` is given), the artifacts
-are downloaded, and their byte sizes and SHA-256 values are recorded in
-a local manifest ("trust on first use"); later loads verify the files
-against that manifest and never touch the network. Pooling, prefix, and
-maximum length are auto-detected from the repository's
-Sentence-Transformers configuration when present, and must be supplied
-explicitly otherwise. The ONNX input signature and embedding dimension
-are read from the graph itself. Unlike registry models, the package
-makes no numerical-parity claim: you vouch for the configuration.
+`sbert_runtime_missing` when ONNX Runtime is not installed;
+`sbert_missing_package` when jsonlite is not installed;
+`sbert_download_failed` when repository metadata or files cannot be
+downloaded or the revision cannot be resolved; `sbert_model_error` when
+the repository has no ONNX graph at the expected path, the pooling rule
+cannot be detected and was not given, or the graph lacks a
+`last_hidden_state` output or needs unsupported inputs;
+`sbert_cache_invalid` when cached files no longer match the recorded
+manifest.
+
+## See also
+
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md) for
+the pinned models;
+[`install_runtime()`](https://sonsoles.me/sbert/reference/install_runtime.md)
+for ONNX Runtime;
+[`encode()`](https://sonsoles.me/sbert/reference/encode.md) to use the
+model; [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md)
+for where it is stored.
 
 ## Examples
 
 ``` r
-# Cache root used for downloaded and custom models.
+# Custom models are stored under "custom" in this cache root.
 cache_dir()
 #> [1] "/home/runner/.cache/R/sbert"
 

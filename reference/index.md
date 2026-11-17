@@ -1,13 +1,21 @@
 # Package index
 
+## Overview
+
+- [`sbert`](https://sonsoles.me/sbert/reference/sbert-package.md)
+  [`sbert-package`](https://sonsoles.me/sbert/reference/sbert-package.md)
+  : sbert: Topic modeling with Sentence-BERT embeddings
+
 ## Encoding text
 
-Turn text into Sentence-BERT embeddings.
+Turn text into Sentence-BERT embeddings and compare them.
 
 - [`encode()`](https://sonsoles.me/sbert/reference/encode.md) : Encode
-  Text with Sentence-BERT
-- [`pool()`](https://sonsoles.me/sbert/reference/pool.md) : Pool Token
-  Embeddings into Sentence Embeddings
+  texts as sentence embeddings
+- [`pool()`](https://sonsoles.me/sbert/reference/pool.md) : Pool token
+  embeddings into sentence embeddings
+- [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
+  : Compute cosine similarity between embeddings
 
 ## Models and runtime
 
@@ -15,137 +23,155 @@ Install the ONNX Runtime, download revision-pinned models, load custom
 Hugging Face exports, and manage the on-disk cache.
 
 - [`models()`](https://sonsoles.me/sbert/reference/models.md) : List the
-  Available Pinned Sentence-BERT Models
+  pinned models
 - [`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
-  : Download a Pinned Sentence-BERT Model
+  : Download a pinned model
 - [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md) :
-  Load a Pinned Sentence-BERT Model
+  Load an installed pinned model
 - [`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
-  : Load an Arbitrary Hugging Face Embedding Model
+  : Load a Hugging Face embedding model outside the pinned list
 - [`model_status()`](https://sonsoles.me/sbert/reference/model_status.md)
-  : Inspect an Installed Model
+  : Check the installed files of a model
 - [`model_remove()`](https://sonsoles.me/sbert/reference/model_remove.md)
-  : Remove an Installed Model from the Cache
+  : Remove a pinned model from the cache
 - [`install_runtime()`](https://sonsoles.me/sbert/reference/install_runtime.md)
   : Install ONNX Runtime
 - [`cache_dir()`](https://sonsoles.me/sbert/reference/cache_dir.md) :
-  Locate the sbert Model Cache
+  Locate the model cache
 - [`cache_size()`](https://sonsoles.me/sbert/reference/cache_size.md) :
-  Measure the sbert Cache
+  Measure the disk space of the model cache
 
 ## Preparing a corpus
 
-Deduplicate, segment, and context-blend documents before modeling.
+Deduplicate, clean, segment, and context-blend documents before
+modeling.
 
-- [`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) :
-  Deduplicate a Text Corpus with Frequencies
+- [`dedupe()`](https://sonsoles.me/sbert/reference/dedupe.md) : Collapse
+  repeated texts and count them
 - [`clean_corpus()`](https://sonsoles.me/sbert/reference/clean_corpus.md)
-  : Clean a Text Corpus Before Encoding
+  : Clean a corpus before encoding
 - [`strip_list_markers()`](https://sonsoles.me/sbert/reference/strip_list_markers.md)
-  : Strip Enumeration and List Markers from Text
+  : Remove list and enumeration markers from text
 - [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)
-  : Alphabetic Content Ratio of Text
-- [`segment()`](https://sonsoles.me/sbert/reference/segment.md) :
-  Segment Text into Sentences, Clauses, or Phrases
+  : Compute the share of letters in text
+- [`segment()`](https://sonsoles.me/sbert/reference/segment.md) : Split
+  documents into sentences, clauses, or phrases
 - [`abbreviations()`](https://sonsoles.me/sbert/reference/abbreviations.md)
-  : Obtain the Built-in Abbreviation Gazetteer
+  : List the abbreviations protected from sentence splitting
 - [`blend()`](https://sonsoles.me/sbert/reference/blend.md) : Blend
-  Segment Embeddings with Their Document Context
+  segment embeddings with their document context
 - [`stop_words()`](https://sonsoles.me/sbert/reference/stop_words.md) :
-  Obtain and Adjust the Topic Stop-Word List
+  Get and adjust the stop-word list
 
-## Topic modeling
+## Fitting topic models
 
-Fit topic models, sweep the topic count, and merge topics down.
+Prepare a corpus once, fit topics, compare topic counts, and merge
+topics.
 
 - [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md)
-  : Prepare a Corpus Once to Fit Many Topic Models
-- [`topics()`](https://sonsoles.me/sbert/reference/topics.md) : Discover
-  Semantic Topics in Documents
+  : Prepare a corpus once for several topic models
+- [`topics()`](https://sonsoles.me/sbert/reference/topics.md) : Fit
+  semantic topics to documents
 - [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md)
-  : Compare Topic Counts Before Committing to One
+  : Compare numbers of topics and segmentation levels
 - [`fitted(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
-  : Extract One Fitted Model from a Topic-Count Comparison
+  : Extract a fitted model from a topic-count comparison
 - [`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
-  : Reduce a Fitted Topic Model to Fewer Topics
+  : Merge the topics of a model into fewer topics
 
 ## Describing topics
 
-Distinctive terms, representative documents, sizes, and keywords.
+Distinctive terms, representative texts, names, sizes, and keywords.
 
 - [`terms(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/terms.sbert_topic_model.md)
-  : Topic Terms, Retuned Without Refitting
+  : Compute the terms of each topic
 - [`representatives()`](https://sonsoles.me/sbert/reference/representatives.md)
-  : Representative Text Units for Every Topic
+  : Select representative texts for each topic
 - [`name_topics()`](https://sonsoles.me/sbert/reference/name_topics.md)
-  : Name the Topics of a Fitted Model
+  : Name the topics of a fitted model
 - [`topic_sizes()`](https://sonsoles.me/sbert/reference/topic_sizes.md)
-  : Topic Sizes on the Distinct and Weighted Scales
+  : Compute the size of each topic
 - [`keywords()`](https://sonsoles.me/sbert/reference/keywords.md) :
-  Extract Keywords from Documents by Embedding Similarity
+  Extract the keywords of documents
 
-## Topic inference
+## Assigning topics
 
-Assign new documents and recover soft, generative, and mixed
-memberships.
+Assign new documents and recover soft memberships and topic mixtures.
 
 - [`predict(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/predict.sbert_topic_model.md)
-  : Assign New Documents to Fitted Topics
+  : Assign new documents to fitted topics
 - [`topic_membership()`](https://sonsoles.me/sbert/reference/topic_membership.md)
-  : Soft Topic Membership Probabilities
+  : Compute graded topic membership
 - [`topic_gamma()`](https://sonsoles.me/sbert/reference/topic_gamma.md)
-  : Document-Topic Distributions from Segment Assignments
+  : Compute document-topic mixtures from segments
 
 ## Evaluating topics
 
-Intrinsic coherence and topic diversity.
+Coherence, diversity, and the hierarchy of topic centers.
 
 - [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) :
-  Score Topic Coherence
+  Score the coherence of topics
 - [`topic_diversity()`](https://sonsoles.me/sbert/reference/topic_diversity.md)
-  : Measure Topic Diversity
-
-## Visualizing and summarizing
-
-Deterministic base-graphics plots, hierarchies, and reports.
-
-- [`summary(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
-  : Summarize a Semantic Topic Model
-- [`plot(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
-  : Plot a Semantic Topic Model
-- [`plot(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
-  : Plot a Topic-Count Comparison
-- [`plot(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_hierarchy.md)
-  : Plot a Topic Hierarchy Dendrogram
+  : Measure the diversity of topic terms
 - [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
-  : Build the Topic Hierarchy of a Fitted Model
-- [`topic_similarity()`](https://sonsoles.me/sbert/reference/topic_similarity.md)
-  : Compute Cosine Similarity
+  : Build the hierarchy of the topics of a model
+- [`summary(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md)
+  : Summarize a topic model
+- [`summary(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_sweep.md)
+  : Summarize a topic-count comparison
+- [`summary(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/summary.sbert_topic_hierarchy.md)
+  : Summarize a topic hierarchy
+
+## Plots
+
+Deterministic base-graphics displays of models, comparisons, and
+hierarchies.
+
+- [`plot(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_model.md)
+  : Plot a fitted topic model
+- [`plot(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
+  : Plot a topic-count comparison
+- [`plot(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/plot.sbert_topic_hierarchy.md)
+  : Plot a topic hierarchy as a dendrogram
 - [`topic_palette()`](https://sonsoles.me/sbert/reference/topic_palette.md)
-  : Qualitative Color Palette for Topics
+  : Get colors that distinguish topics in plots
 
-## Printing and conversion
+## Results
 
-Print methods and tidy accessors for result objects.
+Tidy tables of result objects, and their print methods.
 
-- [`print(`*`<sbert_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_model.md)
-  : Print a Loaded Model
-- [`print(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_corpus.md)
-  : Print a Prepared Topic Corpus
-- [`print(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_model.md)
-  : Print a Semantic Topic Model
-- [`print(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_hierarchy.md)
-  : Print a Topic Hierarchy
-- [`print(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_sweep.md)
-  : Print a Topic-Count Comparison
+- [`as.data.frame(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_model.md)
+  : Convert a topic model to a data frame
 - [`as.data.frame(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md)
-  : Coerce a Topic-Count Comparison to a Data Frame
+  : Convert a topic-count comparison to a data frame
+- [`as.data.frame(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_hierarchy.md)
+  : Convert a topic hierarchy to a data frame
+- [`as.data.frame(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_corpus.md)
+  : Convert a prepared topic corpus to a data frame
+- [`print(`*`<sbert_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_model.md)
+  : Print a loaded model
+- [`print(`*`<sbert_topic_corpus>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_corpus.md)
+  : Print a prepared topic corpus
+- [`print(`*`<sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_model.md)
+  : Print a topic model
+- [`print(`*`<sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_hierarchy.md)
+  : Print a topic hierarchy
+- [`print(`*`<sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.sbert_topic_sweep.md)
+  : Print a topic-count comparison
+- [`print(`*`<summary.sbert_topic_model>`*`)`](https://sonsoles.me/sbert/reference/print.summary.sbert_topic_model.md)
+  : Print a topic model summary
+- [`print(`*`<summary.sbert_topic_sweep>`*`)`](https://sonsoles.me/sbert/reference/print.summary.sbert_topic_sweep.md)
+  : Print a topic-count comparison summary
+- [`print(`*`<summary.sbert_topic_hierarchy>`*`)`](https://sonsoles.me/sbert/reference/print.summary.sbert_topic_hierarchy.md)
+  : Print a topic hierarchy summary
 
 ## Data
 
-Bundled corpora for offline examples and topic modeling.
+Bundled corpora and precomputed embeddings for offline examples.
 
 - [`feedback_translations`](https://sonsoles.me/sbert/reference/feedback_translations.md)
-  : AI-generated Mathematics Feedback with English Translations
+  : AI-generated mathematics feedback with English translations
+- [`feedback_embeddings`](https://sonsoles.me/sbert/reference/feedback_embeddings.md)
+  : Precomputed embeddings of 600 feedback messages
 - [`covid`](https://sonsoles.me/sbert/reference/covid.md) : COVID-19
-  Research Abstracts
+  research abstracts

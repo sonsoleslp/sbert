@@ -1,7 +1,9 @@
-# Print a Topic Hierarchy
+# Print a topic hierarchy
 
-Shows the merge table: one row per merge, with its height and the two
-branches that fused.
+[`print()`](https://rdrr.io/r/base/print.html) shows a topic hierarchy:
+the number of topics and merges, and the merge table: one row per merge,
+with the cosine distance at which it happens and the two branches it
+joins.
 
 ## Usage
 
@@ -14,7 +16,8 @@ print(x, ...)
 
 - x:
 
-  An `sbert_topic_hierarchy` object.
+  A hierarchy built by
+  [`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md).
 
 - ...:
 
@@ -22,7 +25,13 @@ print(x, ...)
 
 ## Value
 
-The hierarchy object, invisibly.
+`x`, invisibly.
+
+## See also
+
+[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md);
+[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_hierarchy.md);
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_hierarchy.md).
 
 ## Examples
 
@@ -35,7 +44,8 @@ embeddings <- rbind(
   c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
   c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
 )
-tree <- topic_hierarchy(topics(text, 3, embeddings = embeddings, n_terms = 3))
+tree <- topic_hierarchy(topics(text, n_topics = 3, embeddings = embeddings,
+                               n_terms = 3))
 print(tree)
 #> <sbert_topic_hierarchy> 3 topics, 2 merges (cosine distance)
 #> 

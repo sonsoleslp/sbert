@@ -1,12 +1,36 @@
-# Compare Topic Counts Before Committing to One
+# Compare numbers of topics and segmentation levels
 
-Fits [`topics()`](https://sonsoles.me/sbert/reference/topics.md) once
-per candidate topic count — deterministically, on one shared set of
-embeddings — and returns the quality metrics that justify a granularity
-choice: mean topic coherence, topic diversity, and the share of
-embedding variance separated between topics. The verb compares; it never
-chooses for you. Take the count you want out of the comparison with
-[fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md).
+`compare_topics()` fits
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) for every
+candidate number of topics, and for every segmentation level in
+`segment`, on one shared set of embeddings, and reports measures of the
+quality of each fit. The number of topics, like the unit of analysis
+(the whole document or its sentences, clauses, or phrases), sets the
+granularity of a topic model and has no single correct value: fewer
+topics give broad themes, more topics give narrower ones, until some of
+them split a theme into near-duplicates.
+
+Three measures are reported per candidate: the mean coherence of the
+topics' terms
+([`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)), the
+diversity of the terms across topics
+([`topic_diversity()`](https://sonsoles.me/sbert/reference/topic_diversity.md)),
+and the share of the embedding variance that lies between topics.
+Coherence tends to fall and between-topic variance to rise as the number
+of topics grows, so a useful candidate is often the count after which
+coherence stops improving rather than the count with the highest
+coherence. Comparing candidates on such measures is a better basis for
+the choice than fixing a number in advance. The function compares; it
+does not choose.
+
+The result is a table of class `sbert_topic_sweep` with one row per
+candidate. The fitted candidates are kept, so a chosen one is taken out
+with
+[fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
+without refitting.
+
+The measures are a guide; the choice should also rest on reading the
+representative texts of the candidate models.
 
 ## Usage
 
@@ -36,186 +60,167 @@ compare_topics(
 
 - text:
 
-  A character vector of documents, a data frame together with `column`,
-  or a prepared
+  Documents: a character vector, a data frame together with `column`, or
+  a corpus prepared by
   [`topic_corpus()`](https://sonsoles.me/sbert/reference/topic_corpus.md).
-  Passing a corpus (or letting `compare_topics()` build one internally)
-  segments, embeds, and tokenizes the documents once and reuses that
-  work across every candidate, instead of re-tokenizing per candidate.
 
 - n_topics:
 
-  Integer vector of candidate topic counts, each at least 2 and below
+  Candidate numbers of topics: distinct integers of at least 2 and below
   the number of modeled units. Default `c(5, 10, 15, 20, 25, 30)`.
 
 - column:
 
-  When `text` is a data frame, the name of the column holding the
-  documents to model. Every other column is carried along with each
-  document in the fitted document table, and rows whose text is missing,
-  blank, or a bibliographic placeholder (`"[No abstract available]"`)
-  are dropped. Precomputed `embeddings` may keep one row per supplied
-  row; the dropped rows are removed from them too. Leave `NULL` for a
-  character vector.
+  Name of the text column when `text` is a data frame. The other columns
+  are carried into the document table. Rows whose text is missing,
+  blank, or the placeholder `"[No abstract available]"` are dropped, and
+  so are their rows of `embeddings`. `NULL` (default) for a character
+  vector.
 
 - model:
 
-  A loaded sbert model, a pinned model name, or `NULL` for the session
-  default. Ignored when `embeddings` is supplied.
+  The encoder: a model from
+  [`load_model()`](https://sonsoles.me/sbert/reference/load_model.md), a
+  pinned model name, or `NULL` (default) for the default model. Not used
+  when `embeddings` are given.
 
 - embeddings:
 
-  Optional precomputed embedding matrix, one row per document (or per
-  segment when `segment` is not `"document"`); supply it to avoid
-  re-encoding.
+  Optional precomputed embedding matrix, one row per modeled unit. When
+  several `segment` levels are compared, a list of matrices named by
+  level. Default `NULL`.
 
 - measure:
 
-  Coherence measure, `"npmi"` (default) or `"umass"`.
+  Coherence measure: `"npmi"` (default) or `"umass"`.
 
 - n_terms:
 
-  Top terms per topic used for coherence and topic diversity. Default
-  `10`.
+  Top terms per topic used for coherence and diversity (default 10).
 
 - n_representatives:
 
-  Representative documents kept per topic in each retained model.
-  Default `1`; raise it when the stored models are meant to be inspected
-  rather than only compared.
+  Representative units stored per topic in each candidate (default 1).
 
 - keep_models:
 
-  Whether to retain every fitted model so the chosen granularity needs
-  no refitting. Default `TRUE`; set `FALSE` to return only the
-  comparison table when memory matters.
+  Whether to keep the fitted candidates (default `TRUE`). With `FALSE`,
+  only the table is kept and
+  [fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
+  is not available.
 
 - batch_size:
 
-  Number of texts encoded per model call when encoding is needed.
-  Default `32`.
+  Texts encoded per model call (default 32).
 
 - cores:
 
-  Number of forked worker processes. Default `1` (serial). Above one,
-  the shared corpus is tokenized in parallel and the candidates — which
-  are independent and deterministic — are fitted in parallel, on
-  Unix-alikes (serial fallback on Windows). Results are identical for
-  any core count.
+  Number of forked worker processes for tokenization and for fitting the
+  candidates (default 1; Unix-alikes only). Results do not depend on it.
 
 - segment:
 
-  The unit the candidates are fitted on, as in
-  [`topics()`](https://sonsoles.me/sbert/reference/topics.md):
-  `"document"` (default), `"sentence"`, `"clause"`, or `"phrase"`. Give
-  several levels — for example `c("document", "sentence", "clause")` —
-  to compare the segmentations as well as the counts: every level is
-  fitted across every candidate, the table gains a leading `segment`
-  column, the plot draws one line per level, and
-  [fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
-  takes `segment =` alongside `n_topics`. `max_tokens`, `merge_below`,
-  and `min_content` then apply to the segmented levels only. With
-  several levels, precomputed `embeddings` are a list of matrices named
-  by level.
+  Unit or units of analysis, as in
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md): one or
+  more of `"document"` (default), `"sentence"`, `"clause"`, and
+  `"phrase"`. With several levels, every level is fitted for every
+  candidate.
 
-- max_tokens:
+- max_tokens, merge_below, min_content:
 
-  Optional cap on segment length, passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). When a
-  `model` is used, the budget counts that model's exact tokens; with
-  precomputed `embeddings` it counts words. Only with a segmented fit.
-
-- merge_below:
-
-  Re-join segments shorter than this many words into their neighbor,
-  passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). Only
-  with a segmented fit.
-
-- min_content:
-
-  Minimum alphabetic-content ratio for a segment to be kept, passed to
-  [`segment()`](https://sonsoles.me/sbert/reference/segment.md). Only
-  with a segmented fit.
+  Segmentation options passed to
+  [`segment()`](https://sonsoles.me/sbert/reference/segment.md), for
+  segmented fits only: the maximum segment length (in the model's
+  tokens, or in words with precomputed `embeddings`; default `NULL`, no
+  limit), the number of words below which a segment is joined to its
+  neighbor (default 0), and the minimum share of letters for a segment
+  to be kept (default 0; see
+  [`content_ratio()`](https://sonsoles.me/sbert/reference/content_ratio.md)).
 
 - coherence_weight:
 
-  How each candidate's topic coherences are averaged: `"none"` (default)
-  gives every topic the same weight; `"size"` weights each topic by its
-  number of modeled units, so a tiny topic of a few near-identical texts
-  (which scores very high) cannot decide the comparison. Passed to
-  [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md) as
-  `weight`.
+  How the coherences of a candidate's topics are averaged: `"none"`
+  (default), every topic equally, or `"size"`, each topic in proportion
+  to its number of units, so a very small topic cannot decide the
+  comparison.
 
 - ...:
 
-  Further arguments passed to
-  [`topics()`](https://sonsoles.me/sbert/reference/topics.md) (for
-  example `stop_words` or `weighting`).
+  Further arguments to
+  [`topics()`](https://sonsoles.me/sbert/reference/topics.md), for
+  example `stop_words` or `weighting`.
 
 ## Value
 
-A base data frame with one row per candidate and columns `n_topics`,
-`coherence` (mean over the topics with at least two scorable terms, as
-in
-[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_model.md),
-weighted as `coherence_weight` says; `NA` only when no topic can be
-scored), `topic_diversity`, and `explained` (between-topic share of
-total variance), preceded by `segment` when several levels were
-compared. The coherence measure is recorded in the `measure` attribute
-and the averaging in the `coherence_weight` attribute. When
-`keep_models = TRUE` the result also carries class `sbert_topic_sweep`
-and the fitted models, which
+An object of class `sbert_topic_sweep`: a data frame with one row per
+candidate and columns `n_topics`, `coherence` (the mean over the topics
+that can be scored, averaged as `coherence_weight` says; `NA` when no
+topic can be scored), `topic_diversity`, `explained` (the between-topic
+share of the variance), and `converged`, preceded by `segment` when
+several levels are compared. The coherence measure and the weighting are
+kept as the attributes `measure` and `coherence_weight`.
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_sweep.md)
+gives the most coherent candidate per level,
+[plot()](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
+draws the measures, and
 [fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
-extracts,
-[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md)
-strips, and
-[`plot.sbert_topic_sweep()`](https://sonsoles.me/sbert/reference/plot.sbert_topic_sweep.md)
-draws.
+returns a fitted candidate.
 
-## Details
+## Conditions
 
-There is no single correct topic count; this verb replaces the habit of
-picking one by feel with a table you can defend. Coherence typically
-falls as counts grow while separation rises, so look for the count after
-which coherence stops improving (or starts degrading) rather than a
-global maximum.
+Errors of class `sbert_bad_input` when fewer than three units are
+modeled, a candidate is not below the number of units, a list of
+embeddings is given for a single level, several levels are given with a
+prepared corpus or with embeddings that are not a list named by level;
+and the conditions of
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) for each
+candidate. Non-convergence of a candidate is recorded in the `converged`
+column.
 
 ## See also
 
-[fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
-to pull one fitted model out of the comparison.
+[`topics()`](https://sonsoles.me/sbert/reference/topics.md) to fit one
+model; [`coherence()`](https://sonsoles.me/sbert/reference/coherence.md)
+and
+[`topic_diversity()`](https://sonsoles.me/sbert/reference/topic_diversity.md)
+for the measures;
+[`topic_hierarchy()`](https://sonsoles.me/sbert/reference/topic_hierarchy.md)
+and
+[`reduce_topics()`](https://sonsoles.me/sbert/reference/reduce_topics.md)
+to merge the topics of a fit.
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+comparison <- compare_topics(corpus, n_topics = c(4, 6, 8),
+                             column = "translation",
+                             embeddings = feedback_embeddings)
 comparison
-#> <sbert_topic_sweep> 2 candidates, coherence measure: npmi
-#>  n_topics  coherence topic_diversity explained
-#>         2 -0.4562038               1 0.9954323
-#>         3  0.1817530               1 0.9972006
+#> <sbert_topic_sweep> 3 candidates, coherence measure: npmi
+#>  n_topics  coherence topic_diversity explained converged
+#>         4 -0.2070855       0.9250000 0.1229819      TRUE
+#>         6 -0.1044246       0.9166667 0.2255144      TRUE
+#>         8 -0.1181287       0.9000000 0.2433832      TRUE
 #> 
-#> Fitted models retained: fitted(x, n_topics = 3)
-fitted(comparison, n_topics = 2)
+#> Fitted models retained: fitted(x, n_topics = 6)
+summary(comparison)
+#> Topic-count comparison: highest mean npmi coherence per level
+#> 
+#>   segment n_candidates min_topics max_topics best_n_topics coherence
+#>  document            3          4          8             6    -0.104
+#>  topic_diversity explained all_converged
+#>            0.917     0.226          TRUE
+fitted(comparison, n_topics = 6)
 #> <sbert_topic_model>
-#>   documents: 6 
-#>   topics: 2
+#>   documents: 600 
+#>   topics: 6
 #>   model: precomputed embeddings
 #>   algorithm: deterministic k-means (Lloyd)
-#>   topic sizes: 3, 3
-#>   between/total SS: 99.5%
+#>   topic sizes: 223, 133, 131, 49, 37, 27
+#>   between/total SS: 22.6%
 
-# Documents against sentences, in one table and one plot (offline: one
-# embedding matrix per level, one row per unit of that level).
+# Documents against sentences (one embedding matrix per level)
 documents <- c(
   "Cats chase mice. Stocks and bonds trade.",
   "Dogs chase balls. Markets price shares.",
@@ -236,18 +241,9 @@ levels <- compare_topics(
 )
 levels
 #> <sbert_topic_sweep> 2 candidates, coherence measure: npmi
-#>   segment n_topics  coherence topic_diversity explained
-#>  document        2  0.6845351               1 0.7491596
-#>  sentence        2 -0.1934264               1 0.9954323
+#>   segment n_topics  coherence topic_diversity explained converged
+#>  document        2  0.6845351               1 0.7491596      TRUE
+#>  sentence        2 -0.1934264               1 0.9954323      TRUE
 #> 
 #> Fitted models retained: fitted(x, n_topics = 2, segment = "document")
-fitted(levels, n_topics = 2, segment = "sentence")
-#> <sbert_topic_model>
-#>   documents: 3 
-#>   segments: 6 (sentence level) 
-#>   topics: 2
-#>   model: precomputed embeddings
-#>   algorithm: deterministic k-means (Lloyd)
-#>   topic sizes: 3, 3
-#>   between/total SS: 99.5%
 ```

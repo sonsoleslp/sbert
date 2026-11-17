@@ -1,9 +1,24 @@
-# List the Available Pinned Sentence-BERT Models
+# List the pinned models
 
-Every supported model is locked to an immutable Hugging Face revision
-and verified by byte size and SHA-256 before use. Pass the `model`
-column value to any verb that takes a model, for example
-`encode(text, model = "bge-small-en-v1.5")`.
+`models()` lists the pinned embedding models as a table: by default the
+columns needed to choose a model, and with `detail = TRUE` also the
+settings the package applies when encoding (pooling rule and input
+prefix), the inference engine, the license, and the repository and
+revision. Embedding models differ in the languages they cover, the
+length of input they read, the size of their vectors, and the disk and
+time they cost.
+
+The package supports a fixed set of models, each pinned to an immutable
+Hugging Face revision and verified by file size and SHA-256 hash, so a
+model name identifies exactly one model. The result has one row per
+pinned model.
+
+Pass a value of the `model` column to any argument that takes a model,
+for example `encode(text, model = "bge-small-en-v1.5")`, or to
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md) and
+[`model_download()`](https://sonsoles.me/sbert/reference/model_download.md).
+For a model outside the list, see
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md).
 
 ## Usage
 
@@ -15,17 +30,26 @@ models(detail = FALSE)
 
 - detail:
 
-  Whether to include the technical columns. The default `FALSE` returns
-  the menu (`model`, `dimensions`, `max_tokens`, `languages`,
-  `size_mb`); `TRUE` adds `pooling` (`"mean"` or `"cls"`), `prefix`
-  (text automatically prepended by
+  `FALSE` (default) for the columns `model`, `dimensions`, `max_tokens`,
+  `languages` and `size_mb`; `TRUE` adds `pooling` (`"mean"` or
+  `"cls"`), `prefix` (text prepended by
   [`encode()`](https://sonsoles.me/sbert/reference/encode.md)), `engine`
-  (`"onnx"` or `"static"`), `license`, `id`, and `revision`.
+  (`"onnx"` or `"static"`), `license`, `id` and `revision`.
 
 ## Value
 
 A base data frame with one row per pinned model and the columns
-described under `detail`.
+described under `detail`. `size_mb` is the download size in megabytes.
+
+## See also
+
+[`load_model()`](https://sonsoles.me/sbert/reference/load_model.md) and
+[`model_download()`](https://sonsoles.me/sbert/reference/model_download.md)
+to use a model;
+[`model_status()`](https://sonsoles.me/sbert/reference/model_status.md)
+to check an installation;
+[`load_custom()`](https://sonsoles.me/sbert/reference/load_custom.md)
+for other models.
 
 ## Examples
 

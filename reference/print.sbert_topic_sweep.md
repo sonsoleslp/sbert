@@ -1,7 +1,10 @@
-# Print a Topic-Count Comparison
+# Print a topic-count comparison
 
-Shows one row per candidate with its quality measures, and the call that
-pulls the best-scoring fitted model back out.
+[`print()`](https://rdrr.io/r/base/print.html) shows a topic-count
+comparison: the coherence measure, one row per candidate with its
+measures, and, when the fitted models are kept, the
+[fitted()](https://sonsoles.me/sbert/reference/fitted.sbert_topic_sweep.md)
+call that returns the most coherent candidate.
 
 ## Usage
 
@@ -14,7 +17,8 @@ print(x, ...)
 
 - x:
 
-  An `sbert_topic_sweep` object.
+  A comparison returned by
+  [`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md).
 
 - ...:
 
@@ -22,25 +26,24 @@ print(x, ...)
 
 ## Value
 
-The sweep object, invisibly.
+`x`, invisibly.
+
+## See also
+
+[`compare_topics()`](https://sonsoles.me/sbert/reference/compare_topics.md);
+[summary()](https://sonsoles.me/sbert/reference/summary.sbert_topic_sweep.md);
+[as.data.frame()](https://sonsoles.me/sbert/reference/as.data.frame.sbert_topic_sweep.md).
 
 ## Examples
 
 ``` r
-text <- c(
-  "Cats chase mice", "Dogs chase balls", "Kittens nap in sunshine",
-  "Stocks and bonds trade", "Markets price shares", "Banks report profit"
-)
-embeddings <- rbind(
-  c(1, 0), c(0.95, 0.05), c(0.9, 0.1),
-  c(0, 1), c(0.05, 0.95), c(0.1, 0.9)
-)
-comparison <- compare_topics(text, n_topics = 2:3, embeddings = embeddings)
-print(comparison)
+corpus <- head(dedupe(feedback_translations, column = "translation"), 600)
+print(compare_topics(corpus, n_topics = c(4, 6), column = "translation",
+                     embeddings = feedback_embeddings))
 #> <sbert_topic_sweep> 2 candidates, coherence measure: npmi
-#>  n_topics  coherence topic_diversity explained
-#>         2 -0.4562038               1 0.9954323
-#>         3  0.1817530               1 0.9972006
+#>  n_topics  coherence topic_diversity explained converged
+#>         4 -0.2070855       0.9250000 0.1229819      TRUE
+#>         6 -0.1044246       0.9166667 0.2255144      TRUE
 #> 
-#> Fitted models retained: fitted(x, n_topics = 3)
+#> Fitted models retained: fitted(x, n_topics = 6)
 ```
