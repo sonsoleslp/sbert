@@ -19,7 +19,7 @@ representative texts of the candidates decide it.
 ``` r
 
 library(sbert)
-#> sbert 0.5.14: Sentence-BERT embeddings and topic models in R.
+#> sbert 0.6.0: Sentence-BERT embeddings and topic models in R.
 #>   14 pinned models (see models()); default: all-MiniLM-L6-v2.
 #>   A model is downloaded only on request, once, and verified by SHA-256.
 ```

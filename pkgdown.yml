@@ -14,7 +14,7 @@ articles:
   sbert: sbert.html
   articles/segmenting: segmenting.html
   articles/verification: verification.html
-last_built: 2026-11-17T11:25Z
+last_built: 2026-11-17T11:44Z
 urls:
   reference: https://sonsoles.me/sbert/reference
   article: https://sonsoles.me/sbert/articles
